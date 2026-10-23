@@ -167,6 +167,10 @@ def main():
                     result = execute(j)
                 elif j.kind == "notify":
                     result = notify(j)
+                elif j.kind == "inbox":
+                    from .inbox import run_job
+
+                    result = run_job(j)
                 elif j.kind == "cleanup_files":
                     sid = j.data.get("space", "")
                     folder = (FILES / sid).resolve()

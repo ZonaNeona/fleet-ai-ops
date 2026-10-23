@@ -15,3 +15,6 @@ pillow>=11,<13
 pypdf>=5,<7
 pytest>=8,<10
 fastembed>=0.7,<0.8
+langgraph>=1.2,<2
+langgraph-checkpoint-postgres>=3.2,<4
+pypdfium2>=5,<6

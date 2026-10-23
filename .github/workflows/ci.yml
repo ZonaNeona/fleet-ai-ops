@@ -48,7 +48,8 @@ jobs:
       # Failed test names go to annotations so they are visible without opening the log.
       - run: |
           set -o pipefail
-          pytest -q --tb=line -rfE tests 2>&1 | tee pytest.log || { grep -E '^(FAILED|ERROR)|Error:|error:' pytest.log | head -40 | sed 's/^/::error::/'; exit 1; }
+          python -m app.worker > worker.log 2>&1 &
+          pytest -q --tb=line -rfE tests 2>&1 | tee pytest.log || { grep -E '^(FAILED|ERROR)|Error:|error:' pytest.log | head -40 | sed 's/^/::error::/'; tail -20 worker.log | sed 's/^/::warning::worker: /'; exit 1; }
 
   web:
     runs-on: ubuntu-latest

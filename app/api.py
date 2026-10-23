@@ -1080,3 +1080,6 @@ app.include_router(under_router)
 from .integrations import router as integration_router
 
 app.include_router(integration_router)
+from .inbox import router as inbox_router
+
+app.include_router(inbox_router)
