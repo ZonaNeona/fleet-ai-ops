@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app import crm
 from app.db import Item, Space, db
 from app.seed import create_space
+from tests.cleanup import drop_space
 from tests.test_integration import client  # noqa: F401  (fixture)
 
 
@@ -47,8 +48,7 @@ def test_sync_funnels_and_reconciliation():
         bad = [r for r in snap["reconciliation"] if not r["ok"]]
         assert len(bad) == 2 and all(float(r["diff"]) == 4800 for r in bad)
         assert all(r["ok"] for r in snap["reconciliation"] if r not in bad)
-    with db() as s:
-        s.delete(s.get(Space, sid))
+    drop_space(sid)
 
 
 def test_api_and_agent_task_draft(client):  # noqa: F811

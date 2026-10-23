@@ -102,7 +102,11 @@ jobs:
           for s in api worker web b24app; do docker compose logs --tail 15 $s | sed "s/^/::error::$s: /"; done
           exit 1
       - run: |
-          curl -fsS -X POST -H "Origin: http://localhost:8080" -H "Content-Type: application/json" -d '{}' http://localhost:8080/api/v1/session
+          code=$(curl -sS -o session.json -w '%{http_code}' -X POST -H "Origin: http://localhost:8080" -H "Content-Type: application/json" -d '{}' http://localhost:8080/api/v1/session)
+          if [ "$code" = 200 ]; then exit 0; fi
+          echo "::error::POST /api/v1/session → $code: $(head -c 300 session.json)"
+          docker compose logs --tail 25 api | sed 's/^/::error::api: /'
+          exit 1
       - if: always()
         run: docker compose down -v
 

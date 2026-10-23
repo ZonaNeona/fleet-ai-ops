@@ -14,6 +14,7 @@ from app.domain import command, get, today, file_access, cansee
 from app.miniapp import rental_quote, balance, fines
 from test_domain import ctx, do, fresh, contract
 from test_integration import client
+from tests.cleanup import drop_space
 
 
 def become(sp, role, person=None):
@@ -235,8 +236,7 @@ def test_receipt_foreign_space_is_not_visible(client):
     try:
         assert c.get("/api/v1/miniapp/receipts/" + rid).status_code == 404
     finally:
-        with db() as s:
-            s.delete(s.get(Space, other_id))
+        drop_space(other_id)
 
 
 def test_bot_message_edit_and_app_url(client):

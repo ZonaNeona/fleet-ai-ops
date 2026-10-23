@@ -7,6 +7,7 @@ from sqlalchemy import delete, select
 from app import inbox
 from app.db import Entry, Item, Job, Space, db
 from app.seed import create_space
+from tests.cleanup import drop_space
 from tests.test_integration import client  # noqa: F401  (fixture)
 
 
@@ -25,8 +26,7 @@ def doc(id):
 
 
 def drop(sid):
-    with db() as s:
-        s.delete(s.get(Space, sid))
+    drop_space(sid)
 
 
 def test_rules_read_each_kind():

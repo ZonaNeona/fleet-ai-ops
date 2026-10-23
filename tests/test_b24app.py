@@ -2,6 +2,7 @@
 
 from app import b24
 from app.crm import Emulator, ReadOnly
+from tests.cleanup import drop_space
 
 
 def test_form_arrays_parse_like_a_portal():
@@ -78,8 +79,7 @@ def test_app_round_trip(monkeypatch):
     assert sent["data"]["auth[client_endpoint]"].endswith(f"/api/b24/rest/{key}/")
     token = c.get("/api/b24app/app-token", headers={"X-B24App-Key": key}).json()["application_token"]
     assert sent["data"]["auth[application_token]"] == token
-    with db() as s:
-        s.delete(s.get(Space, sid))
+    drop_space(sid)
 
 
 def test_verdict_rules():

@@ -10,6 +10,7 @@ from app.seed import create_space
 from app.agent import execute, confirm, tools_for
 from app.rag import search, chunks
 from app.integrations import sign, verify_context, ingest, Ingest, enqueue
+from tests.cleanup import drop_space
 from tests.test_integration import client
 
 
@@ -135,8 +136,7 @@ def test_draft_foreign_space_and_expiry(client):
             with pytest.raises(HTTPException):
                 confirm(s, sp, d.id)
     finally:
-        with db() as s:
-            s.delete(s.get(Space, oid))
+        drop_space(oid)
 
 
 def test_ingest_signature_repeat_and_isolation(client):
@@ -311,8 +311,7 @@ def test_agent_history_stays_in_role_and_space(client, monkeypatch):
             for word in ["Чужие финансы", "Другое пространство", "Старое сообщение"]
         )
     finally:
-        with db() as s:
-            s.delete(s.get(Space, oid))
+        drop_space(oid)
 
 
 def test_retrieval_quality_report():

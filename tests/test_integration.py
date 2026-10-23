@@ -7,6 +7,7 @@ from sqlalchemy import select, func, delete
 from app.api import app
 from app.db import db, Space, Item, Job, System, FILES, URL, now
 from app.seed import create_space, add
+from tests.cleanup import drop_space
 
 
 @pytest.fixture
@@ -19,10 +20,7 @@ def client():
     with TestClient(app, base_url=URL) as client:
         client.cookies.set("fleet_session", token)
         yield client, sid
-    with db() as s:
-        sp = s.get(Space, sid)
-        if sp:
-            s.delete(sp)
+    drop_space(sid)
     folder = (FILES / sid).resolve()
     if folder.parent == FILES.resolve() and folder.exists():
         shutil.rmtree(folder)
@@ -69,8 +67,7 @@ def test_file_scope_and_role(client):
     try:
         assert c.get("/api/v1/items/" + foreign).status_code == 404
     finally:
-        with db() as s:
-            s.delete(s.get(Space, otherid))
+        drop_space(otherid)
 
 
 def test_webhook_deduplication(client, monkeypatch):
