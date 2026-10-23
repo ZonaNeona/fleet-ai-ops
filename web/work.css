@@ -1,5 +1,5 @@
 /* Как мы работаем */
-.wk { display: grid; gap: 14px; }
+.wk { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .wk-path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .wk-path li { display: grid; gap: 6px; align-content: start; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
 .wk-path-top { display: flex; justify-content: space-between; align-items: center; }

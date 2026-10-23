@@ -1,5 +1,5 @@
 /* CRM · Битрикс24 */
-.cr { display: grid; gap: 14px; }
+.cr { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .cr-loading { display: flex; gap: 10px; align-items: center; color: var(--text-3); padding: 40px 0; }
 .cr-head {
   display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;
@@ -52,4 +52,8 @@
 
 @media (max-width: 980px) {
   .cr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .cr-head { flex-direction: column; align-items: stretch; }
+  .cr-kanban { overflow-x: auto; }
 }
