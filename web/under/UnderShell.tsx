@@ -12,6 +12,7 @@ import { N8nView } from "./N8nView";
 import { LogView } from "./LogView";
 import { BotFlow } from "./BotFlow";
 import { DocsView } from "./DocsView";
+import { McpView } from "./McpView";
 import { ModeSwitch, SECTIONS } from "./mode";
 
 type Ctx = { job?: string; prompt?: string; run?: string };
@@ -133,6 +134,7 @@ export function UnderShell({
           )}
           {section === "n8n" && <N8nView data={data} openRow={openRow} initialRun={ctx.n8n?.run} />}
           {section === "docs" && <DocsView data={data} openInbox={openInbox} />}
+          {section === "mcp" && <McpView />}
           {section === "log" && <LogView data={data} go={go} />}
         </main>
         <footer className="k-foot">

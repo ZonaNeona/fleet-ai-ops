@@ -26,6 +26,9 @@ N8N_PREFIX=$(sed -n 's/^N8N_PREFIX=//p' /etc/fleet-integrations.env) node n8n/bu
 if [ "$task_kb" = --kb ]; then
   runuser -u fleet -- env PYTHONPATH=. FLEET_ENV=/etc/fleet.env .venv/bin/python scripts/build_kb.py
 fi
+# Retrieval quality on reference questions (local embeddings, no paid calls) → reports/quality.json
+mkdir -p reports && chown fleet:fleet reports
+runuser -u fleet -- env PYTHONPATH=. FLEET_ENV=/etc/fleet.env .venv/bin/python -m app.quality || true
 pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save --silent
 for _ in $(seq 1 30); do

@@ -1089,3 +1089,9 @@ app.include_router(crm_router)
 from .calls import router as calls_router
 
 app.include_router(calls_router)
+from .mcp import router as mcp_router
+
+app.include_router(mcp_router)
+from .quality import router as quality_router
+
+app.include_router(quality_router)

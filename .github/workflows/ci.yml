@@ -45,6 +45,8 @@ jobs:
       # The app reads embeddings from the local cache only; CI fills the cache once.
       - run: python -c "import os; from fastembed import TextEmbedding; from app.rag import MODEL; TextEmbedding(model_name=MODEL, cache_dir=os.environ['FASTEMBED_CACHE_PATH'])"
       - run: python scripts/build_kb.py
+      # Retrieval quality on reference questions; the numbers go to the run summary as a notice.
+      - run: python -m app.quality | sed 's/^/::notice title=retrieval quality::/'
       # Failed test names go to annotations so they are visible without opening the log.
       - run: |
           set -o pipefail

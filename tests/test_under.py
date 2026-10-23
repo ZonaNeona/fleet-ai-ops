@@ -313,3 +313,10 @@ def test_agent_history_stays_in_role_and_space(client, monkeypatch):
     finally:
         with db() as s:
             s.delete(s.get(Space, oid))
+
+
+def test_retrieval_quality_report():
+    from app.quality import run
+
+    r = run()["retrieval"]
+    assert r["hit_at_3"] >= 0.6 and r["refusals"] >= 0.6

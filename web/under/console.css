@@ -1843,3 +1843,11 @@
 .k-checks div.ok b { color: #34d399; }
 .k-checks div.bad b { color: #fbbf24; }
 .k-checks small { opacity: 0.7; }
+
+/* MCP */
+.k-mcp { grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "canvas ins"; }
+.k-mcp-main { grid-area: canvas; padding: 22px 26px; overflow: auto; display: grid; gap: 14px; align-content: start; }
+.k-mcp-key { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.k-mcp-key code { padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 12px; overflow-wrap: anywhere; }
+.k-mcp-probe { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+@media (max-width: 900px) { .k-mcp { grid-template-columns: 1fr; grid-template-areas: "canvas" "ins"; grid-template-rows: auto auto; } }

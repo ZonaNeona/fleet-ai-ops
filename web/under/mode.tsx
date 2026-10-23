@@ -1,4 +1,4 @@
-import { Network, BookOpen, Bot, Workflow, TerminalSquare, Cpu, LayoutDashboard, Send, FileInput } from "lucide-react";
+import { Network, BookOpen, Bot, Workflow, TerminalSquare, Cpu, LayoutDashboard, Send, FileInput, Plug } from "lucide-react";
 
 /* Лёгкая часть контура «Под капотом»: нужна шапке продукта, поэтому не тянет за собой холсты. */
 
@@ -9,6 +9,7 @@ export const SECTIONS = [
   ["agent", "Агент", "Инструменты и права", Bot],
   ["n8n", "Интеграции", "n8n · 1С · сверка", Workflow],
   ["docs", "Документы", "LangGraph · OCR · сверка", FileInput],
+  ["mcp", "MCP", "Подключить своего ассистента", Plug],
   ["log", "Журнал", "Живая лента", TerminalSquare],
 ] as const;
 
