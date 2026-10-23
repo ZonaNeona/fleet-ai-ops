@@ -1,0 +1,75 @@
+/* Лендинг: «Смотреть за 2 минуты» — три главных входа для проверяющего */
+.tour h2 {
+  font-family: var(--display);
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 8px 0 22px;
+}
+.tour-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.tour-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 26px 24px 22px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 100% 0%, var(--accent-soft), transparent 55%),
+    var(--surface);
+  text-align: left;
+  color: var(--text);
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s,
+    border-color 0.25s;
+}
+.tour-card:hover:not(:disabled) {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.tour-card > svg {
+  color: var(--accent-text);
+}
+.tour-card strong {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 800;
+}
+.tour-card span:not(.tour-num) {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.55;
+  flex: 1;
+}
+.tour-card em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent-text);
+}
+.tour-num {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--line);
+}
+@media (max-width: 900px) {
+  .tour-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

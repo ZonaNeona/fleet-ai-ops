@@ -1,0 +1,290 @@
+{
+  "id": "fleet-fines",
+  "name": "Парк · fines",
+  "active": false,
+  "nodes": [
+    {
+      "id": "fines-1",
+      "name": "Запуск из кабинета",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fleet-fines",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "fleet-fines"
+    },
+    {
+      "id": "fines-2",
+      "name": "По расписанию",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "7 */1 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fines-3",
+      "name": "Выбрать активные сессии",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        200
+      ],
+      "parameters": {
+        "url": "http://127.0.0.1:3008/api/mock/schedule/fines",
+        "options": {
+          "timeout": 20000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fleet-schedule-fines",
+          "name": "Парк · расписание fines"
+        }
+      }
+    },
+    {
+      "id": "fines-4",
+      "name": "Контекст запуска",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const data=$input.first().json; const runs=data.runs||[data.body||data]; return runs.map(c=>{if(!c.run||!c.space||!c.signature)throw new Error('Нет подписанного контекста');return {json:c}});"
+      }
+    },
+    {
+      "id": "fines-5",
+      "name": "Загрузить источник",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "url": "http://127.0.0.1:3008/api/mock/fines/snapshot",
+        "options": {
+          "timeout": 20000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}"
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "fines-6",
+      "name": "Нормализовать данные",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw=$json;if(raw.mode!=='synthetic'||!Array.isArray(raw.value))throw new Error('Неверная схема источника');const rows=raw.value.map(r=>({vehicle_code:r.registration,fine:String(r.amount),external_id:r.resolution}));for(const r of rows){if(!r.vehicle_code)throw new Error('Нет автомобиля');for(const [k,v] of Object.entries(r)){if(!['vehicle_code','external_id'].includes(k)&&(!Number.isFinite(Number(v))||Number(v)<0))throw new Error('Некорректное значение');}}return {json:{context:raw.context,rows,signature:raw.signature,execution_id:String($execution.id)}};"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "fines-7",
+      "name": "Подписанный пакет → учёт",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "url": "http://127.0.0.1:3008/api/v1/integrations/ingest",
+        "options": {
+          "timeout": 20000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}"
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "fines-8",
+      "name": "Ошибка источника",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        240
+      ],
+      "parameters": {
+        "jsCode": "throw new Error('Источник не прошёл проверку или приём. Учётные операции не изменены.');"
+      }
+    },
+    {
+      "id": "fines-9",
+      "name": "Готово",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return $input.all();"
+      }
+    }
+  ],
+  "connections": {
+    "Запуск из кабинета": {
+      "main": [
+        [
+          {
+            "node": "Контекст запуска",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "По расписанию": {
+      "main": [
+        [
+          {
+            "node": "Выбрать активные сессии",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Выбрать активные сессии": {
+      "main": [
+        [
+          {
+            "node": "Контекст запуска",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ошибка источника",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Контекст запуска": {
+      "main": [
+        [
+          {
+            "node": "Загрузить источник",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Загрузить источник": {
+      "main": [
+        [
+          {
+            "node": "Нормализовать данные",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ошибка источника",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нормализовать данные": {
+      "main": [
+        [
+          {
+            "node": "Подписанный пакет → учёт",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ошибка источника",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подписанный пакет → учёт": {
+      "main": [
+        [
+          {
+            "node": "Готово",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ошибка источника",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "executionTimeout": 60
+  },
+  "versionId": "33624971682e7323734c15a2bce5620a",
+  "pinData": {},
+  "tags": []
+}

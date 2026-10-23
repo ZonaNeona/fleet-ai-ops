@@ -1,0 +1,131 @@
+.uh-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.uh-panel h2 {
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+  margin: 8px 0 12px;
+}
+.uh-panel h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.uh-panel p {
+  line-height: 1.65;
+}
+.uh-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.uh-section-head .button {
+  flex-shrink: 0;
+}
+.uh-source-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.uh-source-grid > div {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 14px;
+  position: relative;
+}
+.uh-source-grid strong {
+  font-size: 13px;
+}
+.uh-source-grid small {
+  display: block;
+  color: var(--text-3);
+  font-size: 10px;
+  margin-top: 7px;
+}
+.uh-dot {
+  position: absolute;
+  top: 18px;
+  right: 13px;
+  width: 6px;
+  height: 6px;
+  background: var(--text-3);
+  border-radius: 50%;
+}
+.uh-dot.ok {
+  background: var(--green);
+}
+.uh-reconcile {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.uh-reconcile summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--orange);
+  font-size: 13px;
+}
+.uh-reconcile button {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.uh-reconcile small {
+  display: block;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.uh-sources-widget {
+  margin-top: 20px;
+}
+@media (max-width: 760px) {
+  .uh-panel {
+    padding: 18px;
+  }
+  .uh-source-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .uh-section-head {
+    flex-wrap: wrap;
+  }
+}
+.uh-draft {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px dashed var(--accent);
+  border-radius: 16px;
+  background: var(--accent-soft);
+}
+.uh-draft.ok {
+  border-style: solid;
+  border-color: var(--green);
+}
+.uh-draft h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.uh-draft p,
+.uh-draft small {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.uh-draft .button {
+  justify-self: start;
+}

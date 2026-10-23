@@ -1,0 +1,491 @@
+/* ───────── Страница «Telegram-бот»: описание ролей + эмулятор в рамке телефона ───────── */
+.phone-mini{position:absolute;inset:30px 0 0;z-index:12;background:#f7f5f1;display:flex;flex-direction:column;overflow:hidden;animation:phone-mini-enter .28s ease-out;border-radius:22px 22px 28px 28px}.phone-mini-bar{display:flex;align-items:center;justify-content:space-between;height:51px;flex-shrink:0;padding:8px 15px;background:#fff;border-bottom:1px solid #e8e5df;color:#252b2e}.phone-mini-bar button{background:none;border:0;padding:6px;color:inherit;display:flex}.phone-mini-bar span{font-size:12px;font-weight:600;text-align:center}.phone-mini-bar small{display:block;font-size:9px;color:#81878b;font-weight:400}.phone-mini iframe{width:100%;flex:1;min-height:0;border:0;background:#f7f5f1}.phone-mini-loading{position:absolute;inset:52px 0 0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#f7f5f1;color:#8c7352;font-size:12px;pointer-events:none}.phone-mini-action{padding:10px 15px 14px;background:#fff;flex-shrink:0;border-top:1px solid #e8e5df}.phone-mini-action button{width:100%;border:0;border-radius:11px;background:#ae8556;color:#fff;min-height:46px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px}.phone-mini-action button:disabled{opacity:.5}@keyframes phone-mini-enter{from{transform:translateY(70%);opacity:0}to{transform:translateY(0);opacity:1}}@media(prefers-reduced-motion:reduce){.phone-mini{animation:none}}
+.botpage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 28px;
+  align-items: start;
+}
+.bot-info {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.bot-hero {
+  padding: 26px 28px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(42, 171, 238, 0.14), transparent 60%),
+    var(--surface);
+}
+.bot-hero h2 {
+  font-family: var(--display);
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 8px 0 10px;
+}
+.bot-hero p {
+  color: var(--text-2);
+  line-height: 1.65;
+  max-width: 640px;
+}
+.bot-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.bot-roles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.bot-role {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+.bot-role-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bot-role-head span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(42, 171, 238, 0.12);
+  color: #2aabee;
+}
+.bot-role h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.bot-role ul {
+  display: grid;
+  gap: 7px;
+  padding-left: 16px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+  flex: 1;
+}
+.bot-role .text-button {
+  justify-content: flex-start;
+}
+.bot-how {
+  padding: 20px 22px;
+}
+.bot-how h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.bot-how ol {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.bot-how li {
+  display: flex;
+  gap: 10px;
+}
+.bot-how li svg {
+  flex: none;
+  margin-top: 3px;
+  color: #2aabee;
+}
+.bot-how .muted {
+  margin-top: 12px;
+  font-size: 12.5px;
+}
+
+/* телефон */
+.phone-wrap {
+  position: sticky;
+  top: 80px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.phone {
+  --tg-bg: #a4c8a0;
+  --tg-head: #ffffff;
+  --tg-in: #ffffff;
+  --tg-out: #e3fdd2;
+  --tg-text: #0f1419;
+  --tg-meta: #8a97a3;
+  --tg-link: #2a8bd8;
+  --tg-btn: rgba(25, 61, 46, 0.32);
+  --tg-input: #ffffff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  height: min(740px, calc(100vh - 120px));
+  min-height: 560px;
+  border-radius: 46px;
+  padding: 10px;
+  background: #0b0d10;
+  box-shadow:
+    0 0 0 2px #2a2f36,
+    0 30px 70px -25px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+:root[data-theme="dark"] .phone {
+  --tg-bg: #0e1621;
+  --tg-head: #17212b;
+  --tg-in: #182533;
+  --tg-out: #2b5278;
+  --tg-text: #f5f7fa;
+  --tg-meta: #6d7f8f;
+  --tg-link: #6ab3f3;
+  --tg-btn: rgba(255, 255, 255, 0.1);
+  --tg-input: #17212b;
+}
+.phone-notch {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 3;
+  width: 110px;
+  height: 30px;
+  transform: translateX(-50%);
+  border-radius: 20px;
+  background: #000;
+}
+.tg-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 50px 16px 10px;
+  border-radius: 36px 36px 0 0;
+  background: var(--tg-head);
+  color: var(--tg-text);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+.tg-head > svg {
+  color: var(--tg-link);
+}
+.tg-head strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.tg-head small {
+  color: var(--tg-meta);
+  font-size: 12.5px;
+}
+.tg-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: none;
+  color: #111;
+  background: linear-gradient(135deg, #ffe066, #ffc21a);
+}
+.tg-avatar.big {
+  width: 72px;
+  height: 72px;
+}
+.tg-feed {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 10px;
+  background-color: var(--tg-bg);
+  /* узор в духе Telegram — CSS-градиентами, без картинок */
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.16) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.12) 0 1.5px, transparent 2.5px),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06));
+  background-size:
+    46px 46px,
+    34px 34px,
+    100% 100%;
+  scrollbar-width: none;
+}
+.tg-intro {
+  margin: auto 12px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 18px;
+  border-radius: 18px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
+.tg-intro strong {
+  font-size: 15px;
+}
+.tg-intro p {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.tg-intro small {
+  opacity: 0.75;
+  font-size: 11.5px;
+}
+.tg-msg {
+  display: grid;
+  gap: 4px;
+  max-width: 86%;
+  animation: tg-in 0.25s ease both;
+}
+.tg-msg.me {
+  align-self: flex-end;
+}
+.tg-msg.bot {
+  align-self: flex-start;
+}
+@keyframes tg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+.tg-bubble {
+  position: relative;
+  padding: 7px 11px 6px;
+  border-radius: 16px;
+  background: var(--tg-in);
+  color: var(--tg-text);
+  font-size: 14.5px;
+  line-height: 1.42;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+.tg-msg.bot .tg-bubble {
+  border-bottom-left-radius: 5px;
+}
+.tg-msg.me .tg-bubble {
+  background: var(--tg-out);
+  border-bottom-right-radius: 5px;
+}
+.tg-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tg-text a {
+  color: var(--tg-link);
+}
+.tg-bubble img {
+  display: block;
+  width: calc(100% + 22px);
+  max-width: none;
+  margin: -7px -11px 7px;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.tg-bubble time {
+  float: right;
+  margin: 6px 0 -2px 10px;
+  font-size: 11px;
+  color: var(--tg-meta);
+}
+.tg-doc {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+  color: var(--tg-text);
+  text-decoration: none;
+}
+.tg-doc svg {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border-radius: 50%;
+  background: #2aabee;
+  color: #fff;
+}
+.tg-doc span {
+  display: grid;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tg-doc small {
+  font-weight: 400;
+  color: var(--tg-meta);
+}
+.tg-kb {
+  display: grid;
+  gap: 4px;
+}
+.tg-kb > div {
+  display: flex;
+  gap: 4px;
+}
+.tg-kb button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--tg-btn);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  transition: filter 0.15s;
+}
+.tg-kb button:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.tg-kb button:disabled {
+  opacity: 0.6;
+}
+.tg-typing {
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.tg-typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tg-meta);
+  animation: tg-dot 1.2s ease-in-out infinite;
+}
+.tg-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.tg-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes tg-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.tg-error {
+  align-self: center;
+  max-width: 90%;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12.5px;
+  text-align: center;
+}
+.tg-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 14px;
+  border-radius: 0 0 36px 36px;
+  background: var(--tg-input);
+  color: var(--tg-text);
+}
+.tg-input input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--tg-text);
+  font-size: 15px;
+}
+.tg-menu {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #2aabee;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tg-send {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2aabee;
+  color: #fff;
+}
+.tg-clip {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  color: var(--tg-meta);
+}
+.tg-start {
+  padding: 16px 10px 22px;
+  border-radius: 0 0 36px 36px;
+  background: var(--tg-input);
+  color: var(--tg-link);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.phone-reset {
+  font-size: 12.5px;
+}
+@media (max-width: 1180px) {
+  .botpage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .phone-wrap {
+    position: static;
+    order: -1;
+  }
+  .bot-roles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .phone {
+    width: 100%;
+    max-width: 380px;
+    height: 640px;
+    border-radius: 36px;
+  }
+}
+
+/* reply-клавиатура Telegram (запрос контакта) */
+.tg-reply-kb {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 2px;
+  background: var(--tg-input);
+  border-top: 1px solid rgba(127, 127, 127, 0.15);
+}
+.tg-reply-kb button {
+  min-height: 40px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.14);
+  color: var(--tg-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.tg-reply-kb small {
+  color: var(--tg-meta);
+  font-size: 11px;
+  text-align: center;
+}

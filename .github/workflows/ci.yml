@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: fleet
+          POSTGRES_PASSWORD: fleet
+          POSTGRES_DB: fleet
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fleet" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      FLEET_ENV: /dev/null
+      FLEET_INTEGRATIONS_ENV: /dev/null
+      DATABASE_URL: postgresql+psycopg://fleet:fleet@127.0.0.1/fleet
+      PGPASSWORD: fleet
+      INTEGRATION_SECRET: ci-only-not-a-secret
+      FASTEMBED_CACHE_PATH: /home/runner/.cache/fastembed
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: sudo apt-get install -y --no-install-recommends libpangoft2-1.0-0 fonts-dejavu-core
+      - run: pip install -r requirements.txt
+      - run: psql -h 127.0.0.1 -U fleet -d fleet -c "CREATE EXTENSION IF NOT EXISTS vector"
+      - run: mkdir -p "$RUNNER_TEMP/files" && echo "FILE_ROOT=$RUNNER_TEMP/files" >> "$GITHUB_ENV"
+      - run: alembic upgrade head
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/fastembed
+          key: fastembed-minilm-v1
+      - run: python scripts/build_kb.py
+      - run: pytest -q tests
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: python tools/check_private_names.py
