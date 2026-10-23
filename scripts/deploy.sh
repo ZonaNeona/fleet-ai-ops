@@ -35,11 +35,16 @@ runuser -u fleet -- env PYTHONPATH=. FLEET_ENV=/etc/fleet.env .venv/bin/python -
 if [[ "$task_flags" == *" --quality "* ]]; then
   .venv/bin/pip install -q -r requirements-dev.txt
   runuser -u postgres -- psql -qc "DROP DATABASE IF EXISTS fleet_ci" -c "CREATE DATABASE fleet_ci OWNER fleet"
+  runuser -u postgres -- psql -q -d fleet_ci -c "CREATE EXTENSION IF NOT EXISTS vector" -c "CREATE EXTENSION IF NOT EXISTS btree_gist"
   task_ci_url=$(sed -n "s/^DATABASE_URL=//p" /etc/fleet.env | sed "s#/fleet\$#/fleet_ci#")
   task_ci_env=(env DATABASE_URL="$task_ci_url" FLEET_ENV=/dev/null FLEET_INTEGRATIONS_ENV=/dev/null INTEGRATION_SECRET=ci FILE_ROOT=/tmp/fleet-ci-files PYTHONPATH=.)
-  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/alembic upgrade head >/dev/null
-  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python scripts/build_kb.py >/dev/null
-  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python tools/quality_report.py || true
+  # A failed measurement must not stop the release: the stand restarts below either way.
+  if runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/alembic upgrade head >/dev/null \
+    && runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python scripts/build_kb.py >/dev/null; then
+    runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python tools/quality_report.py || true
+  else
+    echo "quality measurement failed" >&2
+  fi
   runuser -u postgres -- psql -qc "DROP DATABASE IF EXISTS fleet_ci"
   rm -rf /tmp/fleet-ci-files
 fi
