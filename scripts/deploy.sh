@@ -9,6 +9,7 @@ task_kb=${2:-}
 cd /var/www/fleet
 bash scripts/release.sh
 task_stage=$(mktemp -d /var/www/fleet/.stage-XXXXXX)
+chmod 755 "$task_stage"  # rsync copies the stage dir mode onto /var/www/fleet
 trap 'rm -rf -- "$task_stage"' EXIT
 tar -xzf "$task_archive" -C "$task_stage"
 test -f "$task_stage/dist/index.html"
@@ -17,6 +18,7 @@ cp -an dist/assets/. "$task_stage/dist/assets/" 2>/dev/null || true
 task_deps=same
 cmp -s requirements.txt "$task_stage/requirements.txt" || task_deps=changed
 rsync -a "$task_stage"/ /var/www/fleet/
+chown fleet:fleet /var/www/fleet && chmod 755 /var/www/fleet
 chown -R fleet:fleet app web dist public docs tests migrations scripts n8n infra
 if [ "$task_deps" = changed ]; then .venv/bin/pip install -q -r requirements.txt; fi
 .venv/bin/python -m compileall -q app

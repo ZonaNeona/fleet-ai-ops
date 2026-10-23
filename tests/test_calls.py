@@ -31,7 +31,7 @@ def test_review_is_cached_for_everyone(client, monkeypatch):  # noqa: F811
     with db() as s:
         s.execute(delete(System).where(System.key.like("call:c09:%")))
     heard = {"text": "Таксопарк, здравствуйте. Стучит спереди. Приезжайте как-нибудь.", "seconds": 17.3,
-             "cost": "0.0004", "model": "openai/whisper-large-v3-turbo", "ms": 900}
+             "cost": "0.0004", "model": "google/gemini-2.5-flash-lite", "ms": 900}
     monkeypatch.setattr(voice, "transcribe", lambda space, raw: heard)
     paid = []
 

@@ -209,7 +209,7 @@ def dataset(s, sp):
     for i, (stage, _, sem) in enumerate([RENTAL[0], RENTAL[1], RENTAL[1], RENTAL[2], RENTAL[3], RENTAL[5]]):
         n += 1
         model = rnd.choice(["Haval Jolion", "Geely Preface", "Hongqi H5", "Mercedes-Benz E"])
-        created = t - timedelta(hours=rnd.randint(3, 80))
+        created = t - timedelta(hours=rnd.randint(3, 50))
         deals.append({
             "ID": str(n), "TITLE": f"Прокат · {model} · {rnd.choice([2, 3, 7, 14])} дн.", "CATEGORY_ID": "0",
             "STAGE_ID": stage, "STAGE_SEMANTIC_ID": {"process": "P", "success": "S", "failure": "F"}[sem],
@@ -230,6 +230,9 @@ def dataset(s, sp):
         if stuck:
             moved = t - timedelta(days=STUCK_DAYS + 1 + i % 3)
             created = min(created, moved - timedelta(days=1))
+        elif sem == "process":
+            moved = t - timedelta(hours=rnd.randint(2, 60))  # open deals that move on time
+            created = min(created, moved - timedelta(hours=2))
         elif moved > t:
             moved = t - timedelta(hours=1)
         deals.append({

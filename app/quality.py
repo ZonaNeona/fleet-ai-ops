@@ -15,25 +15,25 @@ from .db import now
 router = APIRouter()
 REPORT = Path(__file__).parent.parent / "reports" / "quality.json"
 
-# question → expected knowledge-base document (file stem in app/kb); None means the system must refuse.
+# question → documents that answer it (a regulation in app/kb and/or a seeded page «public-N»); None means refuse.
 CASES = [
-    ("Какие документы нужны водителю для работы в парке?", "driver-documents"),
-    ("Что проверяют у кандидата в водители?", "driver-documents"),
-    ("Что делать, если попал в аварию?", "accident"),
-    ("Меня ударили на дороге, куда звонить?", "accident"),
-    ("Когда возвращают залог после проката?", "deposit"),
-    ("За что могут удержать депозит?", "deposit"),
-    ("Кто платит штраф с камеры?", "fines"),
-    ("Пришёл штраф ГИБДД по моей машине, что дальше?", "fines"),
-    ("Как оформить досрочный выкуп автомобиля?", "buyout"),
-    ("Можно ли взять каникулы по выкупу?", "buyout"),
-    ("Как происходит выдача машины клиенту?", "issue-return"),
-    ("Что проверяют при возврате автомобиля?", "issue-return"),
-    ("Кто оплачивает ремонт машины?", "service"),
-    ("Дадут ли подменный автомобиль на время ТО?", "service"),
-    ("Как считается выплата владельцу автомобиля?", "owners"),
-    ("Как посчитан мой долг по аренде?", "accounting"),
-    ("Какие персональные данные хранит бот?", "privacy"),
+    ("Какие документы нужны водителю для работы в парке?", ("driver-documents", "public-2")),
+    ("Что проверяют у кандидата в водители?", ("driver-documents", "public-2")),
+    ("Что делать, если попал в аварию?", ("accident",)),
+    ("Меня ударили на дороге, куда звонить?", ("accident",)),
+    ("Когда возвращают залог после проката?", ("deposit", "public-4")),
+    ("За что могут удержать депозит?", ("deposit", "public-4")),
+    ("Кто платит штраф с камеры?", ("fines",)),
+    ("Пришёл штраф ГИБДД по моей машине, что дальше?", ("fines",)),
+    ("Как оформить досрочный выкуп автомобиля?", ("buyout", "public-3")),
+    ("Можно ли взять каникулы по выкупу?", ("buyout", "public-3")),
+    ("Как происходит выдача машины клиенту?", ("issue-return",)),
+    ("Что проверяют при возврате автомобиля?", ("issue-return",)),
+    ("Кто оплачивает ремонт машины?", ("service", "public-7")),
+    ("Дадут ли подменный автомобиль на время ТО?", ("service", "public-7")),
+    ("Как считается выплата владельцу автомобиля?", ("owners", "public-5")),
+    ("Как посчитан мой долг по аренде?", ("accounting", "public-8")),
+    ("Какие персональные данные хранит бот?", ("privacy",)),
     ("Как приготовить борщ?", None),
     ("Какова масса Юпитера?", None),
     ("Посоветуй хороший фильм на вечер", None),
@@ -53,7 +53,7 @@ def run():
             if doc not in docs:
                 docs.append(doc)
         if expected:
-            rank = next((i + 1 for i, d in enumerate(docs) if d.startswith(expected)), None)
+            rank = next((i + 1 for i, d in enumerate(docs) if d in expected), None)
             ok1, ok3 = rank == 1, rank is not None and rank <= 3
         else:
             rank, ok1 = None, not docs

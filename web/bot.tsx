@@ -549,7 +549,7 @@ export function BotPage({
                     type="button"
                     className={"tg-send tg-mic" + (recording ? " on" : "")}
                     aria-label={recording ? "Остановить запись" : "Голосовое сообщение"}
-                    title={recording ? "Остановить и отправить" : "Голосовое: распознаётся Whisper и уходит боту текстом"}
+                    title={recording ? "Остановить и отправить" : "Голосовое: распознаётся моделью и уходит боту текстом"}
                     disabled={pending}
                     onClick={voice}
                   >

@@ -54,7 +54,7 @@ const STAGES: { code: string; title: string; date: string; tasks: Task[] }[] = [
   {
     code: "Э-3", title: "Голос и звонки", date: "23.10.2026",
     tasks: [
-      { title: "Голосовые в боте и микрофон эмулятора → Whisper", outcome: "Водитель может просто сказать, что случилось.", status: "done", check: ["Бот", "#app/bot"] },
+      { title: "Голосовые в боте и микрофон эмулятора → распознавание речи", outcome: "Водитель может просто сказать, что случилось.", status: "done", check: ["Бот", "#app/bot"] },
       { title: "Разбор звонков диспетчерской по чек-листу", outcome: "Балл и конкретный совет по каждому звонку.", status: "done", check: ["Звонки", "#app/calls"] },
     ],
   },
@@ -156,7 +156,7 @@ export function WorkPage() {
                     <tbody>
                       {quality.data.rows.map((x: any) => (
                         <tr key={x.question} className={x.hit3 ? "" : "bad"}>
-                          <td>{x.hit3 ? "✓" : "✗"}</td><td>{x.question}</td><td>{x.expected || "отказ"}</td><td>{x.found.join(", ") || "—"}</td>
+                          <td>{x.hit3 ? "✓" : "✗"}</td><td>{x.question}</td><td>{Array.isArray(x.expected) ? x.expected.join(" / ") : "отказ"}</td><td>{x.found.join(", ") || "—"}</td>
                         </tr>
                       ))}
                     </tbody>
