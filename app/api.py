@@ -1059,3 +1059,6 @@ app.include_router(digest_router)
 from .b24 import router as b24_router
 
 app.include_router(b24_router)
+from .telephony import router as telephony_router
+
+app.include_router(telephony_router)

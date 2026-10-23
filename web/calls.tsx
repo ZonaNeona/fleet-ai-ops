@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, CircleDashed, CircleMinus, CircleX, LoaderCircle, Mic, Sparkles } from "lucide-react";
+import { CircleCheck, CircleDashed, CircleMinus, CircleX, LoaderCircle, Mic, PhoneIncoming, Sparkles } from "lucide-react";
 import { api } from "./lib";
 import "./calls.css";
 
@@ -49,6 +49,16 @@ export function CallsPage({ toast }: { toast: (m: string) => void }) {
     }
   };
   const busy = (c: Call) => !c.review && c.job && ["pending", "running"].includes(c.job.state);
+  const ring = async () => {
+    try {
+      const r = await api<{ activity: number; call: string; title: string }>("/telephony/simulate", { method: "POST", body: "{}" });
+      toast(`АТС прислала звонок «${r.title}»: дело №${r.activity} в Битрикс24, разбор запущен`);
+      setPicked(r.call);
+      q.invalidateQueries({ queryKey: ["calls"] });
+    } catch (e: any) {
+      toast(e.message);
+    }
+  };
 
   return (
     <div className="cl">
@@ -59,6 +69,9 @@ export function CallsPage({ toast }: { toast: (m: string) => void }) {
           считает код. Записи учебные, синтезированы голосами; стенд не знает их сценарий и слышит их как обычные звонки.
           Разбор — настоящий вызов моделей, поэтому каждая запись разбирается один раз и результат виден всем.
         </div>
+        <button className="button secondary" onClick={ring} title="Подписанный вебхук виртуальной АТС (формат Mango Office) → дело-звонок в Битрикс24 → разбор записи">
+          <PhoneIncoming size={16} /> Позвонить в диспетчерскую · АТС
+        </button>
         <div className="cl-avg">
           <b className={tone(calls.data.average)}>{calls.data.average ?? "—"}</b>
           <span>средний балл</span>
