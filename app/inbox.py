@@ -345,11 +345,22 @@ def actor(sp, role):
 
 def post_document(s, doc, by_person):
     """Posts through the ledger and existing commands. Returns a short description of what changed."""
+    from sqlalchemy.orm.attributes import flag_modified
+
+    links = dict(doc.data.get("links") or {})
+    try:
+        return _post(s, doc, by_person, links)
+    finally:
+        doc.data = {**doc.data, "links": links}
+        flag_modified(doc, "data")
+
+
+def _post(s, doc, by_person, links):
     from .domain import command, post
 
     d = doc.data
     sp = s.get(Space, doc.space)
-    v, links = d.get("values") or {}, d.get("links") or {}
+    v = d.get("values") or {}
     key = "inbox:" + doc.id
     if s.scalar(select(Entry.id).where(Entry.space == doc.space, Entry.key == key)):
         return "уже проведено"
@@ -393,9 +404,9 @@ def next_code(s, sp_id):
     return f"ВХ-{n + 1:03d}"
 
 
-def create(s, sp_id, source, *, text=None, file=None, name=""):
+def create(s, sp_id, source, *, text=None, file=None, name="", seed=False):
     doc = add(s, sp_id, "inbox", next_code(s, sp_id), {
-        "source": source, "name": name[:120], "text": text, "file": file, "status": "new",
+        "seed": seed, "source": source, "name": name[:120], "text": text, "file": file, "status": "new",
         "kind": None, "values": {}, "checks": [], "links": {}, "steps": [], "received": now().isoformat(),
     })
     s.flush()
@@ -452,7 +463,8 @@ def inbox_create(body: NewDoc, request: Request):
     with db() as s:
         sp = viewer(s, request)
         pending = s.scalar(select(func.count()).select_from(Item).where(
-            Item.space == sp.id, Item.kind == "inbox", Item.data["status"].astext.in_(["new", "reading", "checking"])))
+            Item.space == sp.id, Item.kind == "inbox", Item.data["status"].astext.in_(["new", "reading", "checking"]),
+            Item.data["seed"].astext.is_distinct_from("true")))
         if pending >= 3:
             fail("Дождитесь обработки предыдущих документов", 429)
         if body.sample:
@@ -545,18 +557,18 @@ def seed(s, space):
         return
     c1 = contracts[0]
     n1 = _uin(space.id + ":1")
-    docs = [create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1), name="Фото постановления из бота")]
+    docs = [create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1), name="Фото постановления из бота", seed=True)]
     if tickets:
         t = tickets[0]
         over = int(Decimal(t.data["estimate"])) + 2500
         docs.append(create(s, space.id, "web", text=invoice_text(s, t, "СТ-" + str(400 + len(t.code)), over),
-                           name="Счёт СТО.pdf"))
+                           name="Счёт СТО.pdf", seed=True))
     docs.append(create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1, days_ago=3),
-                       name="Повторное фото того же постановления"))
+                       name="Повторное фото того же постановления", seed=True))
     docs.append(create(s, space.id, "web", text=license_text("Кириллов Павел Андреевич", "77 21 483920",
                                                               today() - timedelta(days=365 * 6),
                                                               today() + timedelta(days=365 * 4)),
-                       name="ВУ кандидата.jpg"))
+                       name="ВУ кандидата.jpg", seed=True))
     enqueue(s, space.id, [d.id for d in docs])
 
 

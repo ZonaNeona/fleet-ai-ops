@@ -192,7 +192,7 @@ def main():
                         current.state = "done"
                         current.result = result
             except Exception as e:
-                print("job failed", j.kind, type(e).__name__, flush=True)
+                print("job failed", j.kind, type(e).__name__, str(e)[:200] if j.kind == "inbox" else "", flush=True)
                 with db() as s:
                     current = s.get(Job, j.id)
                     if current:

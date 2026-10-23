@@ -21,6 +21,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 from psycopg.rows import dict_row
+from sqlalchemy.orm.attributes import flag_modified
 
 from . import inbox
 from .db import Item, Space, db, now
@@ -43,7 +44,9 @@ def _step(d, node, status, ms=None, note=""):
 
 
 def _save(s, doc, d, title=None):
-    doc.data = d
+    # A fresh dict every time: queries inside a step autoflush, and later in-place edits would be lost.
+    doc.data = {**d}
+    flag_modified(doc, "data")
     doc.version += 1
     if title:
         audit(s, s.get(Space, doc.space), title, doc.id, via="inbox")
@@ -200,6 +203,8 @@ def main(action, ids):
     conn, saver = connect()
     try:
         app = build(saver)
+        with db() as s:
+            ids = [i for i in ids if s.get(Item, i)]  # the visitor's space may have expired meanwhile
         for doc_id in ids:
             config = {"configurable": {"thread_id": "inbox-" + doc_id}}
             if action == "run":
