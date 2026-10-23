@@ -593,7 +593,7 @@ def create_space(s, count=160):
         "closed_months": [],
         "seed_count": count,
         "last_billed": str(today),
-        "seed_version": "taxi-2",
+        "seed_version": "taxi-3",
     }
     s.add(
         Event(
@@ -630,7 +630,7 @@ def claim_space(s):
     """Готовое пространство из пула, а если пул пуст — новое."""
     sp = s.scalar(
         select(Space)
-        .where(Space.data["pool"].astext == pool_day(), Space.data["seed_version"].astext == "taxi-2")
+        .where(Space.data["pool"].astext == pool_day(), Space.data["seed_version"].astext == "taxi-3")
         .order_by(Space.created)
         .with_for_update(skip_locked=True)
         .limit(1)
@@ -663,12 +663,12 @@ def refill_pool(s):
     day = pool_day()
     for old in s.scalars(
         select(Space).where(
-            Space.data.has_key("pool"), (Space.data["pool"].astext != day) | Space.data["seed_version"].astext.is_distinct_from("taxi-2")
+            Space.data.has_key("pool"), (Space.data["pool"].astext != day) | Space.data["seed_version"].astext.is_distinct_from("taxi-3")
         )
     ):
         s.delete(old)
     ready = s.scalar(
-        select(func.count()).select_from(Space).where(Space.data["pool"].astext == day, Space.data["seed_version"].astext == "taxi-2")
+        select(func.count()).select_from(Space).where(Space.data["pool"].astext == day, Space.data["seed_version"].astext == "taxi-3")
     )
     if ready >= POOL_SIZE:
         return False
