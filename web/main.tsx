@@ -33,6 +33,7 @@ import {
   WifiOff,
   Building2,
   LogOut,
+  FileInput,
 } from "lucide-react";
 import {
   api,
@@ -85,6 +86,7 @@ const ActionDialog = pick(() => import("./actions"), "ActionDialog");
 const Operations = pick(() => import("./operations"), "Operations");
 const GlobalSearch = pick(() => import("./search"), "GlobalSearch");
 const BotPage = pick(() => import("./bot"), "BotPage");
+const InboxPage = pick(() => import("./inbox"), "InboxPage");
 const UnderShell = pick(() => import("./under/UnderShell"), "UnderShell");
 const MiniApp = pick(() => import("./tg/MiniApp"), "MiniApp");
 const prefetch = () => {
@@ -102,6 +104,7 @@ const nav = [
   ["people", "Клиенты и водители", Users],
   ["contracts", "Договоры", FileText],
   ["service", "Заявки и сервис", Wrench],
+  ["inbox", "Документы", FileInput],
   ["finance", "Финансы", Wallet],
   ["analytics", "Аналитика", ChartNoAxesCombined],
   ["bot", "Telegram-бот", Send],
@@ -413,6 +416,11 @@ function App() {
       (n) =>
         data.session.role !== "service" ||
         !["people", "contracts"].includes(n[0]),
+    )
+    .filter(
+      (n) =>
+        n[0] !== "inbox" ||
+        ["owner", "admin", "finance", "manager", "service"].includes(data.session.role),
     );
   if (mode === "under")
     return (
@@ -433,6 +441,10 @@ function App() {
           switchMode("product");
           setPage("bot");
         }}
+          openInbox={() => {
+            switchMode("product");
+            setPage("inbox");
+          }}
         openRow={(r) => {
             switchMode("product");
             setSelected(r);
@@ -596,6 +608,8 @@ function App() {
                         "Условия, обязательства и история в одном месте.",
                       service:
                         "От обращения до возвращения автомобиля в работу.",
+                      inbox:
+                        "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
                       finance: "Каждая сумма имеет источник и основание.",
                       analytics:
                         "Разбирайтесь в результате до отдельной операции.",
@@ -640,7 +654,7 @@ function App() {
           </div>
           <div
             className="filterbar"
-            style={page === "bot" ? { display: "none" } : undefined}
+            style={["bot", "inbox"].includes(page) ? { display: "none" } : undefined}
           >
             <div className="segment">
               <button
@@ -731,6 +745,14 @@ function App() {
             {page === "people" && <People {...common} />}
             {page === "contracts" && <Contracts {...common} />}
             {page === "service" && <Service {...common} />}
+            {page === "inbox" && (
+              <InboxPage
+                data={data}
+                open={open}
+                toast={setToast}
+                underGraph={() => switchMode("under", undefined, "docs")}
+              />
+            )}
             {page === "finance" && (
               <Finance {...common} report={report.data} done={done} />
             )}

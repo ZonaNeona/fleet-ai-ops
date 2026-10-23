@@ -1829,3 +1829,17 @@
     padding-bottom: 96px;
   }
 }
+
+/* Документы: выбор документа над холстом, текстовый слой и проверки в инспекторе */
+.k-prompt.k-docs-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.k-prompt.k-docs-bar .k-role { flex: 1 1 260px; min-width: 0; max-width: none; }
+.k-pre {
+  margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap; color: inherit; opacity: 0.85;
+}
+.k-checks { display: grid; gap: 8px; margin-top: 10px; }
+.k-checks div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.k-checks div.ok b { color: #34d399; }
+.k-checks div.bad b { color: #fbbf24; }
+.k-checks small { opacity: 0.7; }

@@ -11,6 +11,7 @@ import { AgentView } from "./AgentView";
 import { N8nView } from "./N8nView";
 import { LogView } from "./LogView";
 import { BotFlow } from "./BotFlow";
+import { DocsView } from "./DocsView";
 import { ModeSwitch, SECTIONS } from "./mode";
 
 type Ctx = { job?: string; prompt?: string; run?: string };
@@ -23,6 +24,7 @@ export function UnderShell({
   onSwitch,
   openRow,
   openBot,
+  openInbox,
 }: {
   data: Data;
   section: string;
@@ -31,6 +33,7 @@ export function UnderShell({
   onSwitch: (m: "product" | "under", e: React.MouseEvent) => void;
   openRow: (r: Row) => void;
   openBot: () => void;
+  openInbox: () => void;
 }) {
   const [engineer, setEngineer] = useState(() => {
     try {
@@ -129,10 +132,11 @@ export function UnderShell({
             <AgentView data={data} initialJob={ctx.agent?.job} initialPrompt={ctx.agent?.prompt} onStart={remember("agent")} />
           )}
           {section === "n8n" && <N8nView data={data} openRow={openRow} initialRun={ctx.n8n?.run} />}
+          {section === "docs" && <DocsView data={data} openInbox={openInbox} />}
           {section === "log" && <LogView data={data} go={go} />}
         </main>
         <footer className="k-foot">
-          <Credit /> · учебные данные · RAG, агент и интеграции — реальные вызовы вашей сессии, сценарии бота — пошаговая схема
+          <Credit /> · учебные данные · RAG, агент, документы и интеграции — реальные вызовы вашей сессии, сценарии бота — пошаговая схема
         </footer>
         <AskFab onClick={() => setAi(true)} hidden={ai} />
         {/* помощник тот же, что в продукте, но в тёмных токенах консоли */}

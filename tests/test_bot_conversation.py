@@ -103,3 +103,20 @@ def test_vehicle_tool_exposes_daily_rates_not_sale_prices(client):
     result = execute(sid, 'driver', 'list_vehicles', {}, 'rates')
     assert result['vehicles'] and all(float(v['base_daily_rate_rub']) > 0 for v in result['vehicles'])
     assert 'Цена продажи здесь не задана' in result['note']
+
+
+def test_driver_document_goes_to_incoming_graph(client):
+    _, sid = client
+    setup_driver(sid)
+    prompt = update(sid, 'doc-prompt', callback='d:doc')
+    assert 'фото постановления' in prompt['messages'][0]['text']
+    before = tickets(sid)
+    with db() as s:
+        known = {x.id for x in s.scalars(select(Item).where(Item.space == sid, Item.kind == 'inbox'))}
+    reply = update(sid, 'doc-sample', callback='d:docsample')
+    assert 'принят' in reply['messages'][0]['text']
+    with db() as s:
+        new = [x for x in s.scalars(select(Item).where(Item.space == sid, Item.kind == 'inbox')) if x.id not in known]
+        assert len(new) == 1 and new[0].data['source'] == 'bot' and new[0].data['file']
+        assert not s.get(Space, sid).data.get('tg_wait')
+    assert tickets(sid) == before

@@ -36,7 +36,7 @@ from sqlalchemy import select, func, text as sqltext
 
 from psycopg.types.range import Range
 
-from .db import FILES, ROOT, URL, Booking, Item, Space, Job, Event, Receipt, db, now
+from .db import FILES, ROOT, URL, Booking, Item, Space, Job, Event, Receipt, db, now, uid
 from .domain import command, fail, get, today, visible
 from .reports import report
 from .seed import claim_space
@@ -405,7 +405,7 @@ def menu(sp):
             [("💰 Баланс и долг", "d:balance"), ("🚗 Мой автомобиль", "d:car")],
             [("🏖 Выходной завтра", "d:holiday"), ("🛠 Сообщить о проблеме", "d:ticket")],
             [("🚨 Штрафы ГИБДД", "d:fines"), ("📄 Договор PDF", "d:pdf")],
-            [("📱 Кабинет водителя", "app:driver")],
+            [("📑 Отправить документ", "d:doc"), ("📱 Кабинет водителя", "app:driver")],
         ],
         "client": [
             [("🚘 Подобрать автомобиль", "c:catalog")],
@@ -584,6 +584,17 @@ def driver_action(s, sp, act, uid_key):
             ]
         sp.data = {k: v for k, v in sp.data.items() if k != "tg_last"}
         return [ticket_draft_reply(s, sp, last, last, None, [], uid_key)]
+    if act == "doc":
+        sp.data = {**sp.data, "tg_wait": "doc"}
+        return [
+            {
+                "text": "Пришлите фото постановления ГИБДД или счёта из сервиса. Распознаю, сверю с учётом "
+                "и передам в бухгалтерию; если что-то не сойдётся — решит сотрудник.",
+                "kb": kb([("📷 Нет фото под рукой — пример скана", "d:docsample")], [("← Отмена", "menu")]),
+            }
+        ]
+    if act == "docsample":
+        return inbox_reply(s, sp, sample=True)
     if act == "ticket":
         sp.data = {**sp.data, "tg_wait": "ticket"}
         return [
@@ -967,6 +978,30 @@ def help_text(sp):
         + common,
         "kb": menu(sp)["kb"],
     }
+
+
+def inbox_reply(s, sp, file=None, sample=False):
+    """A document from the driver goes to the same incoming-documents graph as in the cabinet."""
+    from . import inbox
+
+    sp.data = {k: v for k, v in sp.data.items() if k != "tg_wait"}
+    try:
+        with s.begin_nested():
+            if sample:
+                _, raw, name = inbox.sample(s, sp, "fine_scan")
+                file = _save_photo(s, sp, raw, "sample-" + uid()[:8])
+            used = s.scalar(select(func.count()).select_from(Item).where(
+                Item.space == sp.id, Item.kind == "inbox", Item.data["engine"].astext == "model",
+                Item.created > now() - timedelta(days=1)))
+            if used >= inbox.MODEL_DOCS_PER_DAY:
+                return [{"text": "Лимит распознавания на сегодня исчерпан (учебный стенд). Документ можно загрузить в кабинете завтра.", "kb": back(sp)}]
+            doc = inbox.create(s, sp.id, "bot", file=file, name="Фото из Telegram" if not sample else "Пример скана из бота")
+            inbox.enqueue(s, sp.id, [doc.id])
+    except HTTPException as e:
+        return [{"text": esc(str(e.detail)), "kb": back(sp)}]
+    return [{"text": f"Документ <b>{doc.code}</b> принят. Распознаю и сверю с учётом: машина, договор на дату, "
+             "дубли. Если всё сойдётся — проведу сам, иначе передам сотруднику. Ход проверки — в кабинете, раздел «Документы».",
+             "kb": back(sp)}]
 
 
 def ticket_draft_reply(s, sp, text, title, priority, photos, key):
@@ -1390,6 +1425,8 @@ def handle(data, space_id=None):
                         ),
                     }
                 ]
+            elif sp.role == "driver" and raw and sp.data.get("tg_wait") == "doc":
+                out = inbox_reply(s, sp, file=_save_photo(s, sp, raw, data["update_id"]))
             elif sp.role in ("driver", "client") and raw:
                 sp.data = {k: v for k, v in sp.data.items() if k != "tg_wait"}
                 photos = [_save_photo(s, sp, raw, data["update_id"])]
