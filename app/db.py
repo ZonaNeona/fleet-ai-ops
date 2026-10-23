@@ -26,7 +26,11 @@ def uid():
     return uuid.uuid4().hex
 
 
-engine = create_engine(os.environ["DATABASE_URL"], pool_size=4, max_overflow=2, pool_pre_ping=True)
+# A request never waits for a row lock forever, and a forgotten open transaction does not hold locks for long.
+engine = create_engine(
+    os.environ["DATABASE_URL"], pool_size=4, max_overflow=2, pool_pre_ping=True,
+    connect_args={"options": "-c lock_timeout=15000 -c idle_in_transaction_session_timeout=300000"},
+)
 Session = sessionmaker(engine, expire_on_commit=False)
 
 

@@ -224,10 +224,13 @@ def viewer(s, request):
 
 
 def key_for(s, sp):
-    """One app key per visitor space, reused while valid."""
+    """One app key per visitor space, reused while valid. Checked inside the caller's transaction: the space row
+    is already locked there, and a second connection touching it would wait for this one forever."""
     current = sp.data.get("b24app_key")
-    if current and space_of(current) == sp.id:
-        return current
+    if current:
+        row = s.get(System, "b24key:" + hashlib.sha256(current.encode()).hexdigest()[:40])
+        if row and row.data["space"] == sp.id and row.data["expires"] >= now().isoformat():
+            return current
     key = issue_key(s, sp)
     sp.data = {**sp.data, "b24app_key": key}
     return key
