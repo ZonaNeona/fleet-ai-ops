@@ -145,7 +145,6 @@ async function sim(request: APIRequestContext, payload: unknown) {
 async function session(page: Page, role: string) {
   await post(page.request, "/session", {});
   await sim(page.request, { text: "/start" });
-  await sim(page.request, { callback: "pd:yes" });
   await sim(page.request, { callback: "role:" + role });
 }
 

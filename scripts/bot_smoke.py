@@ -77,35 +77,10 @@ def tap(data):
     )
 
 
-def share_contact(phone, owner=TG):
-    print(f"\n→ [контакт {phone}]")
-    telegram.process(
-        {
-            "update_id": next(seq),
-            "message": {
-                "message_id": 3,
-                "from": user,
-                "chat": chat,
-                "contact": {"phone_number": phone, "user_id": owner},
-            },
-        }
-    )
-
-
 def space():
     with db() as s:
         sp = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(TG)))
         return sp.role, dict(sp.data)
-
-
-def driver_phone():
-    with db() as s:
-        sp = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(TG)))
-        return s.get(Item, sp.data["driver"]).data["phone"]
-
-
-def digits_only(v):
-    return re.sub(r"\D", "", v or "")
 
 
 def first(prefix):
@@ -141,31 +116,10 @@ def inspect(tool=None):
 
 try:
     msg("/start")
-    assert first("pd:yes"), "No consent request on /start"
-    # без согласия на ПДн личные данные роли не выдаются
+    assert first("role:driver"), "No role choice on /start"
     tap("role:driver")
-    tap("d:balance")
-    assert first("pd:yes") and not space()[1].get(
-        "pd_consent"
-    ), "Balance shown without consent"
-    tap("pd:yes")
-    assert space()[1].get("pd_consent"), "Consent not stored"
-    # чужой контакт не принимается, свой — определяет роль по учёту, номер хранится хешем
-    share_contact(driver_phone(), owner=TG + 1)
-    assert not space()[1].get("phone_hash"), "Foreign contact accepted"
-    tap("role:client")
-    share_contact(driver_phone())
-    role, data = space()
-    assert (
-        role == "driver" and data.get("phone_hash") and "phone" not in data
-    ), "Contact matching failed"
-    assert digits_only(data["phone_mask"]) != digits_only(
-        driver_phone()
-    ), "Phone not masked"
-    checks.append(
-        {"pd": "consent gate, own-contact role match, hashed phone", "passed": True}
-    )
-    tap("pd:info")
+    assert space()[0] == "driver", "Role was not set"
+    checks.append({"start": "role choice without registration", "passed": True})
     tap("d:balance")
     tap("d:car")
     tap("d:holiday")
@@ -222,10 +176,6 @@ try:
     if hday:
         tap(hday)
     tap("f:economy")
-    # вход сотрудника по коду приглашения
-    tap("id:staff")
-    msg("service-2026")
-    assert space()[0] == "service", "Invite code did not set role"
     # штрафы ГИБДД водителя приходят через n8n-конвейер
     tap("role:driver")
     tap("d:fines")
@@ -236,17 +186,6 @@ try:
             break
     assert first("d:ticket"), "Fine from GIBDD integration not shown"
     checks.append({"integration": "driver sees GIBDD fine via n8n", "passed": True})
-    # отзыв согласия удаляет данные бота
-    tap("pd:delete")
-    tap("pd:delete_yes")
-    with db() as s:
-        left = s.scalar(
-            select(func.count())
-            .select_from(Space)
-            .where(Space.data["tg_user"].astext == str(TG))
-        )
-    assert left == 0, "Telegram link not removed after /delete_me"
-    checks.append({"pd": "consent withdrawal removes bot data", "passed": True})
 finally:
     with db() as s:
         ids = s.scalars(

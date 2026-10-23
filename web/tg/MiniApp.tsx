@@ -52,7 +52,6 @@ type MoneyState = {
 const statusLabel = (value?: string) => statuses[value || ""] || value || "—";
 type MiniState = {
   role: string;
-  onboarding_required?: boolean;
   web_cabinet?: boolean;
   contracts: MoneyState[];
   fines: Row[];
@@ -211,55 +210,13 @@ export function MiniApp() {
       removeEventListener("offline", update);
     };
   }, []);
-  const needsOnboarding =
-    auth.data?.onboarding_required || state.data?.onboarding_required;
   if (
     auth.isLoading ||
-    (!needsOnboarding &&
-      auth.data?.id &&
-      (!boot.data || !state.data) &&
-      !boot.error &&
-      !state.error)
+    (auth.data?.id && (!boot.data || !state.data) && !boot.error && !state.error)
   )
     return (
       <div className="mini">
         <Spinner />
-      </div>
-    );
-  if (needsOnboarding)
-    return (
-      <div className="mini">
-        <div className="mini-welcome">
-          <ShieldCheck size={38} />
-          <span className="mini-eyebrow">ТАКСОПАРК · ВАШ КАБИНЕТ</span>
-          <h1>Начнём со знакомства</h1>
-          <p>
-            В боте подтвердите согласие, поделитесь номером и выберите демороль.
-            После этого здесь появятся ваши автомобили и документы.
-          </p>
-          {embedded() ? (
-            <button className="mini-primary" onClick={() => host("close")}>
-              Продолжить в чате
-            </button>
-          ) : (
-            <a
-              className="mini-primary"
-              href={`https://t.me/${auth.data?.telegram_username || boot.data?.telegram_username || ""}?start=onboarding`}
-            >
-              Продолжить в боте <ArrowUpRight size={17} />
-            </a>
-          )}
-          <button
-            className="mini-link"
-            onClick={() => {
-              qc.invalidateQueries({ queryKey: ["tg-auth"] });
-              qc.invalidateQueries({ queryKey: ["tg-state"] });
-            }}
-          >
-            Я прошёл онбординг · обновить
-          </button>
-          <small>Концепт и прототип · учебные данные</small>
-        </div>
       </div>
     );
   if (auth.error || boot.error || state.error || !boot.data || !state.data)
@@ -1527,10 +1484,10 @@ function Profile({
       </section>
       <div className="mini-surface">
         <ShieldCheck size={22} />
-        <h3>Ваши данные под контролем</h3>
+        <h3>Учебные данные</h3>
         <p>
-          Согласие и сведения о хранении доступны в боте через /privacy. Отзыв
-          согласия — /delete_me.
+          Люди, договоры и оплаты в кабинете — учебные. Роль можно сменить в
+          боте командой /roles.
         </p>
       </div>
     </>

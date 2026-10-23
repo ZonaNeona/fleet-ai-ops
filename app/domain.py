@@ -372,8 +372,6 @@ def require_status(x, states):
 
 
 def command(s, sp, action, p, key):
-    if sp.data.get("tg_user") and (not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen")):
-        fail("Завершите онбординг в боте", 403)
     if action not in WRITE:
         fail("Неизвестная команда")
     if sp.role not in WRITE[action] and sp.role not in ("admin", "owner"):

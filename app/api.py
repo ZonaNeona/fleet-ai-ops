@@ -121,10 +121,6 @@ def auth(s, request):
     sp = s.scalar(query)
     if not sp or sp.touched < now() - timedelta(hours=24):
         fail("Демосессия завершена", 401)
-    if sp.data.get("tg_user") and request.url.path != "/api/v1/session" and (
-        not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen")
-    ):
-        fail("Завершите онбординг в боте", 403)
     if request.method != "GET" or sp.touched < now() - timedelta(minutes=5):
         sp.touched = now()
     return sp
@@ -873,15 +869,13 @@ class BotSim(BaseModel):
     text: str | None = Field(default=None, max_length=1500)
     callback: str | None = Field(default=None, max_length=64)
     message_id: str | None = Field(default=None, max_length=80)
-    # «Поделиться номером»: в эмуляторе своим номером считается номер демо-водителя из учёта
-    contact: bool = False
 
 
 @app.post("/api/v1/bot/sim")
 def bot_sim(body: BotSim, request: Request):
     """Веб-эмулятор бота: апдейт в формате Telegram идёт в ту же очередь и ту же логику
     (telegram.handle), но ответ возвращается в браузер, а не в Telegram."""
-    if not (body.text or "").strip() and not body.callback and not body.contact:
+    if not (body.text or "").strip() and not body.callback:
         fail("Пустое сообщение")
     with db() as s:
         sp = auth(s, request)
@@ -899,38 +893,22 @@ def bot_sim(body: BotSim, request: Request):
         update_id = "sim-" + secrets.token_hex(6)
         who = {"id": "web:" + sp.id, "first_name": "Гость демо"}
         chat = {"id": 0, "type": "private"}
-        if body.contact:
-            person = s.get(Item, sp.data.get("driver", ""))
-            phone = (person.data.get("phone") if person else "") or "+7 (000) 000-0000"
-            update = {
+        update = (
+            {
                 "update_id": update_id,
-                "message": {
+                "callback_query": {
+                    "id": update_id,
                     "from": who,
-                    "chat": chat,
-                    "contact": {
-                        "phone_number": phone,
-                        "user_id": who["id"],
-                        "first_name": who["first_name"],
-                    },
+                    "message": {"chat": chat, "message_id": body.message_id},
+                    "data": body.callback,
                 },
             }
-        else:
-            update = (
-                {
-                    "update_id": update_id,
-                    "callback_query": {
-                        "id": update_id,
-                        "from": who,
-                        "message": {"chat": chat, "message_id": body.message_id},
-                        "data": body.callback,
-                    },
-                }
-                if body.callback
-                else {
-                    "update_id": update_id,
-                    "message": {"from": who, "chat": chat, "text": body.text.strip()},
-                }
-            )
+            if body.callback
+            else {
+                "update_id": update_id,
+                "message": {"from": who, "chat": chat, "text": body.text.strip()},
+            }
+        )
         j = Job(
             kind="telegram_sim",
             space=sp.id,
@@ -939,15 +917,7 @@ def bot_sim(body: BotSim, request: Request):
                 "space": sp.id,
                 "role": sp.role,
                 "prompt": "Эмулятор бота: "
-                + (
-                    "поделился номером"
-                    if body.contact
-                    else (
-                        body.text.strip()[:100]
-                        if body.text
-                        else "кнопка " + body.callback
-                    )
-                ),
+                + (body.text.strip()[:100] if body.text else "кнопка " + body.callback),
             },
             result={},
         )
@@ -985,9 +955,6 @@ def telegram_auth(body: dict, response: Response):
             sp = claim_space(s)
             sp.role = "driver"
             sp.data = {**sp.data, "tg_user": str(data["id"])}
-        if not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-            response.delete_cookie("fleet_session", path="/")
-            return {"onboarding_required": True, "telegram_username": os.getenv("TELEGRAM_USERNAME")}
         token = secrets.token_urlsafe(32)
         s.add(
             AccessToken(token=hashlib.sha256(token.encode()).hexdigest(), space=sp.id)
@@ -1011,8 +978,6 @@ def miniapp_state(request: Request):
         sp = auth(s, request)
         if sp.role not in ("driver", "client"):
             return {"role": sp.role, "web_cabinet": True}
-        if not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-            return {"role": sp.role, "onboarding_required": True}
         contracts = []
         for c in visible(s, sp, "contract"):
             charged = balance(s, sp, c.id, ["charge"])
@@ -1059,8 +1024,8 @@ def miniapp_sync_fines(request: Request):
     from .integrations import enqueue
     with db() as s:
         sp = auth(s, request)
-        if sp.role != "driver" or not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-            fail("Завершите вход водителя в боте", 403)
+        if sp.role != "driver":
+            fail("Штрафы доступны водителю", 403)
         pending = s.scalar(select(Job).where(Job.space == sp.id, Job.kind == "integration",
             Job.state.in_(["pending", "running"]), Job.data["context"]["source"].astext == "fines"))
         if pending:

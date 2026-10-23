@@ -37,7 +37,6 @@ def main():
             session = post('/session', {})
             sid = session['id']
             sim({'text': '/start'})
-            sim({'callback': 'pd:yes'})
             sim({'callback': 'role:driver'})
             sim({'callback': 'd:ticket'})
             sim({'text': '/menu'})

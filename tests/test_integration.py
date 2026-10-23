@@ -148,7 +148,7 @@ def test_miniapp_preserves_desktop_session(client, monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
     with db() as s:
         sp = s.get(Space, sid)
-        sp.data = {**sp.data, "tg_user": "55667788", "pd_consent": {"version": "test"}, "tg_role_chosen": True}
+        sp.data = {**sp.data, "tg_user": "55667788"}
     values = {"auth_date": str(int(time.time())), "user": json.dumps({"id": 55667788})}
     secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
     values["hash"] = hmac.new(

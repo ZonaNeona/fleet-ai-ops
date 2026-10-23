@@ -121,8 +121,6 @@ def payment_terms(s, sp, purpose, target):
 
 def payment_command(s, sp, action, p, x):
     from .domain import fail, serialize, update, post, money
-    if not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-        fail("Завершите онбординг в боте", 403)
     if action == "demo_payment.create":
         purpose, target = p.get("purpose"), p.get("target")
         terms = payment_terms(s, sp, purpose, target)
@@ -165,8 +163,6 @@ def validate_photos(s, sp, photos, image_only=True):
 
 def inspection_command(s, sp, p):
     from .domain import get, fail, update, sla_due
-    if not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-        fail("Завершите онбординг в боте", 403)
     v = get(s, sp, p.get("vehicle"), "vehicle")
     c = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "contract",
         Item.data["vehicle"].astext == v.id, Item.data["client"].astext == sp.data.get("driver"),

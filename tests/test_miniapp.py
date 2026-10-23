@@ -18,8 +18,7 @@ from test_integration import client
 
 def become(sp, role, person=None):
     sp.role = role
-    sp.data = {**sp.data, "pd_consent": {"version": "test"}, "tg_role_chosen": True,
-               **({role: person.id} if person else {})}
+    sp.data = {**sp.data, **({role: person.id} if person else {})}
 
 
 def test_default_driver_has_payable_demo_debt(ctx):
@@ -116,14 +115,10 @@ def test_payment_expiry_changed_debt_and_closed_period(ctx):
         do(ctx, "demo_payment.confirm", {"id": fresh_intent["id"]})
 
 
-def test_payment_scope_and_consent(ctx):
+def test_payment_scope(ctx):
     s, sp = ctx
     v, p, c = contract(ctx)
     do(ctx, "contract.confirm", {"id": c["id"]})
-    become(sp, "client", p)
-    sp.data = {**sp.data, "pd_consent": None}
-    with pytest.raises(HTTPException):
-        do(ctx, "demo_payment.create", {"purpose": "deposit", "target": c["id"]})
     become(sp, "client")
     sp.data = {**sp.data, "client": "not-this-client"}
     with pytest.raises(HTTPException) as exc:
@@ -203,7 +198,7 @@ def init_data(token, age=0, user=77889900):
     return urlencode(values)
 
 
-def test_telegram_auth_requires_onboarding(client, monkeypatch):
+def test_telegram_auth_opens_the_cabinet_at_once(client, monkeypatch):
     c, sid = client
     token = "123:synthetic-only"
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", token)
@@ -211,8 +206,8 @@ def test_telegram_auth_requires_onboarding(client, monkeypatch):
         sp = s.get(Space, sid)
         sp.data = {**sp.data, "tg_user": "77889900"}
     response = c.post("/api/v1/telegram/auth", json={"initData": init_data(token)})
-    assert response.json()["onboarding_required"] is True
-    assert c.get("/api/v1/bootstrap").status_code in (401, 403)
+    assert response.status_code == 200 and response.json()["id"] == sid
+    assert c.get("/api/v1/bootstrap").status_code == 200
     assert c.post("/api/v1/telegram/auth", json={"initData": init_data(token, age=601)}).status_code == 403
     assert c.post("/api/v1/telegram/auth", json={"initData": init_data(token, age=-60)}).status_code == 403
     assert c.post("/api/v1/telegram/auth", json={"initData": init_data("wrong-token")}).status_code == 403
@@ -259,23 +254,6 @@ def test_bot_message_edit_and_app_url(client):
     assert simulate({"update": update, "space": sid}) == result
 
 
-def test_cached_bot_reply_is_not_reused_after_consent_revoked(client):
-    from app.telegram import simulate
-    _, sid = client
-    with db() as s:
-        sp = s.get(Space, sid)
-        become(sp, "driver")
-    update = {"update_id": "cached-private-balance", "callback_query": {"id": "cb", "from": {"id": "web:" + sid},
-        "message": {"message_id": "balance-message", "chat": {"id": 0, "type": "private"}}, "data": "d:balance"}}
-    initial = simulate({"update": update, "space": sid})
-    with db() as s:
-        sp = s.get(Space, sid)
-        sp.data = {k: v for k, v in sp.data.items() if k != "pd_consent"}
-    denied = simulate({"update": update, "space": sid})
-    assert denied != initial
-    assert any(b.get("data") == "pd:yes" for m in denied["messages"] for row in m["kb"] for b in row)
-
-
 def test_notification_rechecks_access_and_builds_scoped_link(client, monkeypatch):
     from types import SimpleNamespace
     from app import telegram, worker
@@ -303,8 +281,6 @@ def test_notification_rechecks_access_and_builds_scoped_link(client, monkeypatch
     assert sent[0][2] == "driver/tickets/" + own_id
     with db() as s:
         sp = s.get(Space, sid)
-        sp.data = {k: v for k, v in sp.data.items() if k != "pd_consent"}
-    assert worker.notify(job(own_id))["telegram"] == "onboarding_required"
     assert len(sent) == 1
 
 

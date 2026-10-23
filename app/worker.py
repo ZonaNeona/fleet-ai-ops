@@ -13,8 +13,6 @@ def notify(job):
         sp = s.get(Space, job.space)
         if not sp or not os.getenv("TELEGRAM_BOT_TOKEN") or not sp.data.get("tg_chat"):
             return {"channel": "in_app", "telegram": "not_linked"}
-        if not sp.data.get("pd_consent") or not sp.data.get("tg_role_chosen"):
-            return {"telegram": "onboarding_required"}
         if job.data.get("via") == "telegram":
             return {"telegram": "answered_in_chat"}
         if job.data.get("target"):

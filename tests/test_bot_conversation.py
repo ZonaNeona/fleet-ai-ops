@@ -6,12 +6,11 @@ from app import telegram
 from tests.test_integration import client
 
 
-def setup_driver(sid, *, consent=True, chosen=True, wait=None):
+def setup_driver(sid, *, wait=None):
     with db() as s:
         sp = s.get(Space, sid)
         sp.role = 'driver'
-        sp.data = {**sp.data, 'pd_consent': {'version': 'test'} if consent else None,
-                   'tg_role_chosen': chosen, 'tg_wait': wait}
+        sp.data = {**sp.data, 'tg_wait': wait}
 
 
 def update(sid, key, text=None, callback=None):
@@ -52,16 +51,17 @@ def test_price_question_after_ticket_prompt_goes_to_ai(client, monkeypatch, navi
     assert tickets(sid) == before
 
 
-@pytest.mark.parametrize('consent,chosen', [(False, False), (True, False)])
-def test_unfinished_onboarding_neither_calls_model_nor_creates_ticket(client, monkeypatch, consent, chosen):
+def test_start_offers_roles_without_registration(client):
     _, sid = client
-    setup_driver(sid, consent=consent, chosen=chosen, wait='ticket')
-    def unexpected(*args):
-        pytest.fail('Incomplete onboarding must not send user text to AI')
-    monkeypatch.setattr(telegram, 'agent_message', unexpected)
-    before = tickets(sid)
-    result = update(sid, 'onboarding-question', text='сколько стоит машина')
-    assert result['messages'] and tickets(sid) == before
+    setup_driver(sid)
+    result = update(sid, 'start', text='/start')
+    buttons = [b['data'] for m in result['messages'] for row in m['kb'] for b in row]
+    assert 'role:driver' in buttons and 'role:owner' in buttons
+    assert not any(b.startswith('pd:') for b in buttons)
+    menu = update(sid, 'pick-client', callback='role:client')
+    with db() as s:
+        assert s.get(Space, sid).role == 'client'
+    assert 'Клиент проката' in menu['messages'][0]['text']
 
 
 def test_model_failure_is_an_answer_not_a_service_request(client, monkeypatch):
@@ -127,7 +127,6 @@ def test_owner_morning_digest(client):
     with db() as s:
         sp = s.get(Space, sid)
         sp.role = 'owner'
-        sp.data = {**sp.data, 'pd_consent': {'version': 'test'}, 'tg_role_chosen': True}
     reply = update(sid, 'digest', callback='o:digest')
     text = reply['messages'][0]['text']
     assert 'Утренняя сводка' in text and 'Долг' in text

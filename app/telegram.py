@@ -26,9 +26,6 @@ from aiogram.types import (
     BufferedInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
     WebAppInfo,
 )
 from fastapi import HTTPException
@@ -139,21 +136,6 @@ async def _deliver(chat, messages, callback_id=None):
         delivered = []
         for m in messages:
             markup = m.get("kb")
-            if m.get("reply") == "contact":
-                # запрос номера возможен только reply-клавиатурой, не inline
-                markup = ReplyKeyboardMarkup(
-                    keyboard=[
-                        [
-                            KeyboardButton(
-                                text="📱 Поделиться номером", request_contact=True
-                            )
-                        ]
-                    ],
-                    resize_keyboard=True,
-                    one_time_keyboard=True,
-                )
-            elif m.get("reply") == "remove":
-                markup = ReplyKeyboardRemove()
             if m.get("photo"):
                 raw = car_jpeg(m["photo"])
                 if raw:
@@ -175,7 +157,7 @@ async def _deliver(chat, messages, callback_id=None):
                 )
                 delivered.append(sent.message_id)
                 continue
-            if m.get("edit_target") and not m.get("reply"):
+            if m.get("edit_target"):
                 try:
                     sent = await bot.edit_message_text(chat_id=chat, message_id=int(m["edit_target"]),
                         text=m["text"][:4000], parse_mode="HTML", reply_markup=markup, disable_web_page_preview=True)
@@ -224,7 +206,8 @@ async def photo_bytes(file_id):
 def role_picker(prefix=""):
     return {
         "text": prefix
-        + "Кто вы? Бот один, а возможности у каждого свои — как в настоящем парке.\n\n"
+        + "Это бот учебного таксопарка. Выберите, кем зайти: у водителя, клиента проката, сотрудника "
+        "и собственника свои кнопки и права. Роль можно сменить в любой момент — /roles.\n\n"
         + f"<i>{DISCLAIMER}</i>",
         "kb": kb(
             [("🚕 Я водитель", "role:driver"), ("🔑 Я клиент проката", "role:client")],
@@ -247,151 +230,6 @@ def staff_picker():
             [("← Назад", "roles")],
         ),
     }
-
-
-# ───────────────────────── ПДн и онбординг ─────────────────────────
-# Демо: согласие (152-ФЗ) → «Поделиться номером» → роль из учёта; сотрудники — по коду.
-# Номер не храним в открытом виде: только солёный хеш и маска для показа.
-
-PD_VERSION = "2026-10-demo"
-INVITES = {
-    "MANAGER-2026": "manager",
-    "SERVICE-2026": "service",
-    "FINANCE-2026": "finance",
-}
-
-
-def consent_msg():
-    return {
-        "text": "Здравствуйте! Это бот таксопарка: водители, клиенты проката и сотрудники отделов.\n\n"
-        "<b>Согласие на обработку персональных данных</b> (152-ФЗ). Чтобы определить вашу роль и связываться "
-        "по заявкам, бот обрабатывает: Telegram ID, номер телефона (только по вашей кнопке «Поделиться»), "
-        "сообщения и фото по заявкам. Цель — работа с договором и обращениями; срок — до отзыва согласия. "
-        "Отозвать и удалить данные: /delete_me. Посмотреть, что хранится: /privacy.\n\n"
-        f"<i>{DISCLAIMER}</i>",
-        "kb": kb([("✅ Согласен", "pd:yes"), ("✖ Не согласен", "pd:no")]),
-    }
-
-
-def identify_msgs():
-    return [
-        {
-            "text": "Спасибо. Поделитесь номером — найду вас в учёте парка и открою нужное меню.",
-            "reply": "contact",
-        },
-        {
-            "text": "Или другой способ:",
-            "kb": kb(
-                [("🧰 Я сотрудник — ввести код", "id:staff")],
-                [("🎭 Демо: выбрать роль вручную", "roles")],
-            ),
-        },
-    ]
-
-
-def digits(phone):
-    return re.sub(r"\D", "", phone or "")
-
-
-def mask_phone(phone):
-    d = digits(phone)
-    return f"+{d[:1]} *** ***-{d[-4:-2]}-{d[-2:]}" if len(d) >= 6 else "—"
-
-
-def phone_hash(sp, phone):
-    return hashlib.sha256(f"phone:{sp.id}:{digits(phone)}".encode()).hexdigest()
-
-
-def privacy_msg(sp):
-    pd = sp.data.get("pd_consent")
-    rows = [
-        f"Роль: <b>{ROLES.get(sp.role, sp.role)}</b>",
-        "Согласие: "
-        + (
-            f"дано {pd['at'][:16].replace('T', ' ')} (версия {pd['version']})"
-            if pd
-            else "не дано"
-        ),
-        "Телефон: "
-        + (sp.data.get("phone_mask") or "не передавался")
-        + (" · хранится как хеш" if sp.data.get("phone_hash") else ""),
-        "Telegram ID: " + ("привязан" if sp.data.get("tg_user") else "—"),
-    ]
-    return {
-        "text": "<b>Ваши данные в боте</b>\n"
-        + "\n".join(rows)
-        + "\n\nФото и сообщения по заявкам хранятся в карточке заявки. Учебный стенд: в промышленной версии — "
-        "журнал согласий, срок хранения и маскирование ПДн в ответах AI.",
-        "kb": kb(
-            [("🗑 Отозвать согласие и удалить данные", "pd:delete")],
-            [("← Меню", "menu")],
-        ),
-    }
-
-
-def match_contact(s, sp, phone):
-    """Роль по номеру из учёта: водитель / клиент пространства."""
-    for role in ("driver", "client"):
-        pid = sp.data.get(role)
-        person = s.get(Item, pid) if pid else None
-        if person and digits(person.data.get("phone")) == digits(phone):
-            return role, person.data.get("name", "")
-    return None, ""
-
-
-def on_contact(s, sp, contact, user):
-    if str(contact.get("user_id")) != str(user["id"]):
-        return [
-            {
-                "text": "Нужен ваш собственный номер — нажмите кнопку «Поделиться номером».",
-                "reply": "contact",
-            }
-        ]
-    if not sp.data.get("pd_consent"):
-        return [consent_msg()]
-    phone = contact.get("phone_number", "")
-    role, name = match_contact(s, sp, phone)
-    mask = mask_phone(phone)
-    sp.data = {**sp.data, "phone_hash": phone_hash(sp, phone), "phone_mask": mask}
-    if role:
-        sp.role = role
-        sp.data = {**{k: v for k, v in sp.data.items() if k != "tg_wait"}, "tg_role_chosen": True}
-        return [
-            {
-                "text": f"Нашёл вас в учёте: <b>{esc(name)}</b> · {ROLES[role]}.\n"
-                f"Номер {mask} сохранён только в виде хеша.",
-                "reply": "remove",
-            },
-            menu(sp),
-        ]
-    return [
-        {
-            "text": f"Номер {mask} не найден в учёте парка. В рабочем продукте менеджер добавит вас "
-            "по заявке. В демо выберите роль вручную.",
-            "reply": "remove",
-        },
-        role_picker(),
-    ]
-
-
-def on_invite(sp, code):
-    role = INVITES.get(code.strip().upper())
-    if not role:
-        return [
-            {
-                "text": "Код не подошёл. Проверьте и введите ещё раз или вернитесь назад.",
-                "kb": kb([("← Назад", "roles")]),
-            }
-        ]
-    sp.role = role
-    sp.data = {
-        **{k: v for k, v in sp.data.items() if k != "tg_wait"},
-        "tg_role_chosen": True,
-    }
-    return [
-        {"text": f"Код принят: <b>{ROLES[role]}</b>. Права — только этого отдела."},
-        menu(sp),
-    ]
 
 
 def menu(sp):
@@ -434,7 +272,7 @@ def menu(sp):
     }.get(role, [])
     return {
         "text": title,
-        "kb": kb(*rows, [("🔐 Мои данные", "pd:info"), ("🔄 Сменить роль", "roles")]),
+        "kb": kb(*rows, [("🔄 Сменить роль", "roles")]),
     }
 
 
@@ -1160,7 +998,7 @@ def handle(data, space_id=None):
         # A voice note becomes ordinary text before anything else: same routing, same consent rules.
         with db() as s:
             sp0 = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(user["id"])))
-            ready = bool(sp0 and sp0.data.get("pd_consent") and sp0.data.get("tg_role_chosen"))
+            ready = bool(sp0)
             sid0 = sp0.id if sp0 else None
         if ready and (m["voice"].get("duration") or 0) <= 120:
             try:
@@ -1171,7 +1009,7 @@ def handle(data, space_id=None):
             except Exception as e:
                 voice_error = "Не получилось распознать голосовое: " + str(e)[:160]
         else:
-            voice_error = "Голосовые принимаются после согласия и выбора роли, до двух минут."
+            voice_error = "Голосовые принимаются длиной до двух минут."
     triage = None
     ctx = None
     text_in = (m.get("text") or "").strip() if not cb else ""
@@ -1191,14 +1029,11 @@ def handle(data, space_id=None):
                     sp0.id,
                     sp0.role,
                     sp0.data.get("tg_wait"),
-                    bool(sp0.data.get("pd_consent")),
-                    bool(sp0.data.get("tg_role_chosen")),
                 )
                 if sp0
                 else None
             )
-        # без согласия на ПДн текст в модель не отправляем
-        if ctx and ctx[1] in ROLES and ctx[2] != "invite" and ctx[3] and ctx[4]:
+        if ctx and ctx[1] in ROLES:
             triage = agent_message(ctx[0], ctx[1], text_in, key)
     with db() as s:
         if space_id:
@@ -1210,15 +1045,7 @@ def handle(data, space_id=None):
         reply_key = "botreply:" + str(data["update_id"])
         cached = s.scalar(select(Receipt).where(Receipt.space == sp.id, Receipt.key == reply_key))
         if cached:
-            same_context = (
-                cached.result["role"] == sp.role
-                and cached.result.get("consent") == bool(sp.data.get("pd_consent"))
-                and cached.result.get("chosen") == bool(sp.data.get("tg_role_chosen"))
-            )
-            restored = thaw_reply(cached.result["messages"]) if same_context else (
-                [consent_msg()] if not sp.data.get("pd_consent") else
-                [role_picker()] if not sp.data.get("tg_role_chosen") else [menu(sp)]
-            )
+            restored = thaw_reply(cached.result["messages"]) if cached.result["role"] == sp.role else [menu(sp)]
             return chat["id"], restored, (cb.get("id") if cb else None), sp.role
         received = s.scalar(
             select(Event.id).where(
@@ -1254,107 +1081,15 @@ def handle(data, space_id=None):
             act, _, arg = rest.partition(":")
             if action == "roles":
                 out = [role_picker()]
-            elif action == "pd:yes":
-                sp.data = {
-                    **sp.data,
-                    "pd_consent": {"at": now().isoformat(), "version": PD_VERSION},
-                }
-                s.add(
-                    Event(
-                        space=sp.id,
-                        title="Бот: получено согласие на обработку ПДн",
-                        role=sp.role,
-                        data={"channel": "telegram", "consent": PD_VERSION},
-                    )
-                )
-                out = (
-                    [{"text": "Согласие сохранено. Продолжим."}, menu(sp)]
-                    if sp.data.get("tg_role_chosen")
-                    else identify_msgs()
-                )
-            elif action == "pd:no":
-                out = [
-                    {
-                        "text": "Понимаю. Без согласия бот не обрабатывает персональные данные: можно посмотреть "
-                        "демо без личных данных или вернуться позже.",
-                        "kb": kb(
-                            [("✅ Передумал — согласен", "pd:yes")],
-                            [("🎭 Демо без личных данных", "roles")],
-                        ),
-                    }
-                ]
-            elif action == "pd:info":
-                out = [privacy_msg(sp)]
-            elif action == "pd:delete":
-                out = [
-                    {
-                        "text": "Удалить согласие, номер и привязку Telegram? Действие необратимо.",
-                        "kb": kb(
-                            [("🗑 Да, удалить", "pd:delete_yes")], [("← Отмена", "menu")]
-                        ),
-                    }
-                ]
-            elif action == "pd:delete_yes":
-                drop = (
-                    "pd_consent",
-                    "phone_hash",
-                    "phone_mask",
-                    "tg_wait",
-                    "tg_role_chosen",
-                    "tg_last",
-                )
-                if space_id:
-                    # эмулятор: веб-сессию не трогаем, стираем только данные бота
-                    sp.data = {k: v for k, v in sp.data.items() if k not in drop}
-                    s.add(
-                        Event(
-                            space=sp.id,
-                            title="Бот: согласие отозвано, данные бота удалены",
-                            role=sp.role,
-                            data={"channel": "telegram"},
-                        )
-                    )
-                else:
-                    # Telegram: личное пространство пользователя удаляется целиком
-                    # (заявки, фото, договоры, привязка); файлы чистит воркер
-                    s.add(Job(kind="cleanup_files", data={"space": sp.id}, result={}))
-                    s.delete(sp)
-                out = [
-                    {
-                        "text": "Данные удалены, согласие отозвано. Чтобы начать заново — /start."
-                    }
-                ]
-            elif action == "id:staff":
-                sp.data = {**sp.data, "tg_wait": "invite"}
-                out = [
-                    {
-                        "text": "Введите код приглашения от руководителя.\n\n<i>Демо-коды: MANAGER-2026, "
-                        "SERVICE-2026, FINANCE-2026</i>",
-                        "kb": kb([("← Назад", "roles")]),
-                    }
-                ]
             elif action == "staff":
                 out = [staff_picker()]
             elif head == "role" and act in ROLES:
                 sp.role = act
-                sp.data = {
-                    **{k: v for k, v in sp.data.items() if k != "tg_wait"},
-                    "tg_role_chosen": True,
-                }
+                sp.data = {k: v for k, v in sp.data.items() if k != "tg_wait"}
                 out = [
-                    {
-                        "text": f"Вы вошли как <b>{ROLES[act]}</b>. Данные и права — только этой роли.",
-                        "reply": "remove",
-                    },
+                    {"text": f"Вы вошли как <b>{ROLES[act]}</b>. Данные и права — только этой роли."},
                     menu(sp),
                 ]
-            elif head in ("agentconfirm", "d", "c", "m", "s", "f", "o") and not sp.data.get(
-                "pd_consent"
-            ):
-                # личные данные роли (баланс, договор, заявки) — только после согласия на ПДн
-                out = [consent_msg()]
-            elif head in ("agentconfirm", "d", "c", "m", "s", "f", "o") and not sp.data.get("tg_role_chosen"):
-                out = [role_picker("Сначала выберите роль.\n\n")]
             elif head == "agentconfirm":
                 from .agent import confirm
 
@@ -1384,33 +1119,8 @@ def handle(data, space_id=None):
                 out = [menu(sp)]
         else:
             text = (m.get("text") or m.get("caption") or "").strip()
-            consent = bool(sp.data.get("pd_consent"))
-            if m.get("contact"):
-                out = on_contact(s, sp, m["contact"], user)
-            elif (
-                sp.data.get("tg_wait") == "invite" and text and not text.startswith("/")
-            ):
-                out = on_invite(sp, text)
-            elif created or text.startswith("/start"):
-                out = ([menu(sp)] if sp.data.get("tg_role_chosen") else identify_msgs()) if consent else [consent_msg()]
-            elif text in ("/role", "/roles"):
+            if created or text.startswith("/start") or text in ("/role", "/roles"):
                 out = [role_picker()]
-            elif text == "/privacy":
-                out = [privacy_msg(sp)]
-            elif text == "/delete_me":
-                out = [
-                    {
-                        "text": "Удалить согласие, номер и привязку Telegram? Действие необратимо.",
-                        "kb": kb(
-                            [("🗑 Да, удалить", "pd:delete_yes")], [("← Отмена", "menu")]
-                        ),
-                    }
-                ]
-            elif not consent and ((text and not text.startswith("/")) or raw):
-                # свободный текст и фото — только после согласия на обработку ПДн
-                out = [consent_msg()]
-            elif not sp.data.get("tg_role_chosen"):
-                out = identify_msgs() if consent else [consent_msg()]
             elif text in ("/menu", "/help"):
                 out = [menu(sp)]
             elif text in ("/balance",) and sp.role == "driver":
@@ -1465,12 +1175,12 @@ def handle(data, space_id=None):
         role = sp.role
         for i, message in enumerate(out):
             message["id"] = str(data["update_id"]) + ":" + str(i)
-        if cb and m.get("message_id") and out and not any(out[0].get(k) for k in ("photo", "document", "reply")):
+        if cb and m.get("message_id") and out and not any(out[0].get(k) for k in ("photo", "document")):
             out[0]["edit_target"] = str(m["message_id"])
             out[0]["id"] = str(m["message_id"])
         if sp not in s.deleted:
             s.add(Receipt(space=sp.id, key=reply_key, result={"messages": freeze_reply(out), "role": role,
-                "consent": bool(sp.data.get("pd_consent")), "chosen": bool(sp.data.get("tg_role_chosen"))}))
+}))
     return chat_id, out, (cb.get("id") if cb else None), role
 
 
@@ -1502,8 +1212,6 @@ def _as_json(m):
             ]
         )
     out = {"text": m.get("text", ""), "kb": rows, "id": m.get("id"), "edit_target": m.get("edit_target")}
-    if m.get("reply"):
-        out["reply"] = m["reply"]
     # фото — только если файл реально есть в статике (в старых пространствах путь мог устареть)
     if m.get("photo") and any(
         (base / m["photo"].lstrip("/")).is_file()

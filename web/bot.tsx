@@ -37,8 +37,6 @@ type Msg = {
   kb?: Btn[][];
   photo?: string;
   document?: { name: string; size: number; data?: string };
-  /** reply-клавиатура Telegram: "contact" — кнопка «Поделиться номером», "remove" — убрать */
-  reply?: "contact" | "remove";
   at: number;
 };
 
@@ -217,7 +215,6 @@ export function BotPage({
   async function send(payload: {
     text?: string;
     callback?: string;
-    contact?: boolean;
     message_id?: string;
     voice?: boolean;
   }) {
@@ -227,11 +224,6 @@ export function BotPage({
       setMsgs((m) => [
         ...m,
         { from: "me", text: (payload.voice ? "🎤 " : "") + payload.text!, at: Date.now() },
-      ]);
-    if (payload.contact)
-      setMsgs((m) => [
-        ...m,
-        { from: "me", text: "📱 Поделился номером", at: Date.now() },
       ]);
     setPending(true);
     try {
@@ -279,10 +271,6 @@ export function BotPage({
       setPending(false);
     }
   }
-  // последняя reply-клавиатура, присланная ботом
-  const replyKb = [...msgs]
-    .reverse()
-    .find((m) => m.from === "bot" && m.reply)?.reply;
   const press = (b: Btn, messageId?: string) => {
     if (b.app) {
       if (!["client", "driver"].includes(data.session.role))
@@ -369,10 +357,8 @@ export function BotPage({
               в очереди: ответ не теряется при перезапуске.
             </li>
             <li>
-              <KeyRound size={15} /> Онбординг: согласие на обработку ПДн
-              (152-ФЗ) → «Поделиться номером» → роль из учёта; сотрудники — по
-              коду приглашения. Номер хранится только хешем, /privacy и
-              /delete_me — у каждого.
+              <KeyRound size={15} /> Без регистрации: /start → выбор роли. У
+              водителя, клиента, отделов и собственника свои кнопки и права.
             </li>
             <li>
               <ShieldCheck size={15} /> Роль и права проверяет сервер; действия
@@ -494,20 +480,6 @@ export function BotPage({
             )}
             {error && <div className="tg-error">{error}</div>}
           </div>
-          {replyKb === "contact" && (
-            <div className="tg-reply-kb">
-              <button
-                onClick={() => send({ contact: true })}
-                disabled={pending}
-              >
-                📱 Поделиться номером
-              </button>
-              <small>
-                В эмуляторе «вашим» номером считается номер демо-водителя из
-                учёта
-              </small>
-            </div>
-          )}
           {msgs.length ? (
             <form
               className="tg-input"
