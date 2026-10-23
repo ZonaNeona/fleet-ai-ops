@@ -1154,6 +1154,23 @@ def handle(data, space_id=None):
         if (not cb and m.get("photo") and not space_id)
         else None
     )
+    heard, voice_error = None, None
+    if not cb and m.get("voice") and not space_id:
+        # A voice note becomes ordinary text before anything else: same routing, same consent rules.
+        with db() as s:
+            sp0 = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(user["id"])))
+            ready = bool(sp0 and sp0.data.get("pd_consent") and sp0.data.get("tg_role_chosen"))
+            sid0 = sp0.id if sp0 else None
+        if ready and (m["voice"].get("duration") or 0) <= 120:
+            try:
+                from .voice import transcribe
+
+                heard = transcribe(sid0, asyncio.run(photo_bytes(m["voice"]["file_id"])))
+                m = {**m, "text": heard["text"]}
+            except Exception as e:
+                voice_error = "Не получилось распознать голосовое: " + str(e)[:160]
+        else:
+            voice_error = "Голосовые принимаются после согласия и выбора роли, до двух минут."
     triage = None
     ctx = None
     text_in = (m.get("text") or "").strip() if not cb else ""
@@ -1435,6 +1452,10 @@ def handle(data, space_id=None):
                 out = [{"text": "Не удалось получить ответ помощника. Повторите вопрос или откройте кабинет. Заявка не создавалась.", "kb": back(sp)}]
             else:
                 out = [menu(sp)]
+        if heard and out and out[0].get("text"):
+            out[0]["text"] = f"🎤 <i>«{esc(heard['text'][:300])}»</i>\n\n" + out[0]["text"]
+        elif voice_error:
+            out = [{"text": "🎤 " + esc(voice_error), "kb": back(sp)}]
         chat_id = chat["id"]
         role = sp.role
         for i, message in enumerate(out):

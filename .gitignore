@@ -25,3 +25,4 @@ REVISION
 reports/
 .stage-*
 .pack-list
+.cache/

@@ -489,3 +489,7 @@
   font-size: 11px;
   text-align: center;
 }
+
+/* Голосовое в эмуляторе */
+.tg-mic.on { background: #e5484d; animation: tg-rec 1.2s ease-in-out infinite; }
+@keyframes tg-rec { 50% { box-shadow: 0 0 0 6px rgba(229, 72, 77, 0.25); } }

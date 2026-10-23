@@ -136,7 +136,7 @@ def main():
                 )
                 if j:
                     # Never blindly repeat an AI request with an ambiguous billable outcome.
-                    if j.state == "running" and j.kind == "ai":
+                    if j.state == "running" and j.kind in ("ai", "call"):
                         j.state = "failed"
                         j.result = {
                             "error": "Обработка прервана. Расход зарезервирован; повторите запрос вручную."
@@ -171,6 +171,10 @@ def main():
                     from .inbox import run_job
 
                     result = run_job(j)
+                elif j.kind == "call":
+                    from .calls import review
+
+                    result = {"score": review(j.space, j.data["call"])["score"]}
                 elif j.kind == "cleanup_files":
                     sid = j.data.get("space", "")
                     folder = (FILES / sid).resolve()
@@ -205,7 +209,7 @@ def main():
                         }
                         current.state = (
                             "failed"
-                            if j.kind == "ai" or current.attempts >= 3
+                            if j.kind in ("ai", "call") or current.attempts >= 3
                             else "pending"
                         )
                         current.due = now() + timedelta(seconds=10 * current.attempts)

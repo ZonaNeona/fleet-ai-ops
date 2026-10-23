@@ -5,6 +5,8 @@ import {
   CarFront,
   Send,
   Paperclip,
+  Mic,
+  Square,
   FileText,
   Bot as BotIcon,
   CarTaxiFront,
@@ -107,6 +109,40 @@ export function BotPage({
   });
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
+  const [recording, setRecording] = useState<MediaRecorder | null>(null);
+  // Microphone: the recording goes through the same speech-to-text as Telegram voice notes, then as a message.
+  async function voice() {
+    if (recording) {
+      recording.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const parts: Blob[] = [];
+      rec.ondataavailable = (e) => parts.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(null);
+        const form = new FormData();
+        form.append("file", new Blob(parts, { type: rec.mimeType }), "voice.webm");
+        setPending(true);
+        try {
+          const r = await api<{ text: string }>("/voice", { method: "POST", body: form });
+          setPending(false);
+          await send({ text: r.text, voice: true });
+        } catch (e: any) {
+          setPending(false);
+          setError(e.message);
+        }
+      };
+      rec.start();
+      setRecording(rec);
+      setTimeout(() => rec.state === "recording" && rec.stop(), 60000);
+    } catch {
+      setError("Нет доступа к микрофону");
+    }
+  }
   const [error, setError] = useState("");
   const feed = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -183,13 +219,14 @@ export function BotPage({
     callback?: string;
     contact?: boolean;
     message_id?: string;
+    voice?: boolean;
   }) {
     if (pending) return;
     setError("");
     if (payload.text)
       setMsgs((m) => [
         ...m,
-        { from: "me", text: payload.text!, at: Date.now() },
+        { from: "me", text: (payload.voice ? "🎤 " : "") + payload.text!, at: Date.now() },
       ]);
     if (payload.contact)
       setMsgs((m) => [
@@ -198,9 +235,10 @@ export function BotPage({
       ]);
     setPending(true);
     try {
+      const { voice: _voice, ...body } = payload;
       const { id } = await api("/bot/sim", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       for (let i = 0; i < 120; i++) {
         await new Promise((r) => setTimeout(r, i < 5 ? 400 : 900));
@@ -503,9 +541,21 @@ export function BotPage({
                   <Send size={18} />
                 </button>
               ) : (
-                <span className="tg-clip" title="Фото — в настоящем боте">
-                  <Paperclip size={19} />
-                </span>
+                <>
+                  <span className="tg-clip" title="Фото — в настоящем боте">
+                    <Paperclip size={19} />
+                  </span>
+                  <button
+                    type="button"
+                    className={"tg-send tg-mic" + (recording ? " on" : "")}
+                    aria-label={recording ? "Остановить запись" : "Голосовое сообщение"}
+                    title={recording ? "Остановить и отправить" : "Голосовое: распознаётся Whisper и уходит боту текстом"}
+                    disabled={pending}
+                    onClick={voice}
+                  >
+                    {recording ? <Square size={16} /> : <Mic size={18} />}
+                  </button>
+                </>
               )}
             </form>
           ) : (

@@ -1,0 +1,58 @@
+/* Звонки диспетчерской */
+.cl { display: grid; gap: 14px; }
+.cl-loading { display: flex; gap: 10px; align-items: center; color: var(--text-3); padding: 40px 0; }
+.cl-intro {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+  font-size: 13.5px; color: var(--text-2); line-height: 1.5;
+}
+.cl-intro b { color: var(--text); }
+.cl-avg { display: grid; justify-items: center; }
+.cl-avg b { font-size: 28px; font-variant-numeric: tabular-nums; }
+.cl-avg span { font-size: 11.5px; color: var(--text-3); }
+.good { color: var(--green); }
+.mid { color: var(--accent-text); }
+.bad { color: var(--red-text); }
+
+.cl-grid { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.cl-list { display: grid; gap: 8px; }
+.cl-row {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px;
+  border-radius: 12px; background: var(--surface); border: 1px solid var(--line); text-align: left; color: var(--text); cursor: pointer;
+}
+.cl-row.active { border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cl-score {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 15px;
+  background: var(--surface-3); font-variant-numeric: tabular-nums;
+}
+.cl-row-main { display: grid; gap: 2px; }
+.cl-row-main small { color: var(--text-3); font-size: 12px; }
+
+.cl-doc { display: grid; gap: 14px; padding: 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); min-width: 0; }
+.cl-doc header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.cl-doc header small { color: var(--text-3); font-size: 12px; }
+.cl-doc h2 { margin: 2px 0 0; font-size: 20px; }
+.cl-big { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cl-audio { width: 100%; }
+.cl-empty { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 13.5px; }
+.cl-error { width: 100%; margin: 0; color: var(--red-text); font-size: 13px; }
+.cl-summary { margin: 0; font-size: 14px; line-height: 1.55; }
+.cl-advice { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 13.5px; }
+.cl-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cl-items li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.cl-items li div { display: grid; gap: 3px; font-size: 13px; }
+.cl-items li small { color: var(--text-3); font-weight: 500; }
+.cl-items li span { color: var(--text-2); }
+.cl-items li q { color: var(--text-3); font-style: italic; }
+.cl-items li.supported svg { color: var(--green); }
+.cl-items li.partial svg { color: var(--accent-text); }
+.cl-items li.not_found svg { color: var(--red); }
+.cl-items li.not_applicable { opacity: 0.6; }
+.cl-transcript summary { cursor: pointer; font-size: 13px; color: var(--text-2); }
+.cl-transcript p { font-size: 13px; line-height: 1.6; color: var(--text-2); }
+.cl-meta { margin: 0; font-size: 12px; color: var(--text-3); }
+
+@media (max-width: 980px) {
+  .cl-grid { grid-template-columns: 1fr; }
+  .cl-intro { grid-template-columns: 1fr; }
+}

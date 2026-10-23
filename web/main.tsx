@@ -35,6 +35,7 @@ import {
   LogOut,
   FileInput,
   Handshake,
+  PhoneCall,
 } from "lucide-react";
 import {
   api,
@@ -89,6 +90,7 @@ const GlobalSearch = pick(() => import("./search"), "GlobalSearch");
 const BotPage = pick(() => import("./bot"), "BotPage");
 const InboxPage = pick(() => import("./inbox"), "InboxPage");
 const CrmPage = pick(() => import("./crm"), "CrmPage");
+const CallsPage = pick(() => import("./calls"), "CallsPage");
 const UnderShell = pick(() => import("./under/UnderShell"), "UnderShell");
 const MiniApp = pick(() => import("./tg/MiniApp"), "MiniApp");
 const prefetch = () => {
@@ -108,6 +110,7 @@ const nav = [
   ["service", "Заявки и сервис", Wrench],
   ["inbox", "Документы", FileInput],
   ["crm", "CRM · Битрикс24", Handshake],
+  ["calls", "Звонки", PhoneCall],
   ["finance", "Финансы", Wallet],
   ["analytics", "Аналитика", ChartNoAxesCombined],
   ["bot", "Telegram-бот", Send],
@@ -425,7 +428,8 @@ function App() {
         n[0] !== "inbox" ||
         ["owner", "admin", "finance", "manager", "service"].includes(data.session.role),
     )
-    .filter((n) => n[0] !== "crm" || ["owner", "admin", "finance", "manager"].includes(data.session.role));
+    .filter((n) => n[0] !== "crm" || ["owner", "admin", "finance", "manager"].includes(data.session.role))
+    .filter((n) => n[0] !== "calls" || ["owner", "admin", "manager"].includes(data.session.role));
   if (mode === "under")
     return (
       <Suspense
@@ -615,6 +619,7 @@ function App() {
                       inbox:
                         "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
                       crm: "Найм водителей и заявки на прокат из Битрикс24 — и сверка оплат с учётом.",
+                      calls: "Запись → расшифровка → разбор по чек-листу диспетчера.",
                       finance: "Каждая сумма имеет источник и основание.",
                       analytics:
                         "Разбирайтесь в результате до отдельной операции.",
@@ -659,7 +664,7 @@ function App() {
           </div>
           <div
             className="filterbar"
-            style={["bot", "inbox", "crm"].includes(page) ? { display: "none" } : undefined}
+            style={["bot", "inbox", "crm", "calls"].includes(page) ? { display: "none" } : undefined}
           >
             <div className="segment">
               <button
@@ -751,6 +756,7 @@ function App() {
             {page === "contracts" && <Contracts {...common} />}
             {page === "service" && <Service {...common} />}
             {page === "crm" && <CrmPage data={data} open={open} toast={setToast} />}
+            {page === "calls" && <CallsPage toast={setToast} />}
             {page === "inbox" && (
               <InboxPage
                 data={data}
