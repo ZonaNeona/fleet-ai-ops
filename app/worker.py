@@ -39,6 +39,22 @@ def notify(job):
     return {"telegram": "sent"}
 
 
+def morning_digest():
+    """09:00 MSK: the owner's digest to every space linked to Telegram, once a day."""
+    if not os.getenv("TELEGRAM_BOT_TOKEN"):
+        return
+    from .digest import build, due_spaces
+    from .telegram import _deliver, kb
+
+    with db() as s:
+        targets = [(sp.data["tg_chat"], build(s, sp)) for sp in due_spaces(s)]
+    for chat, text in targets:
+        try:
+            asyncio.run(_deliver(chat, [{"text": text, "kb": kb([("📊 Дашборд", "web")])}]))
+        except Exception as e:
+            print("digest failed", type(e).__name__, flush=True)
+
+
 def maintenance():
     with db() as s:
         h = s.get(System, "worker")
@@ -117,6 +133,7 @@ def main():
         try:
             if time.monotonic() - last > 20:
                 maintenance()
+                morning_digest()
                 last = time.monotonic()
                 try:
                     with db() as s:

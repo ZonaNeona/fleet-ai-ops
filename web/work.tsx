@@ -1,0 +1,189 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  CalendarRange,
+  CircleCheck,
+  CircleDashed,
+  ExternalLink,
+  MessagesSquare,
+  PenTool,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
+import { api } from "./lib";
+import "./work.css";
+
+const GH = "https://github.com/ZonaNeona/fleet-ai-ops";
+const PATH = [
+  { icon: MessagesSquare, title: "Созвон", text: "Разбираем процесс: где теряются деньги и время, какие системы уже есть — Битрикс24, 1С, таблицы, Telegram.", result: "Список болей с цифрами" },
+  { icon: PenTool, title: "Схема", text: "Рисуем процесс «как есть» и «как будет» и отмечаем, где работает автоматизация, а где решает человек.", result: "Схема процесса в Miro" },
+  { icon: CalendarRange, title: "Смета", text: "Дорожная карта: этапы и задачи с оценкой и результатом простыми словами. Цена фиксируется до старта.", result: "Дорожная карта и цена" },
+  { icon: ShieldCheck, title: "Исполнение", text: "После каждого этапа — выкладка на ваш стенд и приёмка. Код в вашем репозитории, проверки в CI.", result: "Работающая система по этапам" },
+  { icon: Wrench, title: "Сопровождение", text: "Абонентское обслуживание: пакет часов в месяц на доработки и поддержку.", result: "Система растёт вместе с бизнесом" },
+];
+const RULES = [
+  ["Сначала только чтение", "К вашим системам подключаемся на чтение. Запись — только там, где вы её разрешили."],
+  ["ИИ не действует сам", "Всё, что меняет деньги и данные, — черновик или решение человека."],
+  ["Расходы под контролем", "У моделей суточный потолок, стоимость каждого вызова видна в трассе."],
+  ["Проверяемо", "У каждой задачи есть ссылка, где результат можно проверить самому."],
+];
+type Task = { title: string; outcome: string; status: "done" | "next"; check?: [string, string] };
+const STAGES: { code: string; title: string; date: string; tasks: Task[] }[] = [
+  {
+    code: "Э-0", title: "Фундамент и чистый репозиторий", date: "23.10.2026",
+    tasks: [
+      { title: "Нейтральные имена, чистка, новый публичный репозиторий", outcome: "Код открыт и не содержит чужих данных.", status: "done", check: ["GitHub", GH] },
+      { title: "CI: тесты на PostgreSQL + pgvector, сборка, gitleaks, приватные имена", outcome: "Каждое изменение проверяется автоматически.", status: "done", check: ["CI", GH + "/actions"] },
+      { title: "Выкладка одной командой с бэкапом и откатом", outcome: "Релиз занимает минуту и не ломает открытые вкладки.", status: "done", check: ["deploy.sh", GH + "/blob/main/scripts/deploy.sh"] },
+    ],
+  },
+  {
+    code: "Э-1", title: "Входящие документы на графе", date: "23.10.2026",
+    tasks: [
+      { title: "Граф LangGraph: распознавание → сверка → решение человека → проводка", outcome: "Штрафы, счета СТО и права кандидатов проводятся сами, если всё сошлось.", status: "done", check: ["Документы", "#app/inbox"] },
+      { title: "Сканы читает vision-модель, PDF с текстом — правила", outcome: "Фото из бота превращается в проводку.", status: "done", check: ["Граф под капотом", "#under/docs"] },
+    ],
+  },
+  {
+    code: "Э-2", title: "CRM: Битрикс24", date: "23.10.2026",
+    tasks: [
+      { title: "Воронки найма водителей и проката, лиды, журнал REST", outcome: "Видно, где зависли кандидаты и заявки.", status: "done", check: ["CRM", "#app/crm"] },
+      { title: "Сверка «оплачено в CRM ↔ деньги в учёте»", outcome: "Расхождения видны с суммой и договором.", status: "done", check: ["Сверка", "#app/crm"] },
+    ],
+  },
+  {
+    code: "Э-3", title: "Голос и звонки", date: "23.10.2026",
+    tasks: [
+      { title: "Голосовые в боте и микрофон эмулятора → Whisper", outcome: "Водитель может просто сказать, что случилось.", status: "done", check: ["Бот", "#app/bot"] },
+      { title: "Разбор звонков диспетчерской по чек-листу", outcome: "Балл и конкретный совет по каждому звонку.", status: "done", check: ["Звонки", "#app/calls"] },
+    ],
+  },
+  {
+    code: "Э-4", title: "MCP и измеренное качество", date: "23.10.2026",
+    tasks: [
+      { title: "MCP-сервер над инструментами агента", outcome: "Claude Desktop или Cursor работают с таксопарком через те же инструменты.", status: "done", check: ["MCP", "#under/mcp"] },
+      { title: "Качество поиска по эталонным вопросам в CI и при выкладке", outcome: "Точность поиска измерена, а не обещана.", status: "done", check: ["Качество", "#app/work"] },
+    ],
+  },
+  {
+    code: "Э-5", title: "Как мы работаем и сводка", date: "23.10.2026",
+    tasks: [
+      { title: "Утренняя сводка собственнику в Telegram", outcome: "Деньги вчера, долг, машины в минусе, что ждёт человека.", status: "done" },
+      { title: "Этот раздел: путь заказчика, дорожная карта, качество", outcome: "Процесс работы виден на примере самого стенда.", status: "done" },
+    ],
+  },
+];
+
+export function WorkPage() {
+  const [tab, setTab] = useState("path");
+  const quality = useQuery({ queryKey: ["quality"], queryFn: () => api<any>("/quality"), enabled: tab === "quality" });
+  const digest = useQuery({ queryKey: ["digest"], queryFn: () => api<any>("/digest"), enabled: tab === "quality" });
+  const r = quality.data?.retrieval;
+  const pct = (v: number) => Math.round(v * 100) + "%";
+
+  return (
+    <div className="wk">
+      <div className="list-toolbar">
+        <div className="tabs">
+          {[["path", "Путь заказчика"], ["roadmap", "Дорожная карта стенда"], ["quality", "Код и качество"]].map(([id, label]) => (
+            <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "path" && (
+        <>
+          <ol className="wk-path">
+            {PATH.map((p, i) => (
+              <li key={p.title}>
+                <div className="wk-path-top"><span><p.icon size={16} /></span><small>0{i + 1}</small></div>
+                <b>{p.title}</b>
+                <p>{p.text}</p>
+                <small className="wk-result">Результат: <b>{p.result}</b></small>
+              </li>
+            ))}
+          </ol>
+          <div className="wk-rules">
+            {RULES.map(([t, d]) => (
+              <div key={t}><b>{t}</b><span>{d}</span></div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === "roadmap" && (
+        <div className="wk-stages">
+          {STAGES.map((st) => (
+            <section key={st.code}>
+              <header><small>{st.code} · {st.date}</small><h3>{st.title}</h3></header>
+              {st.tasks.map((t) => (
+                <div className={"wk-task " + t.status} key={t.title}>
+                  {t.status === "done" ? <CircleCheck size={16} /> : <CircleDashed size={16} />}
+                  <div>
+                    <b>{t.title}</b>
+                    <span>{t.outcome}</span>
+                  </div>
+                  {t.check && (
+                    <a href={t.check[1]} target={t.check[1].startsWith("#") ? undefined : "_blank"} rel="noopener"
+                       onClick={(e) => { if (t.check![1].startsWith("#")) { e.preventDefault(); location.hash = t.check![1]; location.reload(); } }}>
+                      {t.check[0]} <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </section>
+          ))}
+          <p className="muted">Статус «готово» значит: код в репозитории и проходит CI. Каждый этап выкладывается на стенд и принимается отдельно.</p>
+        </div>
+      )}
+
+      {tab === "quality" && (
+        <div className="wk-quality">
+          <section>
+            <h3>Поиск по регламентам</h3>
+            {r ? (
+              <>
+                <div className="wk-kpis">
+                  <div><b>{pct(r.hit_at_1)}</b><span>нужный регламент первым</span></div>
+                  <div><b>{pct(r.hit_at_3)}</b><span>в первой тройке</span></div>
+                  <div><b>{pct(r.refusals)}</b><span>честных отказов вне базы</span></div>
+                  <div><b>{r.ms_avg} мс</b><span>в среднем на вопрос</span></div>
+                </div>
+                <p className="muted">{quality.data.method} Замер: {new Date(quality.data.at).toLocaleString("ru-RU")}, {quality.data.cases} вопросов.</p>
+                <details>
+                  <summary>Все вопросы</summary>
+                  <table>
+                    <tbody>
+                      {quality.data.rows.map((x: any) => (
+                        <tr key={x.question} className={x.hit3 ? "" : "bad"}>
+                          <td>{x.hit3 ? "✓" : "✗"}</td><td>{x.question}</td><td>{x.expected || "отказ"}</td><td>{x.found.join(", ") || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              </>
+            ) : (
+              <p className="muted">Отчёт появится после первой выкладки: он считается на сервере при каждом релизе.</p>
+            )}
+          </section>
+          <section>
+            <h3>Код</h3>
+            <ul className="wk-links">
+              <li><a href={GH} target="_blank" rel="noopener">Репозиторий на GitHub <ExternalLink size={12} /></a></li>
+              <li><a href={GH + "/actions"} target="_blank" rel="noopener">CI: тесты на PostgreSQL + pgvector, сборка, gitleaks <ExternalLink size={12} /></a></li>
+              <li><a href={GH + "/tree/main/docs/adr"} target="_blank" rel="noopener">Архитектурные решения (ADR) <ExternalLink size={12} /></a></li>
+              <li><a href={GH + "/blob/main/docs/DEMO.md"} target="_blank" rel="noopener">Сценарий показа <ExternalLink size={12} /></a></li>
+            </ul>
+          </section>
+          {digest.data?.text && (
+            <section>
+              <h3>Утренняя сводка собственнику · {digest.data.schedule}</h3>
+              <pre className="wk-digest" dangerouslySetInnerHTML={{ __html: digest.data.text.replace(/<(?!\/?b>)/g, "&lt;") }} />
+            </section>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

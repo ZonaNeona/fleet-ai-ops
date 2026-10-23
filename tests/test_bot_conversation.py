@@ -120,3 +120,15 @@ def test_driver_document_goes_to_incoming_graph(client):
         assert len(new) == 1 and new[0].data['source'] == 'bot' and new[0].data['file']
         assert not s.get(Space, sid).data.get('tg_wait')
     assert tickets(sid) == before
+
+
+def test_owner_morning_digest(client):
+    c, sid = client
+    with db() as s:
+        sp = s.get(Space, sid)
+        sp.role = 'owner'
+        sp.data = {**sp.data, 'pd_consent': {'version': 'test'}, 'tg_role_chosen': True}
+    reply = update(sid, 'digest', callback='o:digest')
+    text = reply['messages'][0]['text']
+    assert 'Утренняя сводка' in text and 'Долг' in text
+    assert c.get('/api/v1/digest').json()['text'].startswith('🌅')

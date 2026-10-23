@@ -1095,3 +1095,6 @@ app.include_router(mcp_router)
 from .quality import router as quality_router
 
 app.include_router(quality_router)
+from .digest import router as digest_router
+
+app.include_router(digest_router)

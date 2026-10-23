@@ -1,0 +1,46 @@
+/* Как мы работаем */
+.wk { display: grid; gap: 14px; }
+.wk-path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.wk-path li { display: grid; gap: 6px; align-content: start; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
+.wk-path-top { display: flex; justify-content: space-between; align-items: center; }
+.wk-path-top span { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); }
+.wk-path-top small { color: var(--text-3); }
+.wk-path p { margin: 0; color: var(--text-2); line-height: 1.5; }
+.wk-result { color: var(--text-3); border-top: 1px solid var(--line); padding-top: 6px; }
+.wk-rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.wk-rules div { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 13px; }
+.wk-rules span { color: var(--text-2); }
+
+.wk-stages { display: grid; gap: 12px; }
+.wk-stages section { padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 8px; }
+.wk-stages header small { color: var(--text-3); font-size: 12px; }
+.wk-stages h3 { margin: 2px 0 0; font-size: 15px; }
+.wk-task { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: start; font-size: 13px; }
+.wk-task div { display: grid; gap: 2px; }
+.wk-task span { color: var(--text-2); }
+.wk-task.done svg { color: var(--green); }
+.wk-task a { display: inline-flex; gap: 4px; align-items: center; color: var(--blue-text); white-space: nowrap; }
+
+.wk-quality { display: grid; gap: 12px; }
+.wk-quality section { padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 10px; }
+.wk-quality h3 { margin: 0; font-size: 14px; }
+.wk-quality p { margin: 0; font-size: 12.5px; }
+.wk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.wk-kpis div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.wk-kpis b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.wk-kpis span { font-size: 12px; color: var(--text-3); }
+.wk-quality table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+.wk-quality td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.wk-quality tr.bad td { background: var(--red-soft); }
+.wk-quality summary { cursor: pointer; font-size: 13px; }
+.wk-links { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+.wk-links a { display: inline-flex; gap: 5px; align-items: center; color: var(--blue-text); }
+.wk-digest { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font: 13px/1.6 inherit; white-space: pre-wrap; }
+
+@media (max-width: 1100px) {
+  .wk-path { grid-template-columns: 1fr 1fr; }
+  .wk-rules, .wk-kpis { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .wk-path, .wk-rules { grid-template-columns: 1fr; }
+}

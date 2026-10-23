@@ -398,7 +398,8 @@ def menu(sp):
     role = sp.role
     if role in ("manager", "service", "finance", "owner"):
         return {"text": f"<b>{ROLES[role]}</b>\n" + ("Экономика бизнеса и решения — в мобильном дашборде." if role == "owner" else "В демо доступно в веб-кабинете."),
-            "kb": kb([("📊 Дашборд" if role == "owner" else "Открыть веб-кабинет", "web")], [("Сменить роль", "roles")])}
+            "kb": kb([("📊 Дашборд" if role == "owner" else "Открыть веб-кабинет", "web")],
+                     *([[("🌅 Утренняя сводка", "o:digest")]] if role == "owner" else []), [("Сменить роль", "roles")])}
     title = f"<b>{ROLES.get(role, role)}</b> · что сделать?"
     rows = {
         "driver": [
@@ -1347,12 +1348,12 @@ def handle(data, space_id=None):
                     },
                     menu(sp),
                 ]
-            elif head in ("agentconfirm", "d", "c", "m", "s", "f") and not sp.data.get(
+            elif head in ("agentconfirm", "d", "c", "m", "s", "f", "o") and not sp.data.get(
                 "pd_consent"
             ):
                 # личные данные роли (баланс, договор, заявки) — только после согласия на ПДн
                 out = [consent_msg()]
-            elif head in ("agentconfirm", "d", "c", "m", "s", "f") and not sp.data.get("tg_role_chosen"):
+            elif head in ("agentconfirm", "d", "c", "m", "s", "f", "o") and not sp.data.get("tg_role_chosen"):
                 out = [role_picker("Сначала выберите роль.\n\n")]
             elif head == "agentconfirm":
                 from .agent import confirm
@@ -1367,6 +1368,10 @@ def handle(data, space_id=None):
                     ]
                 except HTTPException as e:
                     out = [{"text": esc(str(e.detail)), "kb": back(sp)}]
+            elif head == "o" and sp.role == "owner":
+                from .digest import build as digest
+
+                out = [{"text": digest(s, sp), "kb": kb([("📊 Дашборд", "web")], [("← Меню", "menu")])}]
             elif head == "d":
                 out = driver_action(s, sp, act, key)
             elif head == "c":
