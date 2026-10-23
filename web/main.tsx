@@ -49,7 +49,6 @@ import {
   CREDIT,
 } from "./lib";
 import { SearchBox, Loading, Empty, ThemeToggle } from "./ui";
-import { Landing } from "./landing";
 import { AskFab, Credit } from "./fab";
 import type { Action } from "./actions";
 // Стили всех разделов — в одном CSS (у лениво загружаемых модулей своих импортов CSS нет)
@@ -59,14 +58,13 @@ import "./style.css";
 import "./under/sources.css";
 import "./under/console.css";
 import "./bot.css";
-import "./tour.css";
 import "./tg/mini.css";
 import { appRoute } from "./tg/route";
 import { ModeSwitch, SECTIONS } from "./under/mode";
 import { SourcesWidget } from "./under/Integrations";
 
 // Тяжёлые части (графики, карта, таблицы, холсты) грузятся отдельными чанками:
-// лендинг открывается без них, а пока гость смотрит лендинг — догружаем в фоне.
+// дашборд открывается без них, остальное догружается в фоне.
 const views = () => import("./views");
 /** Ленивый именованный экспорт с сохранением типов пропсов. */
 function pick<M, K extends keyof M>(load: () => Promise<M>, key: K): M[K] {
@@ -133,7 +131,7 @@ const pageFromHash = () => {
 function App() {
   const [globalSearch, setGlobalSearch] = useState(false);
   useEffect(() => {
-    // пока виден лендинг — тянем чанки кабинета, затем консоли
+    // после первого экрана тянем чанки кабинета, затем консоли
     const a = setTimeout(prefetch, 800);
     const b = setTimeout(() => import("./under/UnderShell"), 6000);
     return () => (clearTimeout(a), clearTimeout(b));
@@ -153,8 +151,8 @@ function App() {
   const [starting, setStarting] = useState(false);
   const [fatal, setFatal] = useState("");
   const [page, setPage] = useState<string>(pageFromHash() || "today");
-  // A deep link opens its screen at once: a guest session of the owner is created without the landing.
-  const [auto, setAuto] = useState(() => !!(underFromHash() || pageFromHash()));
+  // No landing: any visit opens the cabinet at once in a fresh guest session of the owner.
+  const [auto, setAuto] = useState(true);
   const [mode, setMode] = useState<"product" | "under">(
     underFromHash() ? "under" : "product",
   );
@@ -385,21 +383,15 @@ function App() {
         </div>
       );
     return (
-      <Landing
-        starting={starting}
-        online={online}
-        error={fatal || boot.error?.message || ""}
-        bot={health.data?.telegram_username}
-        begin={begin}
-        under={async () => {
-          await begin("owner");
-          switchMode("under", undefined, "map");
-        }}
-        openBot={async () => {
-          await begin("owner");
-          setPage("bot");
-        }}
-      />
+      <div className="fullscreen">
+        <div className="start-error">
+          <h1>Таксопарк · концепт</h1>
+          <p>{fatal || boot.error?.message || (online ? "Не удалось открыть демосессию." : "Нет соединения с сетью.")}</p>
+          <button className="button primary" disabled={starting} onClick={() => begin("owner")}>
+            {starting ? "Открываем…" : "Открыть кабинет"}
+          </button>
+        </div>
+      </div>
     );
   }
   const common = { data, open, act, search, branch, direction };
