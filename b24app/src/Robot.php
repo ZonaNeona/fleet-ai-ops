@@ -47,7 +47,8 @@ class Robot
         $who = $info['driver']['name'] ?? $info['candidate']['name'] ?? 'водитель';
         $comment = ($ok ? '✅' : '⚠️') . " Проверка водителя ($who): $reasons.";
         if (isset($info['contract']['code'])) {
-            $comment .= " Договор {$info['contract']['code']}, долг {$info['money']['debt']} ₽.";
+            $debt = number_format((float) $info['money']['debt'], 0, ',', ' ');
+            $comment .= " Договор {$info['contract']['code']}, долг $debt ₽.";
         }
         $portal->call('crm.timeline.comment.add', ['fields' => [
             'ENTITY_ID' => $dealId, 'ENTITY_TYPE' => 'deal', 'COMMENT' => $comment,
