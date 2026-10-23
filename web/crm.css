@@ -88,3 +88,4 @@
 .ba-log div { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
 .ba-log small { color: var(--text-3); white-space: nowrap; }
 @media (max-width: 980px) { .ba-grid { grid-template-columns: 1fr; } }
+.cr-code { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--surface-2, #f4f5f7); font-size: 12px; white-space: pre-wrap; word-break: break-all; }

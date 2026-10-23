@@ -94,6 +94,14 @@ const STAGES: { code: string; title: string; date: string; tasks: Task[] }[] = [
       { title: "Телефония: вебхук виртуальной АТС → дело-звонок в Битрикс24 → разбор записи", outcome: "Звонок в диспетчерскую сам оказывается в CRM и получает оценку по чек-листу.", status: "done", check: ["Звонки", "#app/calls"] },
     ],
   },
+  {
+    code: "Э-8", title: "Обмен с 1С в обе стороны", date: "23.10.2026",
+    tasks: [
+      { title: "Выгрузка начислений и оплат в 1С документами по стандартному OData", outcome: "Бухгалтер видит акты и поступления в 1С без двойного ввода; повторный обмен не создаёт дублей.", status: "done", check: ["1С · обмен", "#app/onec"] },
+      { title: "Сверка «учёт ↔ 1С» в обе стороны", outcome: "Находит то, что бухгалтер внёс руками: выписку только в 1С и акт с опечаткой в сумме.", status: "done", check: ["ADR 0011", GH + "/blob/main/docs/adr/0011-onec-odata-exchange.md"] },
+      { title: "Перевести workflow 1С в n8n на этот клиент", outcome: "n8n ходит в ту же базу 1С по OData, а не в снимок.", status: "next" },
+    ],
+  },
 ];
 
 export function WorkPage() {

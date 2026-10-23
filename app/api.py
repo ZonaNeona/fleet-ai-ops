@@ -1062,3 +1062,6 @@ app.include_router(b24_router)
 from .telephony import router as telephony_router
 
 app.include_router(telephony_router)
+from .onec import router as onec_router
+
+app.include_router(onec_router)

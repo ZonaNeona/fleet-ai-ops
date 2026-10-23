@@ -37,6 +37,7 @@ import {
   Handshake,
   PhoneCall,
   Compass,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   api,
@@ -90,6 +91,7 @@ const BotPage = pick(() => import("./bot"), "BotPage");
 const InboxPage = pick(() => import("./inbox"), "InboxPage");
 const CrmPage = pick(() => import("./crm"), "CrmPage");
 const CallsPage = pick(() => import("./calls"), "CallsPage");
+const OnecPage = pick(() => import("./onec"), "OnecPage");
 const WorkPage = pick(() => import("./work"), "WorkPage");
 const UnderShell = pick(() => import("./under/UnderShell"), "UnderShell");
 const MiniApp = pick(() => import("./tg/MiniApp"), "MiniApp");
@@ -111,6 +113,7 @@ const nav = [
   ["inbox", "Документы", FileInput],
   ["crm", "CRM · Битрикс24", Handshake],
   ["calls", "Звонки", PhoneCall],
+  ["onec", "1С · обмен", ArrowLeftRight],
   ["finance", "Финансы", Wallet],
   ["analytics", "Аналитика", ChartNoAxesCombined],
   ["bot", "Telegram-бот", Send],
@@ -425,6 +428,7 @@ function App() {
     )
     .filter((n) => n[0] !== "crm" || ["owner", "admin", "finance", "manager"].includes(data.session.role))
     .filter((n) => n[0] !== "calls" || ["owner", "admin", "manager"].includes(data.session.role))
+    .filter((n) => n[0] !== "onec" || ["owner", "admin", "finance"].includes(data.session.role))
     .filter((n) => n[0] !== "work" || staffRoles.includes(data.session.role));
   if (mode === "under")
     return (
@@ -616,6 +620,7 @@ function App() {
                         "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
                       crm: "Найм водителей и заявки на прокат из Битрикс24 — и сверка оплат с учётом.",
                       calls: "Запись → расшифровка → разбор по чек-листу диспетчера.",
+                      onec: "Начисления и оплаты уходят в 1С документами — и сверяются обратно.",
                       work: "Путь заказчика, дорожная карта этого стенда и измеренное качество.",
                       finance: "Каждая сумма имеет источник и основание.",
                       analytics:
@@ -661,7 +666,7 @@ function App() {
           </div>
           <div
             className="filterbar"
-            style={["bot", "inbox", "crm", "calls", "work"].includes(page) ? { display: "none" } : undefined}
+            style={["bot", "inbox", "crm", "calls", "onec", "work"].includes(page) ? { display: "none" } : undefined}
           >
             <div className="segment">
               <button
@@ -754,6 +759,7 @@ function App() {
             {page === "service" && <Service {...common} />}
             {page === "crm" && <CrmPage data={data} open={open} toast={setToast} />}
             {page === "calls" && <CallsPage toast={setToast} />}
+            {page === "onec" && <OnecPage data={data} open={open} toast={setToast} />}
             {page === "work" && <WorkPage />}
             {page === "inbox" && (
               <InboxPage
