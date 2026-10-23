@@ -11,6 +11,7 @@ header small, section small { color: #828b95; display: block; font-size: 11px; t
 .money .bad { background: #fff0f0; }
 .money .bad b, .money .bad span { color: #c3132e; }
 .car { display: flex !important; gap: 10px; align-items: center; }
+.car > span { display: grid; gap: 2px; }
 .car img { width: 64px; height: 44px; object-fit: cover; border-radius: 6px; }
 .verdict { padding: 10px 14px; border-radius: 10px; border-left: 4px solid; }
 .verdict.ok { background: #effae8; border-color: #7bd500; }

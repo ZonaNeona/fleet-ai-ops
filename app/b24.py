@@ -167,6 +167,10 @@ def card(s, sp, deal):
     return out
 
 
+def rub(v):
+    return f"{Decimal(v):,.0f}".replace(",", " ") + " ₽"
+
+
 def verdict(info):
     """The robot «Проверить водителя»: rules, not a model — the result goes back into the deal."""
     reasons = []
@@ -179,10 +183,10 @@ def verdict(info):
         return {"ok": True, "reasons": [info.get("note", "проверять нечего")], "kind": "none"}
     debt = Decimal(info["money"]["debt"])
     if debt > 0:
-        reasons.append(f"долг {debt:,.0f} ₽".replace(",", " "))
+        reasons.append(f"долг {rub(debt)}")
     crm_paid, ledger = Decimal(info["money"]["crm_paid"] or 0), Decimal(info["money"]["paid"])
     if crm_paid > ledger:
-        reasons.append(f"в CRM отмечено на {crm_paid - ledger:,.0f} ₽ больше, чем пришло денег".replace(",", " "))
+        reasons.append(f"в CRM отмечено на {rub(crm_paid - ledger)} больше, чем пришло денег")
     if info["fines"]:
         reasons.append(f"штрафов: {len(info['fines'])}")
     waiting = [d for d in info["documents"] if d["status"] in ("review", "mismatch")]
