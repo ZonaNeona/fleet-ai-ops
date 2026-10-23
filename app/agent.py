@@ -47,6 +47,17 @@ class Ticket(Args):
     priority: str = Field(default="technical", pattern="^(urgent|technical|normal)$")
 
 
+class Pipeline(Args):
+    funnel: str | None = Field(default=None, pattern="^(hiring|rental)$")
+
+
+class CrmTask(Args):
+    title: str = Field(min_length=3, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    deal_id: str | None = Field(default=None, max_length=20)
+    responsible: str = Field(default="hiring", pattern="^(hiring|rental|head)$")
+
+
 SCHEMAS = {
     "get_balance": Balance,
     "list_vehicles": Vehicles,
@@ -54,6 +65,8 @@ SCHEMAS = {
     "find_contract": Contract,
     "search_knowledge": Knowledge,
     "create_ticket": Ticket,
+    "crm_pipeline": Pipeline,
+    "crm_task": CrmTask,
 }
 DESCRIPTIONS = {
     "get_balance": "Рассчитать доступные роли начисления, оплаты, долг и возраст долга из БД.",
@@ -62,7 +75,11 @@ DESCRIPTIONS = {
     "find_contract": "Найти доступные роли договоры; точный код необязателен.",
     "search_knowledge": "Гибридный поиск по регламентам. Обязателен для ответа об условиях и правилах.",
     "create_ticket": "Только подготовить черновик обращения по доступному автомобилю. Требуется отдельное подтверждение пользователя.",
+    "crm_pipeline": "Битрикс24: воронки найма водителей (hiring) и проката (rental) по стадиям, зависшие сделки, новые лиды, расхождения «оплачено в CRM ↔ деньги в учёте».",
+    "crm_task": "Только подготовить черновик задачи менеджеру в Битрикс24 (hiring — найм, rental — прокат, head — руководитель). Создаётся после подтверждения пользователя.",
 }
+CRM = {"owner", "admin", "manager", "finance"}
+RESPONSIBLE = {"hiring": "1", "rental": "7", "head": "12"}
 
 
 def context(s, space, role):
@@ -78,6 +95,8 @@ def tools_for(role):
         names += ["get_balance", "vehicle_economics"]
     if role in WRITE["ticket.create"] or role in ("owner", "admin"):
         names += ["create_ticket"]
+    if role in CRM:
+        names += ["crm_pipeline", "crm_task"]
     return [
         {
             "type": "function",
@@ -104,6 +123,23 @@ def execute(space, role, name, arguments, key):
         }
     with db() as s:
         sp = context(s, space, role)
+        if name == "crm_pipeline":
+            from .crm import pipeline
+
+            return pipeline(s, sp, args.funnel)
+        if name == "crm_task":
+            code = "DRAFT-" + hashlib.sha256(key.encode()).hexdigest()[:24]
+            old = s.scalar(select(Item).where(Item.space == space, Item.kind == "agent_draft", Item.code == code))
+            if old:
+                return {"draft": {"id": old.id, **old.data}}
+            row = add(s, space, "agent_draft", code, {
+                "role": role, "action": "crm.task", "status": "pending",
+                "payload": {"title": args.title, "description": args.description, "deal": args.deal_id,
+                            "responsible": RESPONSIBLE[args.responsible]},
+                "expires": (now() + timedelta(minutes=10)).isoformat(),
+            })
+            return {"draft": {"id": row.id, **row.data},
+                    "notice": "Это черновик. Задача в Битрикс24 ещё не создана; нужна кнопка подтверждения."}
         if name == "get_balance":
             r = report(s, sp)
             return {
@@ -235,13 +271,18 @@ def confirm(s, sp, draft_id, via="web"):
         return d.data["result"]
     if datetime.fromisoformat(d.data["expires"]) < now():
         fail("Срок подтверждения истёк", 409)
-    result = command(
-        s,
-        sp,
-        "ticket.create",
-        d.data["payload"],
-        ("tg:" if via == "telegram" else "") + "agent-confirm:" + d.id,
-    )
+    if d.data["action"] == "crm.task":
+        from .crm import add_task
+
+        result = add_task(s, sp, d.data["payload"])
+    else:
+        result = command(
+            s,
+            sp,
+            "ticket.create",
+            d.data["payload"],
+            ("tg:" if via == "telegram" else "") + "agent-confirm:" + d.id,
+        )
     d.data = {**d.data, "status": "confirmed", "result": result}
     return result
 

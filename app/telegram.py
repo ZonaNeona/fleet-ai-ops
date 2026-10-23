@@ -1344,7 +1344,7 @@ def handle(data, space_id=None):
                     r = confirm(s, sp, rest, via="telegram")
                     out = [
                         {
-                            "text": "Заявка <b>" + esc(r["code"]) + "</b> создана.",
+                            "text": ("Задача" if r.get("task") else "Заявка") + " <b>" + esc(r["code"]) + "</b> создана.",
                             "kb": back(sp),
                         }
                     ]

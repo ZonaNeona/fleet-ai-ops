@@ -13,6 +13,8 @@ import {
   ClipboardCheck,
   CheckCircle2,
   Lock,
+  Handshake,
+  ListTodo,
 } from "lucide-react";
 import { api, Data } from "../lib";
 import { AnswerText } from "../views";
@@ -25,6 +27,7 @@ const SUGGEST = [
   "Какие машины в ремонте дольше недели?",
   "Какие 3 машины дают самый низкий результат и почему?",
   "Стучит подвеска. Подготовь заявку по моей машине.",
+  "Где зависли кандидаты в найме водителей?",
 ];
 
 const TOOLS = [
@@ -34,6 +37,8 @@ const TOOLS = [
   { id: "find_contract", icon: FileText, color: "#a78bfa", title: "Договоры", what: "Поиск договоров, доступных роли." },
   { id: "search_knowledge", icon: BookOpen, color: "#22d3ee", title: "Регламенты", what: "Гибридный поиск RAG по базе знаний." },
   { id: "create_ticket", icon: TicketPlus, color: "#f472b6", title: "Черновик заявки", what: "Только готовит черновик — создать заявку может лишь человек кнопкой «Подтвердить»." },
+  { id: "crm_pipeline", icon: Handshake, color: "#fb923c", title: "Битрикс24: воронки", what: "Найм водителей и прокат по стадиям, зависшие сделки, новые лиды, расхождения оплат с учётом." },
+  { id: "crm_task", icon: ListTodo, color: "#f472b6", title: "Черновик задачи", what: "Готовит задачу менеджеру в Битрикс24 — создаётся только после подтверждения человеком." },
 ];
 
 /** Зеркало app/agent.py → tools_for(role): права проверяются на сервере, здесь — для наглядности. */
@@ -44,11 +49,15 @@ function allowed(role: string) {
     s.add("vehicle_economics");
   }
   if (["manager", "driver", "client", "service", "owner", "admin"].includes(role)) s.add("create_ticket");
+  if (["owner", "admin", "manager", "finance"].includes(role)) {
+    s.add("crm_pipeline");
+    s.add("crm_task");
+  }
   return s;
 }
 
 const Y0 = 200;
-const toolY = (i: number) => Y0 + (i - 2.5) * 124;
+const toolY = (i: number) => Y0 + (i - (TOOLS.length - 1) / 2) * 100;
 
 export function AgentView({
   data,
@@ -104,7 +113,7 @@ export function AgentView({
       }
     });
     out.push({ key: "answer", node: "answer", label: "Ответ", edges: ["model-answer"], hold: 900 });
-    if (r.drafts?.length) out.push({ key: "draft", node: "draft", label: "Черновик", edges: ["create_ticket-draft"], hold: 900 });
+    if (r.drafts?.length) out.push({ key: "draft", node: "draft", label: "Черновик", edges: [draftTool(r) + "-draft"], hold: 900 });
     return out;
   }, [r]); // eslint-disable-line react-hooks/exhaustive-deps
   const replay = useReplay(frames, job.job + ":" + !!r);
@@ -144,13 +153,13 @@ export function AgentView({
     },
   ];
   if (r?.drafts?.length)
-    nodes.push({ id: "draft", x: 880, y: toolY(5), icon: ClipboardCheck, color: "#f472b6", title: "Ждёт подтверждения", sub: "черновик · 10 мин", state: replay.states.draft ? "retry" : undefined });
+    nodes.push({ id: "draft", x: 880, y: toolY(TOOLS.findIndex((t) => t.id === draftTool(r))), icon: ClipboardCheck, color: "#f472b6", title: "Ждёт подтверждения", sub: "черновик · 10 мин", state: replay.states.draft ? "retry" : undefined });
 
   const edges: FEdge[] = [
     { id: "q-model", from: "q", to: "model" },
     ...TOOLS.map((t) => ({ id: "model-" + t.id, from: "model", to: "tool:" + t.id, dashed: !can.has(t.id) })),
     { id: "model-answer", from: "model", to: "answer", out: "b" as const, in: "t" as const },
-    ...(r?.drafts?.length ? [{ id: "create_ticket-draft", from: "tool:create_ticket", to: "draft", label: "человек решает" }] : []),
+    ...(r?.drafts?.length ? [{ id: draftTool(r) + "-draft", from: "tool:" + draftTool(r), to: "draft", label: "человек решает" }] : []),
   ];
   const painted = replay.paint(edges).map((e) => (job.busy && e.id === "q-model" ? { ...e, flow: true } : e));
   if (job.busy) {
@@ -298,8 +307,8 @@ function ToolInfo({ id, calls, can, role }: { id: string; calls: any[]; can: boo
               {c.status === "success"
                 ? id === "search_knowledge"
                   ? "Найдено фрагментов: " + (c.output?.sources?.length ?? 0)
-                  : id === "create_ticket"
-                    ? "Подготовлен черновик — заявка ещё не создана."
+                  : id === "create_ticket" || id === "crm_task"
+                    ? "Подготовлен черновик — ещё ничего не создано."
                     : "Код вернул данные, доступные роли «" + c.role + "»."
                 : c.output?.error}
             </p>
@@ -310,6 +319,10 @@ function ToolInfo({ id, calls, can, role }: { id: string; calls: any[]; can: boo
   );
 }
 
+function draftTool(r: any) {
+  return r?.drafts?.[0]?.action === "crm.task" ? "crm_task" : "create_ticket";
+}
+
 function Drafts({ drafts }: { drafts: any[] }) {
   const [status, setStatus] = useState<Record<string, string>>({});
   const q = useQueryClient();
@@ -317,7 +330,7 @@ function Drafts({ drafts }: { drafts: any[] }) {
     setStatus((v) => ({ ...v, [d.id]: "…" }));
     try {
       const r = await api("/under/drafts/" + d.id + "/confirm", { method: "POST", body: "{}" });
-      setStatus((v) => ({ ...v, [d.id]: "Создана заявка " + r.code }));
+      setStatus((v) => ({ ...v, [d.id]: (d.action === "crm.task" ? "Создана задача " : "Создана заявка ") + r.code }));
       q.invalidateQueries({ queryKey: ["bootstrap"] });
     } catch (e: any) {
       setStatus((v) => ({ ...v, [d.id]: e.message }));
@@ -329,12 +342,12 @@ function Drafts({ drafts }: { drafts: any[] }) {
         const ok = status[d.id]?.startsWith("Создана");
         return (
           <div className={"k-draft " + (ok ? "ok" : "")} key={d.id}>
-            <span className="k-eyebrow">{ok ? "Заявка создана" : "Требует подтверждения человека"}</span>
+            <span className="k-eyebrow">{ok ? "Создано" : "Требует подтверждения человека"}</span>
             <strong>{d.payload?.title}</strong>
-            <p>{d.vehicle_code} · {d.payload?.description}</p>
+            <p>{d.action === "crm.task" ? "Задача в Битрикс24" : d.vehicle_code} · {d.payload?.description}</p>
             <button className="k-btn primary wide" disabled={!!status[d.id] && status[d.id] !== "" && (ok || status[d.id] === "…")} onClick={() => confirm(d)}>
               <CheckCircle2 size={15} />
-              {ok ? status[d.id] : "Подтвердить создание заявки"}
+              {ok ? status[d.id] : d.action === "crm.task" ? "Подтвердить задачу в Битрикс24" : "Подтвердить создание заявки"}
             </button>
             {status[d.id] && !ok && status[d.id] !== "…" && <p className="k-alert">{status[d.id]}</p>}
           </div>

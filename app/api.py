@@ -1083,3 +1083,6 @@ app.include_router(integration_router)
 from .inbox import router as inbox_router
 
 app.include_router(inbox_router)
+from .crm import router as crm_router
+
+app.include_router(crm_router)

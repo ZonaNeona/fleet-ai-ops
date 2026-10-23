@@ -608,6 +608,10 @@ def create_space(s, count=160):
 
     seed_inbox(s, space)
     s.flush()
+    from .crm import sync as sync_crm
+
+    sync_crm(s, space)
+    s.flush()
     return space
 
 

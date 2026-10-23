@@ -34,6 +34,7 @@ import {
   Building2,
   LogOut,
   FileInput,
+  Handshake,
 } from "lucide-react";
 import {
   api,
@@ -87,6 +88,7 @@ const Operations = pick(() => import("./operations"), "Operations");
 const GlobalSearch = pick(() => import("./search"), "GlobalSearch");
 const BotPage = pick(() => import("./bot"), "BotPage");
 const InboxPage = pick(() => import("./inbox"), "InboxPage");
+const CrmPage = pick(() => import("./crm"), "CrmPage");
 const UnderShell = pick(() => import("./under/UnderShell"), "UnderShell");
 const MiniApp = pick(() => import("./tg/MiniApp"), "MiniApp");
 const prefetch = () => {
@@ -105,6 +107,7 @@ const nav = [
   ["contracts", "Договоры", FileText],
   ["service", "Заявки и сервис", Wrench],
   ["inbox", "Документы", FileInput],
+  ["crm", "CRM · Битрикс24", Handshake],
   ["finance", "Финансы", Wallet],
   ["analytics", "Аналитика", ChartNoAxesCombined],
   ["bot", "Telegram-бот", Send],
@@ -421,7 +424,8 @@ function App() {
       (n) =>
         n[0] !== "inbox" ||
         ["owner", "admin", "finance", "manager", "service"].includes(data.session.role),
-    );
+    )
+    .filter((n) => n[0] !== "crm" || ["owner", "admin", "finance", "manager"].includes(data.session.role));
   if (mode === "under")
     return (
       <Suspense
@@ -610,6 +614,7 @@ function App() {
                         "От обращения до возвращения автомобиля в работу.",
                       inbox:
                         "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
+                      crm: "Найм водителей и заявки на прокат из Битрикс24 — и сверка оплат с учётом.",
                       finance: "Каждая сумма имеет источник и основание.",
                       analytics:
                         "Разбирайтесь в результате до отдельной операции.",
@@ -654,7 +659,7 @@ function App() {
           </div>
           <div
             className="filterbar"
-            style={["bot", "inbox"].includes(page) ? { display: "none" } : undefined}
+            style={["bot", "inbox", "crm"].includes(page) ? { display: "none" } : undefined}
           >
             <div className="segment">
               <button
@@ -745,6 +750,7 @@ function App() {
             {page === "people" && <People {...common} />}
             {page === "contracts" && <Contracts {...common} />}
             {page === "service" && <Service {...common} />}
+            {page === "crm" && <CrmPage data={data} open={open} toast={setToast} />}
             {page === "inbox" && (
               <InboxPage
                 data={data}
