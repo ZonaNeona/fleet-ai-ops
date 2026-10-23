@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CircleCheck, Clock3, LoaderCircle, RefreshCw, Server, UserRound } from "lucide-react";
 import { api, Data, Row, rub } from "./lib";
+import { B24AppTab } from "./b24app";
 import "./crm.css";
 
 type Deal = {
@@ -94,6 +95,7 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
             ["rental", "Прокат"],
             ["leads", `Лиды · ${c.leads.length}`],
             ["money", `Сверка оплат${c.summary.mismatches ? " · " + c.summary.mismatches : ""}`],
+            ["app", "Приложение Б24 · PHP + Vue"],
             ["log", "Журнал REST"],
           ].map(([id, label]) => (
             <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
@@ -192,6 +194,14 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
             </tbody>
           </table>
         </div>
+      )}
+
+      {tab === "app" && (
+        <B24AppTab
+          deals={c.deals}
+          stages={Object.fromEntries(c.funnels.flatMap((f) => f.stages.map((st) => [st.id, st.name])))}
+          toast={toast}
+        />
       )}
 
       {tab === "log" && (

@@ -1056,3 +1056,6 @@ app.include_router(quality_router)
 from .digest import router as digest_router
 
 app.include_router(digest_router)
+from .b24 import router as b24_router
+
+app.include_router(b24_router)

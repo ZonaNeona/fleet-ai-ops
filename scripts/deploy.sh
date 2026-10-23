@@ -20,7 +20,7 @@ task_deps=same
 cmp -s requirements.txt "$task_stage/requirements.txt" || task_deps=changed
 rsync -a "$task_stage"/ /var/www/fleet/
 chown fleet:fleet /var/www/fleet && chmod 755 /var/www/fleet
-chown -R fleet:fleet app web dist public docs tests migrations scripts n8n infra
+chown -R fleet:fleet app web dist public docs tests migrations scripts n8n infra b24app tools
 if [ "$task_deps" = changed ]; then .venv/bin/pip install -q -r requirements.txt; fi
 .venv/bin/python -m compileall -q app
 runuser -u fleet -- env FLEET_ENV=/etc/fleet.env .venv/bin/alembic upgrade head

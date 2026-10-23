@@ -5,7 +5,7 @@ cd /var/www/fleet
 bash scripts/backup.sh
 task_release=/var/www/fleet/releases/$(date -u +%Y%m%dT%H%M%SZ)
 mkdir -p "$task_release"
-cp -a app dist web public docs tests migrations scripts n8n README.md requirements.txt requirements.lock package.json package-lock.json alembic.ini ecosystem.config.cjs "$task_release/"
+cp -a app dist web public docs tests migrations scripts n8n b24app README.md requirements.txt requirements.lock package.json package-lock.json alembic.ini ecosystem.config.cjs "$task_release/"
 printf '%s\n' "$task_release" > /var/www/fleet/LAST_RELEASE
 chmod -R go-w "$task_release"
 # Keep the ten latest snapshots.

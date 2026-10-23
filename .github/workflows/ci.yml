@@ -68,6 +68,21 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # Bitrix24 app: PHP syntax and tests without network, Vue widget type check and build.
+  b24app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - run: for f in b24app/src/*.php b24app/public/*.php; do php -l "$f"; done
+      - run: php b24app/tests/run.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cd b24app/widget && npm ci && npm run build
+
   # The whole stand from docker-compose.yml, the way a reviewer would start it.
   compose:
     runs-on: ubuntu-latest

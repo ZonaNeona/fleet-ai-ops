@@ -26,3 +26,6 @@ reports/
 .stage-*
 .pack-list
 .cache/
+b24app/public/widget/
+b24app/widget/node_modules/
+b24app/var/

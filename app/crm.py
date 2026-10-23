@@ -36,9 +36,24 @@ READ: dict[str, frozenset[str]] = {
     "crm.category.list": frozenset({"entityTypeId", "start"}),
     "crm.status.list": LIST,
     "crm.deal.list": LIST,
+    "crm.deal.get": frozenset({"id"}),
     "crm.lead.list": LIST,
+    "crm.stagehistory.list": LIST | {"entityTypeId"},
+    "crm.item.list": LIST | {"entityTypeId"},
+    "crm.timeline.comment.list": LIST,
+    "crm.activity.list": LIST,
+    "tasks.task.list": LIST,
 }
-WRITE = {"tasks.task.add": frozenset({"fields"})}  # emulator only: the live portal stays read-only
+# Writes always work against the emulator; a live portal accepts them only with BITRIX24_WRITE=1.
+WRITE: dict[str, frozenset[str]] = {
+    "tasks.task.add": frozenset({"fields"}),
+    "crm.deal.update": frozenset({"id", "fields"}),
+    "crm.timeline.comment.add": frozenset({"fields"}),
+    "crm.activity.add": frozenset({"fields"}),
+    "crm.item.add": frozenset({"entityTypeId", "fields"}),
+    "bizproc.event.send": frozenset({"event_token", "return_values", "log_message"}),
+}
+CAR_TYPE = 1040  # smart process «Автомобиль»
 WEBHOOK = re.compile(r"/rest/\d+/[A-Za-z0-9]+/?")
 
 
@@ -47,9 +62,13 @@ class ReadOnly(ValueError):
 
 
 def validate(method, params, live):
-    allowed = READ.get(method) or (None if live else WRITE.get(method))
+    allowed = READ.get(method)
+    if allowed is None and method in WRITE:
+        if live and os.getenv("BITRIX24_WRITE") != "1":
+            raise ReadOnly(f"Метод {method} пишет в портал, а портал подключён только на чтение")
+        allowed = WRITE[method]
     if allowed is None:
-        raise ReadOnly(f"Метод {method} не разрешён" + (" — портал подключён только на чтение" if live else ""))
+        raise ReadOnly(f"Метод {method} не разрешён")
     extra = set(params) - allowed
     if extra:
         raise ReadOnly("Недопустимые параметры: " + ", ".join(sorted(extra)))
@@ -93,15 +112,29 @@ class Live:
 
 
 class Emulator:
-    """Answers like a portal, from data generated for this visitor's fleet."""
+    """Answers like a portal, from data generated for this visitor's fleet. Writes change that data."""
 
     mode = "emulator"
+    # method → (collection, wrapper key of the list result, field that hides records dated in the future)
+    LISTS = {
+        "user.get": ("users", None, None),
+        "crm.status.list": ("statuses", None, None),
+        "crm.deal.list": ("deals", None, "DATE_CREATE"),
+        "crm.lead.list": ("leads", None, "DATE_CREATE"),
+        "crm.stagehistory.list": ("stagehistory", "items", None),
+        "crm.item.list": ("cars", "items", None),
+        "crm.timeline.comment.list": ("comments", None, None),
+        "crm.activity.list": ("activities", None, None),
+        "tasks.task.list": ("tasks", "tasks", None),
+    }
 
     def __init__(self, data, on_write=None):
         self.data = data
+        for key in ("tasks", "comments", "activities", "stagehistory", "cars", "events", "log"):
+            data.setdefault(key, [])
         self.on_write = on_write
 
-    def call(self, method, params=None):
+    def call(self, method, params=None, source="стенд"):
         params = params or {}
         validate(method, params, live=False)
         started = time.time()
@@ -109,16 +142,22 @@ class Emulator:
         if method == "crm.category.list":
             result = {"categories": self.data["categories"]}
             extra["total"] = len(self.data["categories"])
-        elif method == "tasks.task.add":
-            task = {"id": str(1000 + len(self.data["tasks"])), **params["fields"], "createdDate": b24(now())}
-            self.data["tasks"].append(task)
+        elif method == "crm.deal.get":
+            result = next((d for d in self.data["deals"] if d["ID"] == str(params.get("id"))), None)
+            if result is None:
+                raise ReadOnly("Сделка не найдена")
+        elif method in WRITE:
+            result = self._write(method, params)
+            self.data["log"] = (self.data["log"] + [{"method": method, "at": b24(now()), "source": source,
+                                                     "params": json.dumps(params, ensure_ascii=False)[:300]}])[-60:]
             if self.on_write:
                 self.on_write(self.data)
-            result = {"task": task}
         else:
-            rows = self._rows(method, params)
+            collection, wrapper, gate = self.LISTS[method]
+            rows = self._rows(collection, gate, params)
             start = int(params.get("start") or 0)
-            result = rows[start : start + PAGE]
+            page = rows[start : start + PAGE]
+            result = {wrapper: page} if wrapper else page
             extra["total"] = len(rows)
             if start + PAGE < len(rows):
                 extra["next"] = start + PAGE
@@ -126,10 +165,46 @@ class Emulator:
                 "time": {"start": started, "finish": time.time(), "duration": time.time() - started,
                          "processing": 0, "date_start": b24(now()), "date_finish": b24(now())}}
 
-    def _rows(self, method, params):
-        collection = {"user.get": "users", "crm.status.list": "statuses", "crm.deal.list": "deals",
-                      "crm.lead.list": "leads"}[method]
-        gate = "DATE_CREATE" if method in ("crm.deal.list", "crm.lead.list") else None
+    def _write(self, method, params):
+        d, fields = self.data, params.get("fields") or {}
+        if method == "tasks.task.add":
+            task = {"id": str(1000 + len(d["tasks"])), **fields, "createdDate": b24(now())}
+            d["tasks"].append(task)
+            return {"task": task}
+        if method == "crm.deal.update":
+            deal = next((x for x in d["deals"] if x["ID"] == str(params.get("id"))), None)
+            if deal is None:
+                raise ReadOnly("Сделка не найдена")
+            if fields.get("STAGE_ID") and fields["STAGE_ID"] != deal["STAGE_ID"]:
+                d["stagehistory"].append({"ID": str(len(d["stagehistory"]) + 1), "OWNER_ID": deal["ID"],
+                                          "STAGE_ID": fields["STAGE_ID"], "CATEGORY_ID": deal["CATEGORY_ID"],
+                                          "CREATED_TIME": b24(now())})
+                fields = {**fields, "MOVED_TIME": b24(now())}
+            deal.update({k: str(v) for k, v in fields.items()})
+            return True
+        if method == "crm.timeline.comment.add":
+            comment = {"ID": str(1 + len(d["comments"])), "ENTITY_ID": str(fields.get("ENTITY_ID")),
+                       "ENTITY_TYPE": str(fields.get("ENTITY_TYPE", "deal")).lower(),
+                       "COMMENT": str(fields.get("COMMENT", ""))[:4000], "CREATED": b24(now()),
+                       "AUTHOR_ID": str(fields.get("AUTHOR_ID", "1"))}
+            d["comments"].append(comment)
+            return int(comment["ID"])
+        if method == "crm.activity.add":
+            activity = {"ID": str(1 + len(d["activities"])), **{k: v for k, v in fields.items()}, "CREATED": b24(now())}
+            d["activities"].append(activity)
+            return int(activity["ID"])
+        if method == "crm.item.add":
+            item = {"id": 1 + len(d["cars"]), "entityTypeId": int(params.get("entityTypeId") or CAR_TYPE), **fields,
+                    "createdTime": b24(now())}
+            d["cars"].append(item)
+            return {"item": item}
+        if method == "bizproc.event.send":
+            d["events"].append({"event_token": params.get("event_token"), "return_values": params.get("return_values"),
+                                "log_message": params.get("log_message"), "at": b24(now())})
+            return True
+        raise ReadOnly(f"Эмулятор не реализует {method}")
+
+    def _rows(self, collection, gate, params):
         moment = now()
         rows = [r for r in self.data[collection] if not gate or parse(r[gate]) <= moment]
         for key, expected in (params.get("filter") or {}).items():
@@ -142,7 +217,7 @@ class Emulator:
                 if op in (">=", "<=", ">", "<"):
                     a, b = str(actual or ""), str(expected)
                     return {">=": a >= b, "<=": a <= b, ">": a > b, "<": a < b}[op]
-                hit = str(actual).lower() in [str(v).lower() for v in values] or (isinstance(actual, bool) and str(actual).lower() in [str(v).lower() for v in values])
+                hit = str(actual).lower() in [str(v).lower() for v in values]
                 return not hit if op == "!" else hit
 
             rows = [r for r in rows if ok(r)]
@@ -154,7 +229,7 @@ class Emulator:
                           reverse=str(direction).upper() == "DESC")
         select_ = params.get("select")
         if select_ and "*" not in select_:
-            rows = [{k: v for k, v in r.items() if k in set(select_) | {"ID"}} for r in rows]
+            rows = [{k: v for k, v in r.items() if k in set(select_) | {"ID", "id"}} for r in rows]
         return rows
 
 
@@ -259,7 +334,21 @@ def dataset(s, sp):
         })
     return {"users": users, "categories": [{"id": 0, "name": "Прокат", "sort": 100, "entityTypeId": 2, "isDefault": "Y"},
                                            {"id": 1, "name": "Найм водителей", "sort": 200, "entityTypeId": 2, "isDefault": "N"}],
-            "statuses": statuses, "deals": deals, "leads": leads, "tasks": []}
+            "statuses": statuses, "deals": deals, "leads": leads, "tasks": [], "cars": cars(s, sp),
+            "stagehistory": [{"ID": str(i + 1), "OWNER_ID": d["ID"], "STAGE_ID": d["STAGE_ID"], "CATEGORY_ID": d["CATEGORY_ID"],
+                              "CREATED_TIME": d["MOVED_TIME"]} for i, d in enumerate(deals)],
+            "comments": [], "activities": [], "events": [], "log": []}
+
+
+def cars(s, sp):
+    """Smart process «Автомобиль»: the fleet's cars as CRM items, the way a fleet would keep them in Bitrix24."""
+    out = []
+    for i, v in enumerate(s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle").order_by(Item.code)).all()[:40]):
+        out.append({"id": i + 1, "entityTypeId": CAR_TYPE, "title": f"{v.data['model']} · {v.data['plate']}",
+                    "stageId": f"DT{CAR_TYPE}_1:" + {"ready": "NEW", "repair": "PREPARATION"}.get(v.data["status"], "CLIENT"),
+                    "ufCrmCarCode": v.code, "ufCrmCarPlate": v.data["plate"], "ufCrmCarMileage": v.data.get("mileage"),
+                    "ufCrmCarDirection": v.data["direction"], "createdTime": b24(now())})
+    return out
 
 
 # ---------------------------------------------------------------- sync, mapping, reconciliation
