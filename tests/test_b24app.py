@@ -2,7 +2,6 @@
 
 from app import b24
 from app.crm import Emulator, ReadOnly
-from tests.test_integration import client  # noqa: F401  (fixture)
 
 
 def test_form_arrays_parse_like_a_portal():
@@ -25,8 +24,24 @@ def test_emulator_writes_and_logs():
         pass
 
 
-def test_app_round_trip(client, monkeypatch):  # noqa: F811
-    c, sid = client
+def test_app_round_trip(monkeypatch):
+    # Rental contracts start from the 61st car, so this space is larger than the shared fixture's.
+    import hashlib
+    import secrets
+
+    from fastapi.testclient import TestClient
+
+    from app.api import app
+    from app.db import URL, Space, db
+    from app.seed import create_space
+
+    with db() as s:
+        sp = create_space(s, count=70)
+        sid = sp.id
+        token = secrets.token_urlsafe(32)
+        sp.token = hashlib.sha256(token.encode()).hexdigest()
+    c = TestClient(app, base_url=URL)
+    c.cookies.set("fleet_session", token)
     key = c.post("/api/v1/b24app/session").json()["key"]
     deals = c.get(f"/api/b24/rest/{key}/crm.deal.list.json").json()
     assert deals["total"] > 0 and "time" in deals
@@ -63,6 +78,8 @@ def test_app_round_trip(client, monkeypatch):  # noqa: F811
     assert sent["data"]["auth[client_endpoint]"].endswith(f"/api/b24/rest/{key}/")
     token = c.get("/api/b24app/app-token", headers={"X-B24App-Key": key}).json()["application_token"]
     assert sent["data"]["auth[application_token]"] == token
+    with db() as s:
+        s.delete(s.get(Space, sid))
 
 
 def test_verdict_rules():
