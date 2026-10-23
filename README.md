@@ -80,6 +80,8 @@ flowchart LR
 | `n8n/` | Генератор workflow и их определения без секретов |
 | `migrations/` | Alembic |
 | `scripts/` | Выкладка, бэкап, проверка восстановления, оценка ИИ, нагрузка |
+| `docker-compose.yml`, `Dockerfile` | Запуск одной командой; на сервере стенда — pm2 + nginx (`infra/`), память 4 ГБ на несколько проектов |
+| `CLAUDE.md` | Правила проекта для ИИ-агентов, с которыми пишется код |
 | `docs/` | [Предметная модель и правила](docs/DOMAIN.md), [«Под капотом»](docs/UNDER-HOOD.md), [Mini App](docs/MINIAPP.md), [решения (ADR)](docs/adr/) |
 
 ## ИИ и бюджет
@@ -105,7 +107,15 @@ flowchart LR
 
 ## Запуск
 
-Локально — фронтенд против живого API:
+Весь стенд одной командой — PostgreSQL + pgvector, Redis, API, воркер и веб. Интеграции стартуют в режиме эмуляторов, ключи не нужны:
+
+```bash
+docker compose up --build        # → http://localhost:8080
+```
+
+Для ответов моделей положите `OPENROUTER_API_KEY` в `.env` рядом с `docker-compose.yml`. Без ключа стенд работает, а ИИ честно сообщает, что модель не подключена.
+
+Только фронтенд против живого API:
 
 ```bash
 npm ci
@@ -133,7 +143,9 @@ bash scripts/restore_check.sh               # бэкап восстанавли�
 ```
 
 CI на каждый push:
-- pytest на PostgreSQL с pgvector;
+- ruff и mypy;
+- pytest на PostgreSQL с pgvector, с покрытием;
+- запуск всего стенда через `docker compose up` и проверка health;
 - сборка фронтенда;
 - gitleaks;
 - проверка, что в репозиторий не попали приватные имена.

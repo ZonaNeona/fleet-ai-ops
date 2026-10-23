@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from app.db import db, Usage, Space, now
+from app.db import db, Usage, Space
 from sqlalchemy import select, func, text
 
 for path in ["reports/ai-evaluation.json", "reports/load.json", "reports/restore.json"]:

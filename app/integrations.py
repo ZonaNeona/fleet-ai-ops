@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text, select, func
 from .db import db, Space, Item, Entry, Job, now, uid
-from .domain import fail, visible, audit
+from .domain import fail, audit
 from .seed import add
 
 load_dotenv(os.getenv("FLEET_INTEGRATIONS_ENV", "/etc/fleet-integrations.env"))

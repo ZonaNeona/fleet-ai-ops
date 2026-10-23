@@ -49,7 +49,7 @@ async def main():
             bootstrap = await asyncio.gather(*(one(t, "/api/v1/bootstrap") for t in sessions))
             for _ in range(3):
                 normal += await asyncio.gather(
-                    *(one(t, "/api/v1/items/" + c) for t, c in zip(sessions, cards))
+                    *(one(t, "/api/v1/items/" + c) for t, c in zip(sessions, cards, strict=False))
                 )
                 reports += await asyncio.gather(*(one(t, "/api/v1/report") for t in sessions))
         results = {

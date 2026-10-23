@@ -143,7 +143,6 @@ def test_miniapp_preserves_desktop_session(client, monkeypatch):
     from urllib.parse import urlencode
 
     c, sid = client
-    desktop_token = c.cookies.get("fleet_session")
     bot_token = "123456:synthetic-test-token"
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", bot_token)
     with db() as s:

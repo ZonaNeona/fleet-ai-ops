@@ -1,7 +1,7 @@
 """Measured quality of retrieval: reference questions → the regulation that must be found, plus questions the
 knowledge base must refuse. Free to run (local embeddings, no model call), so CI and every deploy run it.
 
-    PYTHONPATH=. python -m app.quality        → reports/quality.json
+    PYTHONPATH=. python -m app.quality        → reports/retrieval.json
 """
 
 import json
@@ -13,7 +13,8 @@ from fastapi import APIRouter
 from .db import now
 
 router = APIRouter()
-REPORT = Path(__file__).parent.parent / "reports" / "quality.json"
+REPORT = Path(__file__).parent.parent / "reports" / "retrieval.json"
+CODE = Path(__file__).parent.parent / "reports" / "code.json"  # written by tools/quality_report.py
 
 # question → documents that answer it (a regulation in app/kb and/or a seeded page «public-N»); None means refuse.
 CASES = [
@@ -82,9 +83,9 @@ def run():
 
 @router.get("/api/v1/quality")
 def quality():
-    if not REPORT.exists():
-        return {"retrieval": None}
-    return json.loads(REPORT.read_text(encoding="utf-8"))
+    out = json.loads(REPORT.read_text(encoding="utf-8")) if REPORT.exists() else {"retrieval": None}
+    out["code"] = json.loads(CODE.read_text(encoding="utf-8")) if CODE.exists() else None
+    return out
 
 
 if __name__ == "__main__":

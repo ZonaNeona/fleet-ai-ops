@@ -13,7 +13,7 @@ try:
         for table in ["entries", "items", "bookings"]:
             s.execute(text("ANALYZE " + table))
     timings = []
-    for i in range(3):
+    for _ in range(3):
         with db() as s:
             sp = s.get(Space, sid)
             started = time.perf_counter()

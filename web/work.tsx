@@ -21,6 +21,12 @@ const PATH = [
   { icon: ShieldCheck, title: "Исполнение", text: "После каждого этапа — выкладка на ваш стенд и приёмка. Код в вашем репозитории, проверки в CI.", result: "Работающая система по этапам" },
   { icon: Wrench, title: "Сопровождение", text: "Абонентское обслуживание: пакет часов в месяц на доработки и поддержку.", result: "Система растёт вместе с бизнесом" },
 ];
+const AI_DEV = [
+  ["Агенты — основной инструмент", "Claude Code, Cursor, Codex: правила проекта в CLAUDE.md, субагенты для поиска и ревью, MCP, параллельная работа в ветках."],
+  ["План до кода", "Каждый этап начинается с плана: что просят заказчики, что переиспользуем, как проверить. План утверждает заказчик."],
+  ["Проверки, а не доверие", "Тесты на настоящем PostgreSQL, линтеры и типы в CI, проверка в браузере на десктопе и телефоне после каждой выкладки."],
+  ["Ответственность — на мне", "Код агентов читаю и проверяю сам, отвечаю за него как за свой. Секреты и чужие данные в репозиторий не попадают — это тоже проверка в CI."],
+];
 const RULES = [
   ["Сначала только чтение", "К вашим системам подключаемся на чтение. Запись — только там, где вы её разрешили."],
   ["ИИ не действует сам", "Всё, что меняет деньги и данные, — черновик или решение человека."],
@@ -72,6 +78,14 @@ const STAGES: { code: string; title: string; date: string; tasks: Task[] }[] = [
       { title: "Этот раздел: путь заказчика, дорожная карта, качество", outcome: "Процесс работы виден на примере самого стенда.", status: "done" },
     ],
   },
+  {
+    code: "Э-6", title: "Запуск одной командой и видимое качество кода", date: "23.10.2026",
+    tasks: [
+      { title: "docker compose up: PostgreSQL + pgvector, Redis, API, воркер, веб", outcome: "Стенд поднимается на любой машине без ключей, интеграции — в режиме эмуляторов.", status: "done", check: ["docker-compose.yml", GH + "/blob/main/docker-compose.yml"] },
+      { title: "CI: ruff, mypy, тесты с покрытием, сборка образов и запуск compose", outcome: "Каждое изменение проверяется так же, как на сервере.", status: "done", check: ["CI", GH + "/actions"] },
+      { title: "Замер тестов и покрытия при каждой выкладке", outcome: "Цифры на этом экране сняты с той версии, что сейчас работает.", status: "done" },
+    ],
+  },
 ];
 
 export function WorkPage() {
@@ -79,6 +93,7 @@ export function WorkPage() {
   const quality = useQuery({ queryKey: ["quality"], queryFn: () => api<any>("/quality"), enabled: tab === "quality" });
   const digest = useQuery({ queryKey: ["digest"], queryFn: () => api<any>("/digest"), enabled: tab === "quality" });
   const r = quality.data?.retrieval;
+  const code = quality.data?.code;
   const pct = (v: number) => Math.round(v * 100) + "%";
 
   return (
@@ -105,6 +120,12 @@ export function WorkPage() {
           </ol>
           <div className="wk-rules">
             {RULES.map(([t, d]) => (
+              <div key={t}><b>{t}</b><span>{d}</span></div>
+            ))}
+          </div>
+          <h3 className="wk-h">Разработка с ИИ-агентами</h3>
+          <div className="wk-rules">
+            {AI_DEV.map(([t, d]) => (
               <div key={t}><b>{t}</b><span>{d}</span></div>
             ))}
           </div>
@@ -139,6 +160,18 @@ export function WorkPage() {
 
       {tab === "quality" && (
         <div className="wk-quality">
+          {code && (
+            <section>
+              <h3>Код · замер при выкладке</h3>
+              <div className="wk-kpis">
+                <div><b>{code.python.passed}/{code.python.tests}</b><span>тестов прошло (PostgreSQL + pgvector)</span></div>
+                <div><b>{code.python.coverage}%</b><span>покрытие кода тестами</span></div>
+                <div><b>{code.python.ruff && code.python.mypy ? "чисто" : "есть замечания"}</b><span>ruff · mypy</span></div>
+                <div><b>{(code.python.lines + code.web.lines).toLocaleString("ru-RU")}</b><span>строк: Python {code.python.files} файлов, TS {code.web.files}</span></div>
+              </div>
+              <p className="muted">{code.checks}. Замер: {new Date(code.at).toLocaleString("ru-RU")}.</p>
+            </section>
+          )}
           <section>
             <h3>Поиск по регламентам</h3>
             {r ? (

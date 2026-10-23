@@ -44,3 +44,4 @@
 @media (max-width: 560px) {
   .wk-path, .wk-rules { grid-template-columns: 1fr; }
 }
+.wk-h { margin: 6px 0 0; font-size: 15px; }

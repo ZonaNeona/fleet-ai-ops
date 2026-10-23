@@ -1,7 +1,7 @@
-import os, json, secrets, hashlib, asyncio, io, csv, time
+import os, json, secrets, hashlib, asyncio, io, csv
 from datetime import timedelta, datetime
 from pathlib import Path
-from contextlib import asynccontextmanager
+from typing import Any
 from fastapi import FastAPI, Request, Response, HTTPException, UploadFile, File
 from fastapi.responses import (
     StreamingResponse,
@@ -9,7 +9,7 @@ from fastapi.responses import (
     ORJSONResponse as JSONResponse,
 )
 from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy import select, func, text, delete, or_
+from sqlalchemy import select, func, text, or_
 from sqlalchemy.exc import IntegrityError
 from psycopg.types.range import Range
 from .db import (
@@ -18,7 +18,6 @@ from .db import (
     Item,
     Entry,
     Event,
-    Receipt,
     Job,
     Usage,
     System,
@@ -42,7 +41,6 @@ from .domain import (
     money,
     parse_date,
     READ,
-    STAFF,
     file_access,
 )
 from .reports import report, entries, ledger_row, scope, payment_allocation
@@ -304,7 +302,7 @@ def bootstrap(request: Request):
                 return sp.role in x.data.get("roles", [])
             return x.kind == "tariff"
 
-        result = {k: [] for k in kinds}
+        result: dict[str, Any] = {k: [] for k in kinds}
         for x in items:
             if allowed(x):
                 result[x.kind].append(serialize(x))
@@ -500,11 +498,6 @@ async def events(request: Request):
         sp = auth(s, request)
         sid = sp.id
         role = sp.role
-        allowed = {
-            x.id
-            for kind in ("vehicle", "contract", "ticket", "client", "statement")
-            for x in visible(s, sp, kind)
-        }
     try:
         last = int(request.headers.get("last-event-id", "0"))
     except ValueError:
@@ -644,8 +637,8 @@ def import_preview(body: dict, request: Request):
 
             w = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
             it = iter(w.active.values)
-            headers = next(it, [])
-            rows = [dict(zip(headers, row)) for row in it]
+            headers: tuple = next(it, ())
+            rows = [dict(zip(headers, row, strict=False)) for row in it]
             w.close()
         else:
             fail("Импорт принимает CSV или XLSX")
@@ -653,7 +646,7 @@ def import_preview(body: dict, request: Request):
             fail("Не более 1000 строк за импорт")
         seen = set()
         out = []
-        for i, row in enumerate(rows):
+        for row in rows:
             row = {str(k): str(v) if v is not None else "" for k, v in row.items()}
             r = {k: row.get(k, "") for k in ("reference", "contract", "date", "amount")}
             try:
@@ -906,7 +899,7 @@ def bot_sim(body: BotSim, request: Request):
             if body.callback
             else {
                 "update_id": update_id,
-                "message": {"from": who, "chat": chat, "text": body.text.strip()},
+                "message": {"from": who, "chat": chat, "text": (body.text or "").strip()},
             }
         )
         j = Job(
@@ -917,7 +910,7 @@ def bot_sim(body: BotSim, request: Request):
                 "space": sp.id,
                 "role": sp.role,
                 "prompt": "Эмулятор бота: "
-                + (body.text.strip()[:100] if body.text else "кнопка " + body.callback),
+                + (body.text.strip()[:100] if body.text else "кнопка " + (body.callback or "")),
             },
             result={},
         )

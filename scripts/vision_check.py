@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 from PIL import Image, ImageDraw, ImageFont
-from app.db import db, Space, FILES, System
+from app.db import db, Space, FILES
 from app.seed import create_space, add
 from app.ai import run
 

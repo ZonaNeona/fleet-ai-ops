@@ -2,8 +2,7 @@
 
 import json, time, resource
 from types import SimpleNamespace
-from sqlalchemy import select, func
-from app.db import db, Space, Item, uid
+from app.db import db, Space, uid
 from app.seed import create_space
 from app.agent import run
 from app.rag import answer

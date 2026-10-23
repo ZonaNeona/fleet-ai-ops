@@ -5,6 +5,7 @@ down_revision = "004_linked_sessions"
 
 
 def upgrade():
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.execute(
         """CREATE TABLE kb_doc (id text PRIMARY KEY, title text NOT NULL, url text NOT NULL, version text NOT NULL, kind text NOT NULL, hash text NOT NULL)"""
     )

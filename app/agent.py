@@ -4,8 +4,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select
-from .db import db, Space, Item, Job, now, uid
-from .domain import visible, cansee, get, command, serialize, fail, WRITE
+from .db import db, Space, Item, Job, now
+from .domain import visible, command, fail, WRITE
 from .seed import add
 from . import ai, rag
 from .reports import report

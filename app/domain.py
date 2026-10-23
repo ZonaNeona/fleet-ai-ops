@@ -1,13 +1,14 @@
 """Transactional application commands shared by HTTP, Telegram and jobs."""
 
 import hashlib, json, math
+from typing import NoReturn
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
 from sqlalchemy import select, func, text
 from psycopg.types.range import Range
 from fastapi import HTTPException
-from .db import Item, Entry, Event, Job, Booking, Receipt, Space, now, uid
+from .db import Item, Entry, Event, Job, Booking, Receipt, now, uid
 from .seed import add, BRANCHES
 
 STAFF = {"owner", "manager", "service", "finance", "screening", "admin"}
@@ -88,7 +89,7 @@ WRITE = {
 }
 
 
-def fail(message, status=400):
+def fail(message, status=400) -> NoReturn:
     raise HTTPException(status, message)
 
 

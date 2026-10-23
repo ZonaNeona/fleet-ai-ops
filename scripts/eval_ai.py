@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 from app.db import db, Space, System, now
 from app.seed import create_space
-from app.ai import run, candidates, models
+from app.ai import run, candidates
 
 cases = []
 for n in range(6):
@@ -126,7 +126,7 @@ def main():
             try:
                 for attempt in range(4):
                     try:
-                        r = run(SimpleNamespace(space=sid, data={**c, "role": "owner"}), model_override=model)
+                        r = run(SimpleNamespace(space=sid, data={**c, "role": "owner"}), model_override=model)  # noqa: B023
                         break
                     except httpx.HTTPStatusError as e:
                         if e.response.status_code != 429 or attempt == 3:

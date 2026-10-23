@@ -22,9 +22,9 @@ def ctx():
         s.close()
 
 
-def do(ctx, action, p={}, key=None):
+def do(ctx, action, p=None, key=None):
     s, sp = ctx
-    r = command(s, sp, action, p, key or secrets.token_hex(12))
+    r = command(s, sp, action, p or {}, key or secrets.token_hex(12))
     s.flush()
     return r
 

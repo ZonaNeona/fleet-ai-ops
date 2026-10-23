@@ -206,7 +206,7 @@ def dataset(s, sp):
             "MOVED_TIME": b24(datetime.fromisoformat(c.data["start"] + "T10:00:00+03:00")),
             "UF_CRM_CONTRACT": c.code, "UF_CRM_VEHICLE": car.data["plate"], "UF_CRM_PAID": f"{crm_paid:.2f}",
         })
-    for i, (stage, _, sem) in enumerate([RENTAL[0], RENTAL[1], RENTAL[1], RENTAL[2], RENTAL[3], RENTAL[5]]):
+    for stage, _, sem in [RENTAL[0], RENTAL[1], RENTAL[1], RENTAL[2], RENTAL[3], RENTAL[5]]:
         n += 1
         model = rnd.choice(["Haval Jolion", "Geely Preface", "Hongqi H5", "Mercedes-Benz E"])
         created = t - timedelta(hours=rnd.randint(3, 50))

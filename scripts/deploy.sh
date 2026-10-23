@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Deploys an archive made by scripts/pack.sh. Run as root on the host:
-#   bash deploy.sh /tmp/fleet-release.tar.gz [--kb]
+#   bash deploy.sh /tmp/fleet-release.tar.gz [--kb] [--quality]
 # Snapshot and backup first, keep old lazy chunks for open tabs, migrate, restart, health check.
 # --kb rebuilds the knowledge base after app/kb edits (loads the embedding model, ~1 min).
+# --quality measures the release for «Код и качество»: tests with coverage on a throwaway database, ruff, mypy.
 set -euo pipefail
 task_archive=$(readlink -f "${1:?usage: deploy.sh fleet-release.tar.gz [--kb]}")
-task_kb=${2:-}
+task_flags=" ${*:2} "
 cd /var/www/fleet
 bash scripts/release.sh
 task_stage=$(mktemp -d /var/www/fleet/.stage-XXXXXX)
@@ -25,12 +26,23 @@ if [ "$task_deps" = changed ]; then .venv/bin/pip install -q -r requirements.txt
 runuser -u fleet -- env FLEET_ENV=/etc/fleet.env .venv/bin/alembic upgrade head
 # Workflow ids follow the host prefix; the definitions are imported into n8n separately.
 N8N_PREFIX=$(sed -n 's/^N8N_PREFIX=//p' /etc/fleet-integrations.env) node n8n/build-workflows.mjs
-if [ "$task_kb" = --kb ]; then
+if [[ "$task_flags" == *" --kb "* ]]; then
   runuser -u fleet -- env PYTHONPATH=. FLEET_ENV=/etc/fleet.env .venv/bin/python scripts/build_kb.py
 fi
 # Retrieval quality on reference questions (local embeddings, no paid calls) → reports/quality.json
 mkdir -p reports && chown fleet:fleet reports
 runuser -u fleet -- env PYTHONPATH=. FLEET_ENV=/etc/fleet.env .venv/bin/python -m app.quality || true
+if [[ "$task_flags" == *" --quality "* ]]; then
+  .venv/bin/pip install -q -r requirements-dev.txt
+  runuser -u postgres -- psql -qc "DROP DATABASE IF EXISTS fleet_ci" -c "CREATE DATABASE fleet_ci OWNER fleet"
+  task_ci_url=$(sed -n "s/^DATABASE_URL=//p" /etc/fleet.env | sed "s#/fleet\$#/fleet_ci#")
+  task_ci_env=(env DATABASE_URL="$task_ci_url" FLEET_ENV=/dev/null FLEET_INTEGRATIONS_ENV=/dev/null INTEGRATION_SECRET=ci FILE_ROOT=/tmp/fleet-ci-files PYTHONPATH=.)
+  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/alembic upgrade head >/dev/null
+  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python scripts/build_kb.py >/dev/null
+  runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python tools/quality_report.py || true
+  runuser -u postgres -- psql -qc "DROP DATABASE IF EXISTS fleet_ci"
+  rm -rf /tmp/fleet-ci-files
+fi
 pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save --silent
 for _ in $(seq 1 30); do

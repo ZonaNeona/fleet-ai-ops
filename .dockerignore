@@ -1,0 +1,10 @@
+.git
+.venv
+node_modules
+dist
+.cache
+reports
+*.tar.gz
+**/__pycache__
+.pytest_cache
+.github

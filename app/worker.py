@@ -1,6 +1,6 @@
 import time, os, asyncio, traceback, shutil
 from datetime import timedelta
-from sqlalchemy import select, delete, text
+from sqlalchemy import select, delete
 from .db import db, Job, System, Space, Booking, Item, AccessToken, FILES, now
 from .domain import cansee, bill, today, audit, update
 from .seed import refill_pool

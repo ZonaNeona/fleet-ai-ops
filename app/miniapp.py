@@ -1,10 +1,10 @@
 """Mini App services. All amounts and authorizations are resolved on the server."""
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 from sqlalchemy import select, func
-from .db import Item, Entry, Booking, now, uid
+from .db import Item, Entry, now, uid
 from .seed import add
 
 
@@ -120,7 +120,7 @@ def payment_terms(s, sp, purpose, target):
 
 
 def payment_command(s, sp, action, p, x):
-    from .domain import fail, serialize, update, post, money
+    from .domain import fail, update, post, money
     if action == "demo_payment.create":
         purpose, target = p.get("purpose"), p.get("target")
         terms = payment_terms(s, sp, purpose, target)
@@ -143,7 +143,7 @@ def payment_command(s, sp, action, p, x):
     terms = payment_terms(s, sp, x.data["purpose"], x.data["target"])
     if terms["amount"] != x.data["amount"]:
         fail("Сумма изменилась. Получите новый расчёт.", 409)
-    e = post(s, sp, terms["entry_kind"], money(terms["amount"]), terms["vehicle"], terms["contract"],
+    post(s, sp, terms["entry_kind"], money(terms["amount"]), terms["vehicle"], terms["contract"],
         terms["label"], key="demo-payment:" + x.id, demo=True, receipt=x.id, purpose=x.data["purpose"])
     update(x, status="paid", paid_at=now().isoformat())
     return x, "Учебная оплата проведена · квитанция готова"
