@@ -147,15 +147,27 @@ def _events(run_id, trace, started) -> Result:
             elif kind == "run.completed":
                 usage = event.get("usage") or {}
                 model = str((event.get("runtime") or {}).get("model") or "")
-                tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0) + \
-                    int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
-                cost = Decimal(str(usage.get("cost") or usage.get("cost_usd") or 0))
+                prompt = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+                completion = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
+                tokens = prompt + completion
+                cost = Decimal(str(usage.get("cost") or usage.get("cost_usd") or 0)) or price(model, prompt, completion)
                 trace.append({"step": "llm", "title": "Hermes · ответ", "model": model, "tokens": tokens,
                               "cost": str(cost), "ms": round((time.monotonic() - started) * 1000), "status": "success"})
                 return Result(str(event.get("output") or answer).strip(), model, used, tokens, cost)
             elif kind in ("run.failed", "run.cancelled", "run.interrupted"):
                 raise HermesUnavailable(str(event.get("error") or kind))
     raise HermesUnavailable("поток событий оборвался")
+
+
+def price(model, prompt, completion) -> Decimal:
+    """Hermes does not always report the cost: it is computed from the provider's published prices, as for own calls."""
+    from .ai import models
+
+    try:
+        p = models()[model]["pricing"]
+        return Decimal(str(p["prompt"])) * prompt + Decimal(str(p["completion"])) * completion
+    except Exception:
+        return Decimal(0)
 
 
 def _stop(run_id):
