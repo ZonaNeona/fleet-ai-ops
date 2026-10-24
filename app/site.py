@@ -303,6 +303,19 @@ def request_car(request: Request, kind: str = Form(...), ref: str = Form(...), n
         return response
 
 
+@router.post("/auto/cabinet")
+def cabinet(request: Request):
+    """«Open in the cabinet»: the visitor sees their request as the rental manager does, whatever role they had."""
+    from .api import auth
+
+    with db() as s:
+        try:
+            auth(s, request).role = "manager"
+        except HTTPException:
+            pass
+    return RedirectResponse("/#app/crm", 303)
+
+
 # ---------------------------------------------------------------- crawlers
 
 

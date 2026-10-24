@@ -62,6 +62,9 @@ def test_request_lands_in_the_visitors_bitrix24():
     crm = c.get("/api/v1/crm").json()  # the cabinet's snapshot already has it
     assert any(x["id"] == str(lead) for x in crm["leads"])
     assert "Спасибо" in c.get(sent.headers["location"]).text
+    c.post("/api/v1/session/role", json={"role": "driver"})
+    opened = c.post("/auto/cabinet", headers={"Origin": URL}, follow_redirects=False)
+    assert opened.headers["location"] == "/#app/crm" and c.get("/api/v1/session").json()["role"] == "manager"
     with db() as s:
         sid = s.scalar(select(Space.id).where(Space.token == hashlib.sha256(c.cookies["fleet_session"].encode()).hexdigest()))
     drop_space(sid)

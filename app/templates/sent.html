@@ -12,7 +12,9 @@
     <div><span>Ответственный</span><b>менеджер проката</b></div>
   </div>
   <p class="note">Это демо: заявка попала в Битрикс24 вашего демо-кабинета. Откройте его глазами менеджера — сделка уже в воронке, лид в списке, вызовы REST в журнале.</p>
-  <p style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/#app/crm">Открыть в кабинете → CRM</a><a class="btn ghost" href="/auto">Вернуться в каталог</a></p>
+  <form method="post" action="/auto/cabinet" style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" type="submit">Открыть кабинет менеджера → CRM</button><a class="btn ghost" href="/auto">Вернуться в каталог</a>
+  </form>
 </div>
 {% else %}
 <p class="lead"><a href="/auto">Вернуться в каталог</a></p>
