@@ -299,6 +299,48 @@ function Experience({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const payConfig = useQuery({
+    queryKey: ["pay-config"],
+    queryFn: () => api<{ yookassa: string; telegram: boolean }>("/payments/config"),
+    staleTime: 600000,
+  });
+  // Back from the payment page: the shop has already notified the stand, the receipt is ready.
+  useEffect(() => {
+    let id = "";
+    try {
+      id = sessionStorage.getItem("fleet-pay-return") || "";
+      sessionStorage.removeItem("fleet-pay-return");
+    } catch {}
+    if (id)
+      api<Row>("/items/" + id)
+        .then((x) => {
+          setPayment(x);
+          refresh();
+        })
+        .catch(() => {});
+  }, []);
+  async function payOnline(provider: "yookassa" | "telegram") {
+    if (!payment) return;
+    if (provider === "yookassa") {
+      await run(async () => {
+        const r = await api<{ confirmation_url: string }>(`/payments/${payment.id}/yookassa`, {
+          method: "POST",
+          body: JSON.stringify({ back: location.pathname + location.search + location.hash }),
+        });
+        try {
+          sessionStorage.setItem("fleet-pay-return", payment.id);
+        } catch {}
+        location.href = r.confirmation_url;
+      });
+      return;
+    }
+    await run(async () => {
+      const r = await api<{ link: string }>(`/payments/${payment.id}/telegram`, { method: "POST", body: "{}" });
+      nativeApp()?.openInvoice?.(r.link, (status) => {
+        if (status === "paid") setTimeout(() => api<Row>("/items/" + payment.id).then(setPayment).then(refresh), 1500);
+      });
+    });
+  }
   useEffect(() => {
     if (!location.hash.startsWith("#tg/"))
       history.replaceState(
@@ -418,13 +460,15 @@ function Experience({
             <p>
               {payment.status === "paid"
                 ? "Операция появилась в учёте. Баланс обновлён."
-                : "Деньги с карты не списываются. Учебная операция появится в финансовом журнале."}
+                : payConfig.data?.yookassa === "live"
+                  ? "Тестовый магазин ЮKassa: оплатите тестовой картой, деньги не списываются."
+                  : "Эмулятор ЮKassa: та же страница оплаты и то же уведомление, деньги не списываются."}
             </p>
             <div className="mini-receipt">
               <span>Квитанция</span>
               <strong>{payment.code}</strong>
               <span>Способ оплаты</span>
-              <strong>Демонстрационный</strong>
+              <strong>{payment.provider?.name === "telegram" ? "Telegram Payments · тест" : payment.provider ? "ЮKassa · тест" : "Онлайн, тестовый режим"}</strong>
             </div>
             {payment.status === "paid" ? (
               <>
@@ -441,20 +485,21 @@ function Experience({
                 </button>
               </>
             ) : (
-              <Primary
-                button={{
-                  text: `Подтвердить учебную оплату · ${rub(payment.amount)}`,
-                  disabled: !online,
-                  busy,
-                }}
-                onClick={() =>
-                  run(async () =>
-                    setPayment(
-                      await command("demo_payment.confirm", { id: payment.id }),
-                    ),
-                  )
-                }
-              />
+              <>
+                <Primary
+                  button={{
+                    text: `Оплатить картой · ${rub(payment.amount)}`,
+                    disabled: !online,
+                    busy,
+                  }}
+                  onClick={() => payOnline("yookassa")}
+                />
+                {payConfig.data?.telegram && nativeApp()?.openInvoice && (
+                  <button className="mini-link" disabled={busy} onClick={() => payOnline("telegram")}>
+                    Оплатить в Telegram
+                  </button>
+                )}
+              </>
             )}
           </section>
         ) : (

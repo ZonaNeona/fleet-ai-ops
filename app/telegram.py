@@ -1186,6 +1186,11 @@ def handle(data, space_id=None):
 
 def process(data):
     """Апдейт из настоящего Telegram: логика + доставка через Bot API."""
+    from .payments import telegram_update
+
+    paid = telegram_update(data)
+    if paid is not None:
+        return paid
     r = handle(data)
     if not r:
         return {"ignored": True}

@@ -43,6 +43,7 @@ type NativeApp = {
   close(): void;
   showConfirm?(text: string, callback: (confirmed: boolean) => void): void;
   openTelegramLink?(u: string): void;
+  openInvoice?(url: string, callback?: (status: string) => void): void;
   onEvent?(event: string, handler: () => void): void;
   offEvent?(event: string, handler: () => void): void;
   isVersionAtLeast?(v: string): boolean;

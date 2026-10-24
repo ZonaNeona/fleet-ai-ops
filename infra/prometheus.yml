@@ -1,0 +1,8 @@
+# docker compose --profile observability up → Prometheus :9090, Grafana :3000 (anonymous viewer, dashboard «Fleet»)
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: fleet-api
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ["api:3008"]

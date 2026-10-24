@@ -1,4 +1,4 @@
-import os, json, secrets, hashlib, asyncio, io, csv
+import os, json, secrets, hashlib, io, csv, time
 from datetime import timedelta, datetime
 from pathlib import Path
 from typing import Any
@@ -44,6 +44,7 @@ from .domain import (
     file_access,
 )
 from .reports import report, entries, ledger_row, scope, payment_allocation
+from . import ops
 
 app = FastAPI(
     title="Taxi Fleet Concept",
@@ -51,6 +52,31 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+
+
+ops.init_sentry()
+# Webhooks come from providers' addresses and have their own checks; everything else that writes is limited per visitor.
+UNLIMITED = ("/api/v1/telegram/webhook", "/api/telephony/", "/api/pay/yookassa/webhook", "/api/b24/rest/")
+
+
+@app.middleware("http")
+async def observe(request, call_next):
+    if (
+        request.method not in ("GET", "HEAD", "OPTIONS")
+        and request.url.path.startswith("/api/")
+        and not request.url.path.startswith(UNLIMITED)
+        and not ops.allow("write", ops.visitor(request), int(os.getenv("WRITE_LIMIT", "240")), 60)
+    ):
+        ops.LIMITED.labels("write").inc()
+        return JSONResponse({"detail": "Слишком много запросов. Подождите минуту."}, 429)
+    started = time.perf_counter()
+    try:
+        r = await call_next(request)
+    except Exception:
+        ops.record(request, 500, time.perf_counter() - started)
+        raise
+    ops.record(request, r.status_code, time.perf_counter() - started)
+    return r
 
 
 class Cmd(BaseModel):
@@ -180,6 +206,9 @@ def health():
 def session(request: Request, response: Response):
     with db() as s:
         # Bound public creation globally, without retaining raw visitor IPs.
+        if not ops.allow("session", ops.visitor(request), int(os.getenv("SESSION_LIMIT", "6")), 60):
+            ops.LIMITED.labels("session").inc()
+            fail("Подождите минуту перед созданием новой сессии", 429)
         s.execute(text("SELECT pg_advisory_xact_lock(684411)"))
         if (
             s.scalar(
@@ -361,7 +390,27 @@ def reports(
     if end:
         parse_date(end)
     with db() as s:
-        return JSONResponse(report(s, auth(s, request), start, end, branch, direction))
+        sp = auth(s, request)
+        who = sp.role + ":" + str(sp.data.get(sp.role) or "")
+        value, hit = ops.cached(sp.id, "report:" + who, [start, end, branch, direction],
+                                lambda: report(s, sp, start, end, branch, direction))
+        r = JSONResponse(value)
+        r.headers["X-Cache"] = "hit" if hit else "miss"
+        return r
+
+
+@app.get("/api/metrics")
+def metrics():
+    return ops.metrics_response()
+
+
+@app.get("/api/v1/observability")
+def observability(request: Request):
+    with db() as s:
+        sp = auth(s, request)
+        if sp.role not in ("owner", "admin", "finance"):
+            fail("Наблюдаемость доступна собственнику", 403)
+    return ops.summary()
 
 
 @app.get("/api/v1/availability")
@@ -504,8 +553,16 @@ async def events(request: Request):
         last = 0
 
     async def stream():
+        waiter = ops.Waiter(sid)  # Redis wakes the stream the moment an event commits; without it — a 2 s poll
+        try:
+            async for chunk in rows_until(time.monotonic() + 30, waiter):
+                yield chunk
+        finally:
+            await waiter.close()
+
+    async def rows_until(deadline, waiter):
         nonlocal last
-        for _ in range(15):
+        while time.monotonic() < deadline:
             if await request.is_disconnected():
                 break
             with db() as s:
@@ -541,7 +598,7 @@ async def events(request: Request):
                         ensure_ascii=False,
                     ) + "\n\n"
             yield ": keepalive\n\n"
-            await asyncio.sleep(2)
+            await waiter.wait(2)
 
     return StreamingResponse(
         stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"}
@@ -1065,3 +1122,6 @@ app.include_router(telephony_router)
 from .onec import router as onec_router
 
 app.include_router(onec_router)
+from .payments import router as payments_router
+
+app.include_router(payments_router)

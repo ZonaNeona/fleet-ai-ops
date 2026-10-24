@@ -18,12 +18,19 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U fleet" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
     env:
       FLEET_ENV: /dev/null
       FLEET_INTEGRATIONS_ENV: /dev/null
       DATABASE_URL: postgresql+psycopg://fleet:fleet@127.0.0.1/fleet
       PGPASSWORD: fleet
       INTEGRATION_SECRET: ci-only-not-a-secret
+      REDIS_URL: redis://127.0.0.1:6379/0
+      # One test client writes far faster than a person; the limits themselves have their own test.
+      WRITE_LIMIT: "100000"
+      SESSION_LIMIT: "100000"
       FASTEMBED_CACHE_PATH: /home/runner/.cache/fastembed
       PYTHONPATH: .
     steps:

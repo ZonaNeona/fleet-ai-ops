@@ -1,6 +1,6 @@
 import time, os, asyncio, traceback, shutil
 from datetime import timedelta
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func, or_
 from .db import db, Job, System, Space, Booking, Item, AccessToken, FILES, now
 from .domain import cansee, bill, today, audit, update
 from .seed import refill_pool
@@ -65,6 +65,16 @@ def maintenance():
         ).update({"state": "expired"})
         s.execute(
             delete(AccessToken).where(AccessToken.created < now() - timedelta(hours=24))
+        )
+        # Provider-side rows (the YooKassa emulator, payment links, app keys, Telegram update ids) outlive the
+        # demo spaces they served; a week is far longer than any retry window.
+        week = (now() - timedelta(days=7)).isoformat()
+        s.execute(
+            delete(System).where(
+                or_(System.key.like("ykemu:%"), System.key.like("pay:%"), System.key.like("tg:%"), System.key.like("b24key:%")),
+                func.coalesce(System.data["created_at"].astext, System.data["at"].astext,
+                              System.data["received"].astext, System.data["expires"].astext, "") < week,
+            )
         )
         expired = s.scalars(
             select(Space).where(Space.touched < now() - timedelta(hours=24))

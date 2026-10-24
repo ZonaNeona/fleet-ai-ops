@@ -102,6 +102,14 @@ const STAGES: { code: string; title: string; date: string; tasks: Task[] }[] = [
       { title: "Перевести workflow 1С в n8n на этот клиент", outcome: "n8n ходит в ту же базу 1С по OData, а не в снимок.", status: "next" },
     ],
   },
+  {
+    code: "Э-9", title: "Эксплуатация: Redis, мониторинг, платежи", date: "23.10.2026",
+    tasks: [
+      { title: "Онлайн-оплата долга и залога: ЮKassa (эмулятор API v3) и Telegram Payments", outcome: "Деньги приходят в учёт по уведомлению провайдера один раз, даже если уведомление пришло дважды; возврат — сторно.", status: "done", check: ["Эксплуатация", "#under/ops"] },
+      { title: "Метрики Prometheus, дашборд Grafana, Sentry", outcome: "Видно задержки, очередь, пульс воркера и расход на модели; ошибки не теряются.", status: "done", check: ["/api/metrics", "/api/metrics"] },
+      { title: "Redis: лимиты по посетителю, кэш отчёта, мгновенная живая лента", outcome: "Отчёт открывается из кэша, пока данные не изменились; события приходят без опроса.", status: "done", check: ["ADR 0012", GH + "/blob/main/docs/adr/0012-redis-metrics-payments.md"] },
+    ],
+  },
 ];
 
 export function WorkPage() {

@@ -37,7 +37,7 @@ if [[ "$task_flags" == *" --quality "* ]]; then
   runuser -u postgres -- psql -qc "DROP DATABASE IF EXISTS fleet_ci" -c "CREATE DATABASE fleet_ci OWNER fleet"
   runuser -u postgres -- psql -q -d fleet_ci -c "CREATE EXTENSION IF NOT EXISTS vector" -c "CREATE EXTENSION IF NOT EXISTS btree_gist"
   task_ci_url=$(sed -n "s/^DATABASE_URL=//p" /etc/fleet.env | sed "s#/fleet\$#/fleet_ci#")
-  task_ci_env=(env DATABASE_URL="$task_ci_url" FLEET_ENV=/dev/null FLEET_INTEGRATIONS_ENV=/dev/null INTEGRATION_SECRET=ci FILE_ROOT=/tmp/fleet-ci-files PYTHONPATH=.)
+  task_ci_env=(env DATABASE_URL="$task_ci_url" FLEET_ENV=/dev/null FLEET_INTEGRATIONS_ENV=/dev/null INTEGRATION_SECRET=ci FILE_ROOT=/tmp/fleet-ci-files PYTHONPATH=. WRITE_LIMIT=100000 SESSION_LIMIT=100000)
   # A failed measurement must not stop the release: the stand restarts below either way.
   if runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/alembic upgrade head >/dev/null \
     && runuser -u fleet -- "${task_ci_env[@]}" .venv/bin/python scripts/build_kb.py >/dev/null; then
