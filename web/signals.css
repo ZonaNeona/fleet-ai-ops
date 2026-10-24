@@ -1,0 +1,18 @@
+.sg { margin: 20px 0; background: var(--surface); border: 1px solid var(--line, #e7e9ee); border-radius: 18px; padding: 16px 18px; min-width: 0; }
+.sg-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sg-head h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.sg-head h2 b { font-size: 12px; background: #fde8e4; color: #a23b2a; border-radius: 999px; padding: 2px 8px; }
+.sg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sg-chips button { border: 1px solid var(--line, #e7e9ee); background: var(--surface-2); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: inherit; }
+.sg-chips button.on { background: var(--text, #1f2328); color: var(--surface, #fff); border-color: transparent; }
+.sg-list { display: grid; gap: 6px; }
+.sg-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; text-align: left; border: 0; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; cursor: pointer; color: inherit; font: inherit; }
+.sg-item:hover { background: var(--surface-3); }
+.sg-item > svg:first-child { color: #c27c1f; margin-top: 2px; }
+.sg-item.rental-overdue > svg:first-child, .sg-item.ticket-overdue > svg:first-child { color: #c0392b; }
+.sg-item span { display: grid; gap: 2px; min-width: 0; }
+.sg-item small { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); }
+.sg-item b { font-size: 14px; overflow-wrap: anywhere; }
+.sg-item em { font-style: normal; font-size: 13px; color: var(--text-2); }
+.sg-item i { font-style: normal; font-size: 13px; }
+.sg-more { margin: 8px 0 0; font-size: 13px; }

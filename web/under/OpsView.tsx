@@ -11,6 +11,7 @@ type Obs = {
   redis: { enabled: boolean; ok: boolean; ping_ms?: number; used_mb?: number; keys?: number };
   stats: Record<string, number>;
   sentry: boolean;
+  hermes: { configured: boolean; ok?: boolean; ms?: number };
   queue: { worker_heartbeat_age_seconds: number; jobs: Record<string, number>; jobs_failed_today: number; queue_wait_seconds: number; ai_spend_usd_today: number; ai_calls_today: number };
 };
 type Pay = {
@@ -111,6 +112,10 @@ export function OpsView() {
           <div className="ok"><b>Лимиты</b><small>пропущено {o?.stats.allowed ?? 0} · отказано {o?.stats.limited ?? 0}</small></div>
           <div className="ok"><b>Кэш отчёта</b><small>попаданий {o?.stats.cache_hit ?? 0} · промахов {o?.stats.cache_miss ?? 0}</small></div>
           <div className="ok"><b>Живая лента</b><small>событий разослано {o?.stats.published ?? 0}</small></div>
+          <div className={o?.hermes.ok ? "ok" : "bad"}>
+            <b>Hermes Agent</b>
+            <small>{!o?.hermes.configured ? "не подключён: агент отвечает встроенным циклом" : o.hermes.ok ? `на связи · ${o.hermes.ms} мс · профиль fleet` : "недоступен — отвечает встроенный цикл"}</small>
+          </div>
           <div className={o?.sentry ? "ok" : "bad"}><b>Sentry</b><small>{o?.sentry ? "ошибки уходят в Sentry" : "выключен: SENTRY_DSN не задан"}</small></div>
         </div>
         <Section title="Последние ошибки 5xx">

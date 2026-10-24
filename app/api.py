@@ -823,14 +823,20 @@ def ai(body: AIInput, request: Request):
             f = get(s, sp, body.file, "file")
             if not file_access(s, sp, f):
                 fail("Нет доступа к файлу", 403)
+        from .quick import match
+
+        # Frequent questions are answered by tools without a model: they never spend the hourly AI quota.
+        quick = body.mode == "agent" and match(body.prompt) is not None
         if (
-            s.scalar(
+            not quick
+            and s.scalar(
                 select(func.count())
                 .select_from(Job)
                 .where(
                     Job.space == sp.id,
                     Job.kind == "ai",
                     Job.due > now() - timedelta(hours=1),
+                    Job.data["quick"].astext.is_distinct_from("true"),
                 )
             )
             >= 10
@@ -840,7 +846,7 @@ def ai(body: AIInput, request: Request):
             id=uid(),
             space=sp.id,
             kind="ai",
-            data={**body.model_dump(), "role": sp.role},
+            data={**body.model_dump(), "role": sp.role, "quick": quick},
             result={},
         )
         s.add(j)
@@ -1133,3 +1139,6 @@ app.include_router(payments_router)
 from .site import router as site_router
 
 app.include_router(site_router)
+from .signals import router as signals_router
+
+app.include_router(signals_router)

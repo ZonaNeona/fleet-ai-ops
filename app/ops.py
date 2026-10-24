@@ -309,8 +309,10 @@ def summary():
                         keys=r.dbsize())
         except Exception:
             _down()
+    from .hermes import health
+
     return {"routes": routes[:15], "requests": len(RECENT), "errors": list(ERRORS)[-10:], "redis": info, "stats": dict(STATS),
-            "sentry": bool(os.getenv("SENTRY_DSN")), "queue": gauges()}
+            "sentry": bool(os.getenv("SENTRY_DSN")), "queue": gauges(), "hermes": health()}
 
 
 def init_sentry():

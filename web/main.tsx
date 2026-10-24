@@ -92,6 +92,7 @@ const InboxPage = pick(() => import("./inbox"), "InboxPage");
 const CrmPage = pick(() => import("./crm"), "CrmPage");
 const CallsPage = pick(() => import("./calls"), "CallsPage");
 const OnecPage = pick(() => import("./onec"), "OnecPage");
+const SignalsWidget = pick(() => import("./signals"), "SignalsWidget");
 const WorkPage = pick(() => import("./work"), "WorkPage");
 const UnderShell = pick(() => import("./under/UnderShell"), "UnderShell");
 const MiniApp = pick(() => import("./tg/MiniApp"), "MiniApp");
@@ -745,6 +746,10 @@ function App() {
               ) : (
                 <Dashboard {...common} report={report.data} go={setPage} />
               ))}
+            {page === "today" &&
+              ["owner", "admin", "finance", "manager"].includes(data.session.role) && (
+                <SignalsWidget data={data} open={open} go={setPage} />
+              )}
             {page === "today" &&
               ["owner", "admin", "finance", "manager"].includes(
                 data.session.role,

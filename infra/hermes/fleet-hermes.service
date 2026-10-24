@@ -1,0 +1,20 @@
+[Unit]
+Description=Fleet AI Ops — Hermes Agent, profile fleet (API server only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+Environment=HOME=/home/hermes
+Environment=HERMES_HOME=/home/hermes/.hermes
+Environment=HERMES_API_TIMEOUT=60
+ExecStart=/home/hermes/.local/bin/hermes -p fleet gateway run
+Restart=always
+RestartSec=5
+MemoryHigh=350M
+MemoryMax=450M
+
+[Install]
+WantedBy=multi-user.target

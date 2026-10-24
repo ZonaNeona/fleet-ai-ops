@@ -31,11 +31,8 @@ def build(s, sp):
     yesterday = str(today() - timedelta(days=1))
     day = next((d for d in r["daily"] if d["date"] == yesterday), None)
     minus = [x for x in r["rows"] if Decimal(x["result"]) < 0]
-    items = s.scalars(select(Item).where(Item.space == sp.id, Item.kind.in_(["inbox", "ticket", "crm"]))).all()
-    hold = [x for x in items if x.kind == "inbox" and x.data.get("status") in ("review", "mismatch")]
-    overdue = [x for x in items if x.kind == "ticket" and x.data.get("status") != "closed"
-               and x.data.get("due") and datetime.fromisoformat(x.data["due"]) < now()]
-    crm = next((x.data for x in items if x.kind == "crm"), None)
+    items = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "inbox")).all()
+    hold = [x for x in items if x.data.get("status") in ("review", "mismatch")]
     lines = [
         "🌅 <b>Утренняя сводка</b> · " + datetime.now(MSK).strftime("%d.%m"),
         "",
@@ -47,17 +44,17 @@ def build(s, sp):
         worst = sorted(minus, key=lambda x: Decimal(x["result"]))[:3]
         lines.append(f"В минусе за 30 дней: {len(minus)} машин, хуже всех — " +
                      ", ".join(f"{x['code']} ({rub(x['result'])})" for x in worst))
-    todo = []
-    if hold:
-        todo.append(f"документов ждут решения: {len(hold)}")
-    if overdue:
-        todo.append(f"просроченных заявок сервиса: {len(overdue)}")
-    if crm:
-        if crm["summary"]["stuck"]:
-            todo.append(f"зависших сделок в Битрикс24: {crm['summary']['stuck']}")
-        if crm["summary"]["mismatches"]:
-            todo.append(f"расхождений оплат CRM ↔ учёт: {crm['summary']['mismatches']}")
+    from html import escape
+
+    from .signals import compute, summary
+
+    signals = compute(s, owner, limit=60)
+    todo = [f"документов ждут решения: {len(hold)}"] if hold else []
+    todo += [f"{x['label'].lower()}: {x['count']}" for x in summary(signals)]
     lines += ["", "Сегодня нужен человек: " + "; ".join(todo) if todo else "Срочного на сегодня нет."]
+    if signals:
+        lines += ["", "<b>Сделать сейчас</b>"]
+        lines += [f"• {escape(x['title'])} — {escape(x['reason'])}" for x in signals[:5]]
     return "\n".join(lines)
 
 

@@ -30,7 +30,7 @@
 | [`#app/bot`](https://fleet.shvarev-demo.ru/#app/bot) | Эмулятор Telegram-бота в рамке телефона: тот же код, что у настоящего бота, Mini App внутри |
 | [`#under/map`](https://fleet.shvarev-demo.ru/#under/map) | Инженерная консоль «Под капотом»: как запрос проходит вебхук, очередь, воркер, агента и проверку прав |
 | [`#under/rag`](https://fleet.shvarev-demo.ru/#under/rag) | Поиск по регламентам: pgvector + русский полнотекстовый поиск, RRF, проверка ссылок, честный отказ вне базы |
-| [`#under/agent`](https://fleet.shvarev-demo.ru/#under/agent) | Агент с восемью инструментами (учёт, регламенты, Битрикс24). Недоступные роли инструменты под замком, запись — только черновиком с подтверждением |
+| [`#under/agent`](https://fleet.shvarev-demo.ru/#under/agent) | Агент с девятью инструментами (учёт, регламенты, Битрикс24, «сделать сейчас») и маршрутизатором: частый вопрос — ответ без модели, правила — база знаний, остальное — Hermes Agent через MCP или встроенный цикл. Недоступные роли инструменты под замком, запись — только черновиком с подтверждением |
 | [`#under/docs`](https://fleet.shvarev-demo.ru/#under/docs) | Граф документов на LangGraph: путь реального документа, `interrupt()` на решении человека, чекпойнты в PostgreSQL |
 | [`#under/mcp`](https://fleet.shvarev-demo.ru/#under/mcp) | MCP-сервер: личный ключ к своему демо-пространству, конфиги для Claude Desktop и Cursor, проверка `initialize` / `tools/list` / `tools/call` прямо из консоли |
 | [`#under/n8n`](https://fleet.shvarev-demo.ru/#under/n8n) | Настоящие workflow n8n для 1С, Яндекс Про, штрафов и телематики, сверка расхождений, история запусков |
@@ -94,7 +94,7 @@ flowchart LR
 
 ## ИИ и бюджет
 
-- **Агент:** восемь инструментов — `get_balance`, `list_vehicles`, `vehicle_economics`, `find_contract`, `search_knowledge`, `create_ticket`, `crm_pipeline`, `crm_task`.
+- **Агент:** девять инструментов — `get_balance`, `list_vehicles`, `vehicle_economics`, `find_contract`, `search_knowledge`, `create_ticket`, `crm_pipeline`, `crm_task`, `get_signals`. Маршрутизатор исполнителей и Hermes — ADR 0014.
   - Набор инструментов зависит от роли; каждый вызов заново проверяет права.
   - Денег и договоров модель не меняет: заявку и задачу в Битрикс24 создаёт человек кнопкой «Подтвердить».
 - **RAG:** гибридный поиск, порог cosine 0,38.

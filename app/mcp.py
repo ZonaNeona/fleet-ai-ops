@@ -8,6 +8,9 @@ Transports:
   * Streamable HTTP at POST /api/mcp — plain JSON responses, stateless. A visitor creates a personal key bound to their
     demo space (24 hours, role «owner»); `npx mcp-remote https://…/api/mcp?key=…` connects desktop clients.
   * stdio for local IDE agents:  FLEET_MCP_SPACE=<space id> python -m app.mcp
+  * Hermes Agent (profile «fleet») connects over HTTP with a server key. Its tool calls run in the space and under the
+    role of the turn the stand handed it (`app/hermes.py` records the turn before starting a run), so Hermes can do
+    exactly what the visitor's own agent could — no more.
 """
 
 import hashlib
@@ -30,14 +33,14 @@ CALLS_PER_MINUTE = 20
 _hits: dict[str, list[float]] = {}
 
 
-def tools():
+def tools(role=ROLE):
     from .agent import tools_for
 
     return [{"name": t["function"]["name"], "description": t["function"]["description"],
-             "inputSchema": t["function"]["parameters"]} for t in tools_for(ROLE)]
+             "inputSchema": t["function"]["parameters"]} for t in tools_for(role)]
 
 
-def handle(message, space):
+def handle(message, space, role=ROLE):
     """One JSON-RPC message → response dict, or None for notifications."""
     from .agent import execute
 
@@ -56,12 +59,15 @@ def handle(message, space):
     if method == "ping":
         return ok({})
     if method == "tools/list":
-        return ok({"tools": tools()})
+        return ok({"tools": tools()})  # the full list: a call is still checked against the caller's role
     if method == "tools/call":
         params = message.get("params") or {}
         name, args = params.get("name"), params.get("arguments") or {}
+        if not space:
+            return ok({"content": [{"type": "text", "text": "Нет активного хода: инструменты вызываются только внутри вопроса посетителя."}],
+                       "isError": True})
         try:
-            result = execute(space, ROLE, name, args, "mcp:" + hashlib.sha256(json.dumps([name, args, time.time()]).encode()).hexdigest()[:24])
+            result = execute(space, role, name, args, "mcp:" + hashlib.sha256(json.dumps([name, args, time.time()]).encode()).hexdigest()[:24])
             return ok({"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, default=str)}], "isError": False})
         except Exception as e:
             reason = getattr(e, "detail", None) or str(e) or type(e).__name__
@@ -81,6 +87,19 @@ def space_for_key(key):
         return sp.id
 
 
+def hermes_turn(key):
+    """The server key of the stand's Hermes profile → (space, role) of the turn in progress, or None for any other key."""
+    from .hermes import TURN_KEY, TURN_TTL
+
+    expected = os.getenv("FLEET_HERMES_MCP_KEY", "")
+    if not expected or not key or not secrets.compare_digest(key, expected):
+        return None
+    with db() as s:
+        row = s.get(System, TURN_KEY)
+        fresh = row and row.data.get("at", 0) > time.time() - TURN_TTL
+        return (row.data["space"], row.data["role"]) if fresh else ("", ROLE)
+
+
 def limited(key):
     t = time.monotonic()
     hits = [x for x in _hits.get(key, []) if t - x < 60]
@@ -91,8 +110,9 @@ def limited(key):
 @router.post("/api/mcp")
 async def mcp_http(request: Request):
     key = request.query_params.get("key") or (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
-    space = space_for_key(key)
-    if not space:
+    turn = hermes_turn(key)
+    space, role = turn if turn else (space_for_key(key), ROLE)
+    if not space and not turn:
         return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32001, "message": "Нужен действующий ключ: создайте его в консоли «Под капотом» → MCP"}}, status_code=401)
     try:
         body = await request.json()
@@ -105,7 +125,7 @@ async def mcp_http(request: Request):
         return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32002, "message": f"Не больше {CALLS_PER_MINUTE} вызовов в минуту"}}, status_code=429)
     import anyio
 
-    out = [r for r in [await anyio.to_thread.run_sync(handle, m, space) for m in batch if isinstance(m, dict)] if r]
+    out = [r for r in [await anyio.to_thread.run_sync(handle, m, space, role) for m in batch if isinstance(m, dict)] if r]
     if not out:
         return Response(status_code=202)
     return JSONResponse(out if isinstance(body, list) else out[0], headers={"MCP-Protocol-Version": PROTOCOL})

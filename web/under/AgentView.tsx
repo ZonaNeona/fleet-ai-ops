@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   MessageSquareText,
+  Zap,
   BrainCircuit,
   Wallet,
   CarFront,
@@ -39,6 +40,7 @@ const TOOLS = [
   { id: "create_ticket", icon: TicketPlus, color: "#f472b6", title: "Черновик заявки", what: "Только готовит черновик — создать заявку может лишь человек кнопкой «Подтвердить»." },
   { id: "crm_pipeline", icon: Handshake, color: "#fb923c", title: "Битрикс24: воронки", what: "Найм водителей и прокат по стадиям, зависшие сделки, новые лиды, расхождения оплат с учётом." },
   { id: "crm_task", icon: ListTodo, color: "#f472b6", title: "Черновик задачи", what: "Готовит задачу менеджеру в Битрикс24 — создаётся только после подтверждения человеком." },
+  { id: "get_signals", icon: Zap, color: "#ef4444", title: "Сделать сейчас", what: "Правила над учётом, сервисом, Битрикс24 и звонками: что требует человека сегодня и следующее действие." },
 ];
 
 /** Зеркало app/agent.py → tools_for(role): права проверяются на сервере, здесь — для наглядности. */
@@ -52,12 +54,20 @@ function allowed(role: string) {
   if (["owner", "admin", "manager", "finance"].includes(role)) {
     s.add("crm_pipeline");
     s.add("crm_task");
+    s.add("get_signals");
   }
   return s;
 }
 
 const Y0 = 200;
 const toolY = (i: number) => Y0 + (i - (TOOLS.length - 1) / 2) * 100;
+
+const ENGINE: Record<string, string> = {
+  rules: "Быстрый ответ без модели",
+  kb: "База знаний с цитатами",
+  hermes: "Hermes Agent через MCP",
+  model: "Встроенный цикл с инструментами",
+};
 
 export function AgentView({
   data,
@@ -231,7 +241,8 @@ export function AgentView({
               </a>
             ))}
             <Drafts drafts={r.drafts || []} />
-            <Kv items={[["Модель", r.model], ["Токены", r.tokens], ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)], ["Вызовов инструментов", trace.filter((s) => s.step === "tool").length]]} />
+            <Kv items={[["Ответил", ENGINE[r.engine] || "Встроенный цикл"], ["Модель", r.model], ["Токены", r.tokens], ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)], ["Вызовов инструментов", trace.filter((s) => s.step === "tool").length]]} />
+            {r.engine === "rules" && <p className="k-hint">Частый вопрос: ответ собран из инструментов без модели — бесплатно и не тратит лимит.</p>}
           </>
         )}
       </aside>

@@ -5,7 +5,7 @@ cd /var/www/fleet
 bash scripts/backup.sh
 task_release=/var/www/fleet/releases/$(date -u +%Y%m%dT%H%M%SZ)
 mkdir -p "$task_release"
-for task_path in app dist web public docs tests migrations scripts n8n b24app README.md requirements.txt requirements.lock package.json package-lock.json alembic.ini ecosystem.config.cjs; do
+for task_path in app dist web public docs tests migrations scripts n8n b24app infra README.md requirements.txt requirements.lock package.json package-lock.json alembic.ini ecosystem.config.cjs; do
   # A path added in this very release is not on the host yet.
   if [ -e "$task_path" ]; then cp -a "$task_path" "$task_release/"; fi
 done

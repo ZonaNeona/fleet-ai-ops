@@ -1,4 +1,4 @@
-import json, time, hashlib
+import json, time, hashlib, os, re
 from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -51,6 +51,10 @@ class Pipeline(Args):
     funnel: str | None = Field(default=None, pattern="^(hiring|rental)$")
 
 
+class Signals(Args):
+    rule: str | None = Field(default=None, pattern="^(debt-silent|rental-overdue|ticket-overdue|hiring-stuck|crm-paid-gap|call-low)$")
+
+
 class CrmTask(Args):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(default="", max_length=2000)
@@ -67,6 +71,7 @@ SCHEMAS = {
     "create_ticket": Ticket,
     "crm_pipeline": Pipeline,
     "crm_task": CrmTask,
+    "get_signals": Signals,
 }
 DESCRIPTIONS = {
     "get_balance": "Рассчитать доступные роли начисления, оплаты, долг и возраст долга из БД.",
@@ -76,6 +81,7 @@ DESCRIPTIONS = {
     "search_knowledge": "Гибридный поиск по регламентам. Обязателен для ответа об условиях и правилах.",
     "create_ticket": "Только подготовить черновик обращения по доступному автомобилю. Требуется отдельное подтверждение пользователя.",
     "crm_pipeline": "Битрикс24: воронки найма водителей (hiring) и проката (rental) по стадиям, зависшие сделки, новые лиды, расхождения «оплачено в CRM ↔ деньги в учёте».",
+    "get_signals": "«Сделать сейчас»: что требует человека сегодня — долги без оплаты, аренды без закрытия, просроченные заявки сервиса, зависшие кандидаты, оплаты CRM без денег, слабые звонки. С причиной и следующим действием.",
     "crm_task": "Только подготовить черновик задачи менеджеру в Битрикс24 (hiring — найм, rental — прокат, head — руководитель). Создаётся после подтверждения пользователя.",
 }
 CRM = {"owner", "admin", "manager", "finance"}
@@ -96,7 +102,7 @@ def tools_for(role):
     if role in WRITE["ticket.create"] or role in ("owner", "admin"):
         names += ["create_ticket"]
     if role in CRM:
-        names += ["crm_pipeline", "crm_task"]
+        names += ["crm_pipeline", "crm_task", "get_signals"]
     return [
         {
             "type": "function",
@@ -123,6 +129,10 @@ def execute(space, role, name, arguments, key):
         }
     with db() as s:
         sp = context(s, space, role)
+        if name == "get_signals":
+            from .signals import compute
+
+            return {"signals": compute(s, sp, args.rule, limit=10)}
         if name == "crm_pipeline":
             from .crm import pipeline
 
@@ -287,9 +297,69 @@ def confirm(s, sp, draft_id, via="web"):
     return result
 
 
+# Questions about the fleet's rules go straight to the knowledge base: an answer with checked citations.
+RULES = re.compile(
+    r"регламент|по правилам|можно ли|разрешен|допуст|кто платит|за чей сч[её]т|штраф за|залог|страховк|"
+    r"лимит пробега|перепробег|выходн\w* по графику|досрочн\w* выкуп|подменн"
+)
+ENGINES = {"rules": "Быстрый ответ без модели", "kb": "База знаний", "hermes": "Hermes Agent · MCP", "model": "Встроенный цикл"}
+
+
 def run(job):
+    """One agent turn, routed to the cheapest executor that can answer it honestly:
+
+    1. a frequent question with a clear intent → tools only, no model, free (app/quick.py);
+    2. a question about the fleet's rules → the knowledge base, with checked citations;
+    3. anything else → Hermes Agent over MCP when it is up, otherwise the built-in tool loop.
+    The trace keeps only what really happened, the result names the executor."""
+    from . import hermes, quick
+
+    role, prompt = job.data["role"], job.data["prompt"]
+    started = time.monotonic()
+    trace: list = []
+    reply = quick.answer(job.space, role, prompt, trace)
+    route = "rules" if reply else "kb" if RULES.search(prompt.lower()) else "hermes" if hermes.configured() else "model"
+    trace.insert(0, {"step": "route", "title": "Маршрутизация: " + ENGINES[route], "status": "success",
+                     "ms": round((time.monotonic() - started) * 1000), "output": {"route": route}})
+    if reply:
+        return {"answer": reply, "engine": "rules", "model": "без модели", "cost": "0", "tokens": 0, "trace": trace,
+                "sources": [], "drafts": [], "fields": {}}
+    if route == "kb":
+        result = rag.answer(job)
+        return {**result, "engine": "kb", "trace": trace + list(result.get("trace") or [])}
+    if route == "hermes" and budget_left():
+        begun = now()
+        try:
+            res = hermes.run(job, trace)
+            with db() as s:
+                drafts = [{"id": d.id, **d.data} for d in s.scalars(select(Item).where(
+                    Item.space == job.space, Item.kind == "agent_draft", Item.created >= begun))
+                    if d.data.get("role") == role]
+            return {"answer": res.text or "Hermes не дал ответа — переформулируйте вопрос.", "engine": "hermes",
+                    "model": res.model, "cost": str(res.cost), "tokens": res.tokens, "trace": trace,
+                    "sources": [], "drafts": drafts, "fields": {}}
+        except hermes.HermesUnavailable as e:
+            trace.append({"step": "fallback", "title": "Hermes недоступен — отвечает встроенный цикл",
+                          "status": "retry", "ms": 0, "output": {"reason": str(e)}})
+    return {**_loop(job, trace), "engine": "model"}
+
+
+def budget_left():
+    """Hermes reports its cost only after the run: start one only while the day's budget has room for it."""
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import func
+
+    from .db import Usage
+
+    midnight = now().astimezone(ZoneInfo("Europe/Moscow")).replace(hour=0, minute=0, second=0, microsecond=0)
+    with db() as s:
+        spent = s.scalar(select(func.coalesce(func.sum(Usage.cost), 0)).where(Usage.created >= midnight))
+    return Decimal(spent) + Decimal("0.02") < Decimal(os.getenv("DAILY_BUDGET", ".50"))
+
+
+def _loop(job, trace):
     role = job.data["role"]
-    trace = []
     drafts = []
     sources = []
     total = Decimal(0)
