@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Аренда и выкуп авто{% endblock %} · Таксопарк</title>
+<meta name="description" content="{% block description %}Прокат автомобилей посуточно и выкуп для работы в такси: свободные даты, расчёт цены и заявка онлайн.{% endblock %}">
+<link rel="canonical" href="{{ url }}{{ path }}">
+{% if not index %}<meta name="robots" content="noindex">{% endif %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Таксопарк · аренда и выкуп">
+<meta property="og:title" content="{{ self.title() }}">
+<meta property="og:description" content="{{ self.description() }}">
+<meta property="og:url" content="{{ url }}{{ path }}">
+<meta property="og:image" content="{{ url }}{% block og_image %}/cars/haval-jolion.webp{% endblock %}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.svg">
+{% block head %}{% endblock %}
+<style>
+:root{--bg:#f5f2ec;--card:#fff;--ink:#1f2328;--ink2:#5d6168;--line:#e7e1d6;--gold:#a8782a;--gold-bg:#f6ecd8;--ok:#2f7d4f;--ok-bg:#e5f3ea;--bad:#a23b2a;--bad-bg:#f8e4df;--dark:#22302f}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.demo{background:var(--dark);color:#e9e4da;font-size:13px;text-align:center;padding:8px 16px}
+.demo a{color:#f2d48a}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0}
+.logo{text-decoration:none;display:grid;line-height:1.1}
+.logo b{font-size:20px;letter-spacing:.14em}
+.logo b span{color:var(--gold)}
+.logo small{font-size:11px;letter-spacing:.18em;color:var(--ink2);text-transform:uppercase}
+nav.top{display:flex;gap:6px;flex-wrap:wrap}
+nav.top a{text-decoration:none;font-size:14px;padding:8px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+nav.top a.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:8px 0 10px;letter-spacing:-.01em}
+h2{font-size:22px;margin:36px 0 14px}
+.lead{color:var(--ink2);max-width:640px;margin:0 0 22px}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+a.card:hover{transform:translateY(-2px);box-shadow:0 10px 28px #0000000f}
+.card .photo{aspect-ratio:16/10;background:#ece7dd;object-fit:cover;width:100%}
+.card .body{padding:14px 16px 16px;display:grid;gap:6px}
+.card h3{margin:0;font-size:18px}
+.meta{color:var(--ink2);font-size:14px}
+.price{font-weight:700;font-size:18px}
+.price small{font-weight:400;color:var(--ink2);font-size:13px}
+.pill{display:inline-block;font-size:12px;padding:3px 9px;border-radius:999px;background:var(--gold-bg);color:#7a5517;font-weight:600}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.busy{background:#eeeae2;color:var(--ink2)}
+form.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
+select,input[type=date],input[type=text],input[type=tel],input[type=number],textarea{font:inherit;font-size:15px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);max-width:100%}
+textarea{width:100%;min-height:70px}
+label.chk{display:flex;gap:8px;align-items:center;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:12px 18px;font:600 15px system-ui,sans-serif;cursor:pointer;text-decoration:none;background:var(--ink);color:#fff}
+.btn.gold{background:var(--gold)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.split{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.panel h3{margin:0 0 10px;font-size:18px}
+.rows{display:grid;gap:6px;margin:12px 0}
+.rows div{display:flex;justify-content:space-between;gap:12px;font-size:15px}
+.rows div span{color:var(--ink2)}
+.rows .total{border-top:1px solid var(--line);padding-top:8px;font-size:18px;font-weight:700}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fields label{display:grid;gap:4px;font-size:13px;color:var(--ink2)}
+.fields .wide{grid-column:1/-1}
+.note{font-size:13px;color:var(--ink2)}
+.error{background:var(--bad-bg);color:var(--bad);padding:10px 12px;border-radius:12px;font-size:14px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:13px;text-align:center}
+.cal b{font-weight:600;color:var(--ink2);font-size:11px;text-transform:uppercase}
+.cal span{padding:7px 0;border-radius:8px;background:var(--ok-bg);color:var(--ok)}
+.cal span.busy{background:#e9e4da;color:#9a958c;text-decoration:line-through}
+.cal span.past{background:transparent;color:#c5bfb3}
+.cal span.today{outline:2px solid var(--gold)}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:4px}
+.crumbs{font-size:14px;color:var(--ink2);margin:4px 0 0}
+.crumbs a{color:var(--ink2)}
+.hero-photo{border-radius:20px;aspect-ratio:16/10;object-fit:cover;width:100%;background:#ece7dd}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.steps div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.steps b{display:block;margin-bottom:4px}
+footer{margin:56px 0 28px;color:var(--ink2);font-size:13px;display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
+@media (max-width:820px){.split{grid-template-columns:1fr}.fields{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="demo">Демонстрационный сайт: автомобили и цены учебные, заявки уходят в демо-кабинет. <a href="/#app/crm">Кабинет менеджера →</a></div>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/auto"><b>ТАКСО<span>ПАРК</span></b><small>аренда и выкуп авто</small></a>
+  <nav class="top">
+    <a href="/auto#rental" class="{{ 'on' if path == '/auto' else '' }}">Прокат</a>
+    <a href="/auto#buyout">Выкуп для такси</a>
+  </nav>
+</header>
+{% block content %}{% endblock %}
+<footer>
+  <span>Концепт сайта таксопарка · серверный рендеринг FastAPI + Jinja · цены считает тот же код, что в кабинете и Mini App</span>
+  <span><a href="/sitemap.xml">sitemap.xml</a> · Игорь Шварёв</span>
+</footer>
+</div>
+</body>
+</html>

@@ -120,6 +120,8 @@ const nav = [
   ["settings", "Источники и настройки", Settings],
   ["work", "Как мы работаем", Compass],
 ] as const;
+// #site — клиентский сайт таксопарка: серверные страницы /auto, не часть кабинета
+if (location.hash === "#site") location.replace("/auto");
 // #under/<раздел> — инженерный контур «Под капотом»
 const underFromHash = () => {
   const m = location.hash.match(/^#under(?:\/(\w+))?/);

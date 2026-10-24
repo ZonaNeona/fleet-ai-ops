@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Аренда {{ car.model }} {{ car.year }} — от {{ car.rate|rub }} в сутки{% endblock %}
+{% block description %}{{ car.model }} {{ car.year }}, класс {{ car.class }}: свободные даты, расчёт цены с доставкой и вторым водителем, заявка онлайн.{% endblock %}
+{% block og_image %}{{ car.image }}{% endblock %}
+{% block head %}
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org", "@type": "Car", "name": car.model ~ " " ~ car.year|string,
+  "vehicleModelDate": car.year|string, "image": url ~ car.image, "url": url ~ car.url,
+  "offers": {"@type": "Offer", "priceCurrency": "RUB", "price": car.rate|string,
+             "priceSpecification": {"@type": "UnitPriceSpecification", "price": car.rate|string, "priceCurrency": "RUB", "unitText": "DAY"},
+             "availability": "https://schema.org/" ~ ("InStock" if not car.free else "PreOrder")}
+} | tojson }}</script>
+{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/auto">Каталог</a> · <a href="/auto?cls={{ car.class }}">{{ car.class }}</a> · {{ car.code }}</p>
+<h1>{{ car.model }}, {{ car.year }}</h1>
+<p class="lead">{{ car.class }} · пробег {{ "{:,}".format(car.mileage).replace(",", " ") }} км · {% if car.free %}свободна с {{ car.free|day }}{% else %}свободна сегодня{% endif %}</p>
+
+<div class="split">
+  <div>
+    <img class="hero-photo" src="{{ car.image }}" alt="{{ car.model }}" width="1280" height="800">
+    <h2>Свободные даты</h2>
+    <div class="panel">
+      <div class="cal">
+        {% for w in weekdays %}<b>{{ w }}</b>{% endfor %}
+        {% for d in calendar %}<span class="{{ 'past' if d.past else ('busy' if d.busy else '') }}{{ ' today' if d.today }}" title="{{ d.date|day }}">{{ d.date.day }}</span>{% endfor %}
+      </div>
+      <div class="legend"><span><i style="background:var(--ok-bg)"></i>свободна</span><span><i style="background:#e9e4da"></i>занята</span><span>сутки — с 10:00 до 10:00</span></div>
+    </div>
+    {% if same %}
+    <h2>Ещё {{ car.model }}</h2>
+    <div class="grid">
+      {% for x in same %}
+      <a class="card" href="{{ x.url }}"><div class="body"><h3>{{ x.code }}</h3><div class="meta">{{ x.year }} · {% if x.free %}свободна с {{ x.free|day }}{% else %}свободна сегодня{% endif %}</div></div></a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel" id="calc">
+    <h3>Расчёт и заявка</h3>
+    <form method="get" action="{{ car.url }}#calc">
+      <div class="fields">
+        <label>Начало<input type="date" name="start" value="{{ start }}" required></label>
+        <label>Окончание<input type="date" name="end" value="{{ end }}" required></label>
+        <label class="chk wide"><input type="checkbox" name="delivery" value="1" {{ 'checked' if delivery }}> Доставка к адресу · 1 500 ₽</label>
+        <label class="chk wide"><input type="checkbox" name="collection" value="1" {{ 'checked' if collection }}> Забрать машину от адреса · 1 500 ₽</label>
+        <label class="wide">Второй водитель (+300 ₽ в сутки)<input type="text" name="driver" value="{{ driver }}" placeholder="Имя, если нужен" maxlength="60"></label>
+      </div>
+      <p><button class="btn ghost" type="submit">Пересчитать</button></p>
+    </form>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if quote %}
+    <div class="rows">
+      <div><span>{{ quote.days }} {{ 'сутки' if quote.days == 1 else 'суток' }} × {{ quote.rental_rate|rub }}{% if quote.discount_percent %} (−{{ quote.discount_percent }}%){% endif %}</span><b>{{ (quote.rental_rate|float * quote.days)|rub }}</b></div>
+      {% if quote.addons_daily|float %}<div><span>Второй водитель</span><b>{{ (quote.addons_daily|float * quote.days)|rub }}</b></div>{% endif %}
+      {% if quote.services_amount|float %}<div><span>Доставка и возврат</span><b>{{ quote.services_amount|rub }}</b></div>{% endif %}
+      <div class="total"><span>Итого</span><b>{{ quote.total|rub }}</b></div>
+      <div><span>Возвратный залог</span><b>{{ quote.deposit|rub }}</b></div>
+    </div>
+    <p class="note">{{ quote.rule }}</p>
+    {% if not error %}
+    <form method="post" action="/auto/request">
+      <input type="hidden" name="kind" value="rental"><input type="hidden" name="ref" value="{{ car.code }}">
+      <input type="hidden" name="start" value="{{ start }}"><input type="hidden" name="end" value="{{ end }}">
+      <input type="hidden" name="delivery" value="{{ '1' if delivery }}"><input type="hidden" name="collection" value="{{ '1' if collection }}">
+      <input type="hidden" name="driver" value="{{ driver }}">
+      <div class="fields">
+        <label>Имя<input type="text" name="name" maxlength="60" placeholder="Как к вам обращаться"></label>
+        <label>Телефон<input type="tel" name="phone" maxlength="20" placeholder="Можно не заполнять"></label>
+        <label class="wide">Комментарий<textarea name="comment" maxlength="500" placeholder="Например: нужно детское кресло"></textarea></label>
+      </div>
+      <p><button class="btn gold" type="submit">Отправить заявку · {{ quote.total|rub }}</button></p>
+      <p class="note">Демо: не вводите настоящие данные. Заявка станет лидом и сделкой в воронке «Прокат» вашего демо-Битрикс24.</p>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

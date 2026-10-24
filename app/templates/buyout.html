@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Выкуп {{ offer.model }} для такси — {{ offer.daily|rub }} в рабочий день{% endblock %}
+{% block description %}{{ offer.model }} в выкуп за 12 месяцев: ежедневный платёж {{ offer.daily|rub }}, график {{ offer.schedule }}, выкупной платёж {{ offer.final|rub }}.{% endblock %}
+{% block og_image %}{{ offer.image }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/auto#buyout">Выкуп</a> · {{ offer.model }}</p>
+<h1>{{ offer.model }} в выкуп</h1>
+<p class="lead">{{ offer.class }} · работаете на машине в такси, платите по графику, через {{ offer.months }} месяцев — выкупной платёж, и она ваша.</p>
+<div class="split">
+  <img class="hero-photo" src="{{ offer.image }}" alt="{{ offer.model }}" width="1280" height="800">
+  <div class="panel">
+    <h3>График платежей</h3>
+    <form method="get" action="{{ offer.url }}">
+      <div class="fields">
+        <label class="wide">График работы
+          <select name="schedule" onchange="this.form.submit()">
+            {% for k, v in schedules.items() %}<option value="{{ k }}" {{ 'selected' if k == offer.schedule }}>{{ k }} — {{ v }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <noscript><p><button class="btn ghost" type="submit">Пересчитать</button></p></noscript>
+    </form>
+    <div class="rows">
+      <div><span>Платёж за рабочий день</span><b>{{ offer.daily|rub }}</b></div>
+      <div><span>Рабочих дней за 12 месяцев</span><b>{{ offer.days }}</b></div>
+      <div><span>В среднем в месяц</span><b>{{ offer.month_payment|rub }}</b></div>
+      <div><span>Выкупной платёж</span><b>{{ offer.final|rub }}</b></div>
+      <div class="total"><span>Всего за машину</span><b>{{ offer.total|rub }}</b></div>
+    </div>
+    <p class="note">Выходные по графику не оплачиваются — так же считает учёт парка по договору выкупа.</p>
+    <form method="post" action="/auto/request">
+      <input type="hidden" name="kind" value="buyout"><input type="hidden" name="ref" value="{{ offer.slug }}">
+      <input type="hidden" name="schedule" value="{{ offer.schedule }}">
+      <div class="fields">
+        <label>Имя<input type="text" name="name" maxlength="60" placeholder="Как к вам обращаться"></label>
+        <label>Телефон<input type="tel" name="phone" maxlength="20" placeholder="Можно не заполнять"></label>
+        <label class="wide">Стаж и вопросы<textarea name="comment" maxlength="500" placeholder="Например: стаж 6 лет, работаю в Яндекс Про"></textarea></label>
+      </div>
+      <p><button class="btn gold" type="submit">Оставить заявку на выкуп</button></p>
+      <p class="note">Демо: не вводите настоящие данные.</p>
+    </form>
+  </div>
+</div>
+<h2>Другие модели в выкуп</h2>
+<div class="grid">
+{% for o in others %}
+  <a class="card" href="{{ o.url }}"><img class="photo" src="{{ o.thumb }}" alt="{{ o.model }}" loading="lazy" width="640" height="400"><div class="body"><h3>{{ o.model }}</h3><div class="price">{{ o.daily|rub }} <small>/ рабочий день</small></div></div></a>
+{% endfor %}
+</div>
+{% endblock %}

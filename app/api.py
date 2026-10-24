@@ -202,31 +202,36 @@ def health():
         }
 
 
+def open_session(s, request, response):
+    """A demo space for a new visitor: from the cabinet's «start» or from a request sent on the client site."""
+    # Bound public creation globally, without retaining raw visitor IPs.
+    if not ops.allow("session", ops.visitor(request), int(os.getenv("SESSION_LIMIT", "6")), 60):
+        ops.LIMITED.labels("session").inc()
+        fail("Подождите минуту перед созданием новой сессии", 429)
+    s.execute(text("SELECT pg_advisory_xact_lock(684411)"))
+    if (
+        s.scalar(
+            select(func.count())
+            .select_from(Space)
+            .where(
+                Space.created > now() - timedelta(minutes=1),
+                ~Space.data.has_key("pool"),
+            )
+        )
+        >= 8
+    ):
+        fail("Подождите минуту перед созданием новой сессии", 429)
+    sp = claim_space(s)
+    token = secrets.token_urlsafe(32)
+    sp.token = hashlib.sha256(token.encode()).hexdigest()
+    set_cookie(response, token)
+    return sp
+
+
 @app.post("/api/v1/session")
 def session(request: Request, response: Response):
     with db() as s:
-        # Bound public creation globally, without retaining raw visitor IPs.
-        if not ops.allow("session", ops.visitor(request), int(os.getenv("SESSION_LIMIT", "6")), 60):
-            ops.LIMITED.labels("session").inc()
-            fail("Подождите минуту перед созданием новой сессии", 429)
-        s.execute(text("SELECT pg_advisory_xact_lock(684411)"))
-        if (
-            s.scalar(
-                select(func.count())
-                .select_from(Space)
-                .where(
-                    Space.created > now() - timedelta(minutes=1),
-                    ~Space.data.has_key("pool"),
-                )
-            )
-            >= 8
-        ):
-            fail("Подождите минуту перед созданием новой сессии", 429)
-        sp = claim_space(s)
-        token = secrets.token_urlsafe(32)
-        sp.token = hashlib.sha256(token.encode()).hexdigest()
-        set_cookie(response, token)
-        return space_data(sp)
+        return space_data(open_session(s, request, response))
 
 
 @app.get("/api/v1/session")
@@ -1125,3 +1130,6 @@ app.include_router(onec_router)
 from .payments import router as payments_router
 
 app.include_router(payments_router)
+from .site import router as site_router
+
+app.include_router(site_router)

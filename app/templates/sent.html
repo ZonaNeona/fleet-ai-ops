@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Заявка отправлена{% endblock %}
+{% block content %}
+<span class="eyebrow">Заявка принята</span>
+<h1>Спасибо! Менеджер уже видит заявку</h1>
+{% if lead %}
+<div class="panel" style="max-width:640px">
+  <div class="rows">
+    <div><span>Заявка</span><b>{{ title }}</b></div>
+    <div><span>Лид в Битрикс24</span><b>#{{ lead }} · источник «Сайт»</b></div>
+    <div><span>Сделка</span><b>#{{ deal }} · воронка «Прокат» · «Новая заявка»</b></div>
+    <div><span>Ответственный</span><b>менеджер проката</b></div>
+  </div>
+  <p class="note">Это демо: заявка попала в Битрикс24 вашего демо-кабинета. Откройте его глазами менеджера — сделка уже в воронке, лид в списке, вызовы REST в журнале.</p>
+  <p style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/#app/crm">Открыть в кабинете → CRM</a><a class="btn ghost" href="/auto">Вернуться в каталог</a></p>
+</div>
+{% else %}
+<p class="lead"><a href="/auto">Вернуться в каталог</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Аренда и выкуп автомобилей{% endblock %}
+{% block content %}
+<span class="eyebrow">Прокат от суток · выкуп для работы в такси</span>
+<h1>Машина на нужные даты — с ценой сразу</h1>
+<p class="lead">Свободные даты видны по каждой машине, цену считает сервер по тарифу парка: скидка от 7 и от 30 дней, доставка и второй водитель. Заявка сразу попадает менеджеру в Битрикс24.</p>
+
+<h2 id="rental">Прокат · {{ total }} машин</h2>
+<form class="filters" method="get" action="/auto#rental">
+  <select name="cls" aria-label="Класс">
+    <option value="">Все классы</option>
+    {% for c in classes %}<option value="{{ c }}" {{ 'selected' if c == cls }}>{{ c }}</option>{% endfor %}
+  </select>
+  <select name="price" aria-label="Цена в сутки">
+    <option value="0">Любая цена</option>
+    {% for p in [5000, 15000, 40000] %}<option value="{{ p }}" {{ 'selected' if p == price }}>до {{ p|rub }}/сутки</option>{% endfor %}
+  </select>
+  <select name="sort" aria-label="Сортировка">
+    <option value="price" {{ 'selected' if sort == 'price' }}>Сначала дешевле</option>
+    <option value="price_desc" {{ 'selected' if sort == 'price_desc' }}>Сначала дороже</option>
+    <option value="free" {{ 'selected' if sort == 'free' }}>Сначала свободные</option>
+  </select>
+  <label class="chk"><input type="checkbox" name="free" value="1" {{ 'checked' if free }}> свободна в ближайшие 3 дня</label>
+  <button class="btn ghost" type="submit">Показать</button>
+</form>
+<div class="grid">
+{% for m in models %}
+  <a class="card" href="{{ m.url }}">
+    <img class="photo" src="{{ m.thumb or m.image }}" alt="{{ m.model }}" loading="lazy" width="640" height="400">
+    <div class="body">
+      <h3>{{ m.model }}</h3>
+      <div class="meta">{{ m.class }} · {{ m.year }} · {{ m.count }} {{ 'машина' if m.count == 1 else ('машины' if m.count < 5 else 'машин') }} в парке</div>
+      <div class="price">{{ m.rate|rub }} <small>/ сутки</small></div>
+      <div>{% if m.free %}<span class="pill busy">ближайшая свободна с {{ m.free|day }}</span>{% else %}<span class="pill ok">есть свободная сегодня</span>{% endif %}</div>
+    </div>
+  </a>
+{% else %}
+  <p class="note">По этим условиям машин нет — уберите фильтр.</p>
+{% endfor %}
+</div>
+
+<h2 id="buyout">Выкуп для работы в такси</h2>
+<p class="lead">Ежедневный платёж по выбранному графику, через 12 месяцев — выкупной платёж, и машина ваша.</p>
+<div class="grid">
+{% for o in offers %}
+  <a class="card" href="{{ o.url }}">
+    <img class="photo" src="{{ o.thumb }}" alt="{{ o.model }}" loading="lazy" width="640" height="400">
+    <div class="body">
+      <h3>{{ o.model }}</h3>
+      <div class="meta">{{ o.class }} · выкуп за {{ o.months }} месяцев</div>
+      <div class="price">{{ o.daily|rub }} <small>/ рабочий день</small></div>
+      <div><span class="pill">≈ {{ o.month_payment|rub }} в месяц</span></div>
+    </div>
+  </a>
+{% endfor %}
+</div>
+
+<div class="steps">
+  <div><b>1. Выберите даты</b>Календарь занятости по каждой машине, цена пересчитывается сразу.</div>
+  <div><b>2. Оставьте заявку</b>Она станет лидом и сделкой в воронке «Прокат» в Битрикс24.</div>
+  <div><b>3. Менеджер подтвердит</b>Залог и оплата — онлайн, договор — в кабинете клиента.</div>
+</div>
+{% endblock %}

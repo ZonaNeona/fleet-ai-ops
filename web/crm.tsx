@@ -164,6 +164,10 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
             </tbody>
           </table>
           <p className="muted cr-note"><Clock3 size={13} /> Часть лидов датирована позже сегодня — они появятся при следующей синхронизации, как в живом портале.</p>
+          <p className="muted cr-note">
+            Заявки с клиентского сайта приходят сюда лидом и сделкой в воронке «Прокат»:{" "}
+            <a href="/auto" target="_blank" rel="noreferrer">открыть сайт таксопарка</a>
+          </p>
         </div>
       )}
 

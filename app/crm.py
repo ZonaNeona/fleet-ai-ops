@@ -51,6 +51,8 @@ WRITE: dict[str, frozenset[str]] = {
     "crm.timeline.comment.add": frozenset({"fields"}),
     "crm.activity.add": frozenset({"fields"}),
     "crm.item.add": frozenset({"entityTypeId", "fields"}),
+    "crm.lead.add": frozenset({"fields"}),
+    "crm.deal.add": frozenset({"fields"}),
     "bizproc.event.send": frozenset({"event_token", "return_values", "log_message"}),
 }
 CAR_TYPE = 1040  # smart process «Автомобиль»
@@ -198,6 +200,23 @@ class Emulator:
                     "createdTime": b24(now())}
             d["cars"].append(item)
             return {"item": item}
+        if method == "crm.lead.add":
+            lead = {"STATUS_ID": "NEW", "SOURCE_ID": "WEB", "ASSIGNED_BY_ID": "7", **fields,
+                    "ID": str(1 + max([int(x["ID"]) for x in d["leads"]] or [499])), "DATE_CREATE": b24(now())}
+            d["leads"].append(lead)
+            return int(lead["ID"])
+        if method == "crm.deal.add":
+            category = str(fields.get("CATEGORY_ID", "0"))
+            stage = str(fields.get("STAGE_ID") or ("NEW" if category == "0" else f"C{category}:NEW"))
+            deal = {"CURRENCY_ID": "RUB", "ASSIGNED_BY_ID": "7", "SOURCE_ID": "WEB", "OPPORTUNITY": "0.00",
+                    "UF_CRM_CONTRACT": "", "UF_CRM_VEHICLE": "", "UF_CRM_PAID": "0.00",
+                    **{k: str(v) for k, v in fields.items()}, "CATEGORY_ID": category, "STAGE_ID": stage,
+                    "STAGE_SEMANTIC_ID": "P", "ID": str(1 + max([int(x["ID"]) for x in d["deals"]] or [100])),
+                    "DATE_CREATE": b24(now()), "MOVED_TIME": b24(now())}
+            d["deals"].append(deal)
+            d["stagehistory"].append({"ID": str(len(d["stagehistory"]) + 1), "OWNER_ID": deal["ID"], "STAGE_ID": stage,
+                                      "CATEGORY_ID": category, "CREATED_TIME": b24(now())})
+            return int(deal["ID"])
         if method == "bizproc.event.send":
             d["events"].append({"event_token": params.get("event_token"), "return_values": params.get("return_values"),
                                 "log_message": params.get("log_message"), "at": b24(now())})
