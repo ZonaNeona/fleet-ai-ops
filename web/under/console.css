@@ -1881,3 +1881,4 @@
 .k-robot-steps li.retry svg { color: #fbbf24; }
 .k-robot-steps li.error svg { color: #f87171; }
 .k-robot-steps small { color: var(--k-text3); font-variant-numeric: tabular-nums; }
+.k-demo-note { border-left: 2px solid var(--k-accent); padding-left: 10px; }
