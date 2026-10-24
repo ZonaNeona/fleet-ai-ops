@@ -20,7 +20,7 @@ export function RobotView() {
   const q = useQueryClient();
   const robot = useQuery({
     queryKey: ["robot"],
-    queryFn: () => api<{ available: boolean; run: Run | null }>("/robot"),
+    queryFn: () => api<{ available: boolean; run: Run | null; ledger: number }>("/robot"),
     refetchInterval: (query) => (["queued", "running"].includes(query.state.data?.run?.status || "") ? 2000 : false),
   });
   const [shot, setShot] = useState("");
@@ -48,6 +48,23 @@ export function RobotView() {
     }
   };
   const working = ["queued", "running"].includes(run?.status || "");
+  const [syncing, setSyncing] = useState(false);
+  const fetchFines = async () => {
+    setSyncing(true);
+    try {
+      await api("/integrations/run", { method: "POST", body: JSON.stringify({ source: "fines" }) });
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const r = await api<{ ledger: number }>("/robot");
+        if (r.ledger) break;
+      }
+      await q.invalidateQueries({ queryKey: ["robot"] });
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
   const rec = run?.reconciliation || [];
   const fresh = rec.filter((r) => r.state === "portal-only").length;
   const src = (name: string) => (run ? `/api/v1/robot/${run.id}/shot/${name}` : "");
@@ -74,6 +91,14 @@ export function RobotView() {
           )}
         </div>
         {robot.data && !robot.data.available && <p className="k-hint">Playwright на этом сервере не установлен.</p>}
+        {robot.data?.available && robot.data.ledger === 0 && (
+          <p className="k-hint">
+            В учёте пока нет штрафов из n8n — сверке не с чем сравнивать.{" "}
+            <button className="k-btn" disabled={syncing} onClick={fetchFines}>
+              {syncing ? <LoaderCircle size={13} className="spin" /> : <RotateCw size={13} />} Сначала забрать штрафы через n8n
+            </button>
+          </p>
+        )}
         {run && (
           <Section title={`Запуск ${new Date(run.created).toLocaleTimeString("ru-RU")} · ${run.plates ?? "…"} ТС${run.seconds ? ` · ${run.seconds} с` : ""}`}>
             {run.error && <p className="k-hint"><CircleAlert size={13} /> {run.error}</p>}

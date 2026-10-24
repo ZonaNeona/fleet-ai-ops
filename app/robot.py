@@ -210,7 +210,8 @@ def robot_view(request: Request):
     with db() as s:
         sp = viewer(s, request)
         run = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "robot_run").order_by(Item.created.desc()))
-        return {"available": available(), "run": view(run) if run else None}
+        # Without fines from n8n the reconciliation has nothing to compare with: the console offers to fetch them first.
+        return {"available": available(), "run": view(run) if run else None, "ledger": len(ledger_fines(s, sp.id))}
 
 
 @router.post("/api/v1/robot/run")
