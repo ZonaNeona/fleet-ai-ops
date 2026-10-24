@@ -185,6 +185,12 @@ def catalog(request: Request, type: str = "", cls: str = "", price: int = 0, sor
                 price=price, sort=sort, free=free, classes=CLASSES, total=len(cars))
 
 
+# Declared before /auto/{ref}: routes match in order.
+@router.get("/auto/sent", response_class=HTMLResponse)
+def sent(request: Request, lead: int = 0, deal: int = 0, title: str = ""):
+    return page("sent.html", request, lead=lead, deal=deal, title=title[:120])
+
+
 @router.get("/auto/vykup/{key}", response_class=HTMLResponse)
 def buyout_page(key: str, request: Request, schedule: str = "6/1"):
     if key not in BUYOUT:
@@ -295,11 +301,6 @@ def request_car(request: Request, kind: str = Form(...), ref: str = Form(...), n
         audit(s, sp, f"Заявка с сайта → лид #{lead} и сделка #{deal} в Битрикс24", None, via="site")
         response.headers["location"] = "/auto/sent?" + urlencode({"lead": lead, "deal": deal, "title": title[:120]})
         return response
-
-
-@router.get("/auto/sent", response_class=HTMLResponse)
-def sent(request: Request, lead: int = 0, deal: int = 0, title: str = ""):
-    return page("sent.html", request, lead=lead, deal=deal, title=title[:120])
 
 
 # ---------------------------------------------------------------- crawlers
