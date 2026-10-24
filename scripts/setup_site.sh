@@ -27,6 +27,26 @@ assert anchor in text, "no location / in " + path
 open(path, "w").write(text.replace(anchor, block + anchor))
 PY
 done
+# Cache headers: an old page shell must never point a returning visitor at bundles a release removed.
+for site in "$@"; do
+  grep -q 'location = /index.html' "$site" && continue
+  python3 - "$site" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path).read()
+block = r""" location = /index.html {
+   add_header Cache-Control "no-cache";
+   add_header X-Content-Type-Options nosniff;
+   add_header Referrer-Policy same-origin;
+ }
+ location /assets/ {
+   add_header Cache-Control "public, max-age=31536000, immutable";
+   add_header X-Content-Type-Options nosniff;
+ }
+"""
+open(path, "w").write(text.replace(" location / {", block + " location / {"))
+PY
+done
 nginx -t
 systemctl reload nginx
 echo "site routes ready"
