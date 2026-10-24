@@ -1142,3 +1142,17 @@ app.include_router(site_router)
 from .signals import router as signals_router
 
 app.include_router(signals_router)
+from .mail import router as mail_router
+
+app.include_router(mail_router)
+from .sheets import router as sheets_router
+
+app.include_router(sheets_router)
+from .gov import router as gov_router
+from .robot import router as robot_router
+
+app.include_router(gov_router)
+app.include_router(robot_router)
+from .channels import router as channels_router
+
+app.include_router(channels_router)

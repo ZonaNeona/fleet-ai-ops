@@ -1239,4 +1239,7 @@ def simulate(data):
     if not r:
         return {"messages": []}
     _, out, _, role = r
-    return {"messages": [_as_json(m) for m in out], "role": role}
+    from .channels import formats
+
+    # The same answer as VK's messages.send and MAX's /messages would receive it.
+    return {"messages": [_as_json(m) for m in out], "role": role, "channels": formats(out)}

@@ -1871,3 +1871,13 @@
 .k-pay-status.refunded { color: #fbbf24; }
 .k-pay ol { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--k-text2); display: grid; gap: 3px; }
 .k-pay ol small { color: var(--k-text3); font-variant-numeric: tabular-nums; }
+/* Робот */
+.k-robot-shot { border-radius: 12px; overflow: hidden; border: 1px solid var(--k-line); background: #0b0f15; min-height: 120px; }
+.k-robot-shot img { display: block; width: 100%; height: auto; }
+.k-robot-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.k-robot-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; background: var(--k-panel2); }
+.k-robot-steps li.on { outline: 1px solid var(--k-accent); }
+.k-robot-steps li.success svg { color: #34d399; }
+.k-robot-steps li.retry svg { color: #fbbf24; }
+.k-robot-steps li.error svg { color: #f87171; }
+.k-robot-steps small { color: var(--k-text3); font-variant-numeric: tabular-nums; }

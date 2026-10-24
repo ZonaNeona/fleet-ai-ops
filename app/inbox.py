@@ -156,11 +156,14 @@ confidence — насколько уверенно прочитаны обяза
 
 def by_model(space, images):
     """Vision model reads photos and scanned pages. Budget and cost go through the shared AI layer."""
-    from .ai import call, chain
+    from .ai import call, chain, local_documents
 
-    options = chain(vision=True)
+    local = local_documents()
+    options = chain(vision=True, local=local)
     if not options:
-        raise RuntimeError("Vision-модель не настроена")
+        # No silent fallback to the cloud: a document that must stay inside waits for a person instead.
+        raise RuntimeError("Локальная модель недоступна — документ с ПДн не отправляется в облако" if local
+                           else "Vision-модель не настроена")
     provider, model = options[0]
     content = [{"type": "text", "text": "Распознай документ."}] + [
         {"type": "image_url", "image_url": {"url": img}} for img in images

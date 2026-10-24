@@ -22,6 +22,8 @@ def notify(job):
             if not item or not cansee(s, sp, item):
                 return {"telegram": "out_of_scope"}
         chat = sp.data["tg_chat"]
+        if str(chat).startswith(("vk:", "max:")):
+            return {"channel": str(chat).split(":")[0], "telegram": "not_linked"}  # notifications go out through Telegram
         title = job.data["title"]
         route = "web" if sp.role in ("owner", "admin", "manager", "service", "finance", "screening") else None
         if job.data.get("target") and sp.role in ("driver", "client"):
@@ -47,6 +49,8 @@ def morning_digest():
     with db() as s:
         targets = [(sp.data["tg_chat"], build(s, sp)) for sp in due_spaces(s)]
     for chat, text in targets:
+        if str(chat).startswith(("vk:", "max:")):
+            continue  # the digest goes out through Telegram only
         try:
             asyncio.run(_deliver(chat, [{"text": text, "kb": kb([("📊 Дашборд", "web")])}]))
         except Exception as e:
@@ -71,7 +75,8 @@ def maintenance():
         week = (now() - timedelta(days=7)).isoformat()
         s.execute(
             delete(System).where(
-                or_(System.key.like("ykemu:%"), System.key.like("pay:%"), System.key.like("tg:%"), System.key.like("b24key:%")),
+                or_(System.key.like("ykemu:%"), System.key.like("pay:%"), System.key.like("tg:%"), System.key.like("b24key:%"),
+                    System.key.like("vk:%"), System.key.like("max:%")),
                 func.coalesce(System.data["created_at"].astext, System.data["at"].astext,
                               System.data["received"].astext, System.data["expires"].astext, "") < week,
             )
@@ -144,6 +149,16 @@ def main():
                 morning_digest()
                 last = time.monotonic()
                 try:
+                    from .mail import poll
+
+                    poll()  # every few minutes, and only with a mailbox configured
+                    from .gov import sweep
+
+                    with db() as s:
+                        sweep(s)
+                except Exception:
+                    traceback.print_exc()
+                try:
                     with db() as s:
                         refill_pool(s)
                 except Exception:
@@ -196,6 +211,14 @@ def main():
                     from .inbox import run_job
 
                     result = run_job(j)
+                elif j.kind == "channel":
+                    from .channels import process as process_channel
+
+                    result = process_channel(j.data)
+                elif j.kind == "robot":
+                    from .robot import run_job as run_robot
+
+                    result = run_robot(j)
                 elif j.kind == "call":
                     from .calls import review
 

@@ -12,6 +12,7 @@ import {
   Globe,
   IdCard,
   LoaderCircle,
+  Mail,
   Receipt,
   Sparkles,
   Upload,
@@ -70,6 +71,7 @@ const SOURCE: Record<string, [any, string]> = {
   bot: [Bot, "из Telegram-бота"],
   web: [Globe, "загружен в кабинете"],
   sample: [Sparkles, "пример со стенда"],
+  mail: [Mail, "из почты"],
 };
 const LINKS: [string, string, keyof Data][] = [
   ["vehicle", "Машина", "vehicle"],
@@ -94,6 +96,7 @@ export function InboxPage({
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
   const file = useRef<HTMLInputElement>(null);
+  const eml = useRef<HTMLInputElement>(null);
   const inbox = useQuery({
     queryKey: ["inbox"],
     queryFn: () => api<Inbox>("/inbox"),
@@ -135,6 +138,25 @@ export function InboxPage({
       await send("upload", { file: stored.id });
     } catch (e: any) {
       toast(e.message);
+      setBusy("");
+    }
+  };
+  // A letter: its PDF and photos become documents of the same graph; the sample comes from a service station.
+  const letter = async (f?: File) => {
+    setBusy("mail");
+    try {
+      let r: { docs: Doc[] };
+      if (f) {
+        const form = new FormData();
+        form.append("file", f);
+        r = await api<{ docs: Doc[] }>("/inbox/eml", { method: "POST", body: form });
+      } else r = await api<{ docs: Doc[] }>("/inbox/eml/sample", { method: "POST", body: "{}" });
+      if (r.docs[0]) setPicked(r.docs[0].id);
+      setOnly("all");
+      refresh();
+    } catch (e: any) {
+      toast(e.message);
+    } finally {
       setBusy("");
     }
   };
@@ -200,6 +222,23 @@ export function InboxPage({
           <button className="button secondary" disabled={!!busy} onClick={() => send("license", { sample: "license" })}>
             <IdCard size={16} /> ВУ кандидата
           </button>
+          <button className="button secondary" disabled={!!busy} onClick={() => letter()} title="Письмо СТО со счётом в PDF — проходит тот же граф">
+            {busy === "mail" ? <LoaderCircle size={16} className="spin" /> : <Mail size={16} />} Письмо от СТО
+          </button>
+          <button className="button secondary" disabled={!!busy} onClick={() => eml.current?.click()} title="Файл письма .eml из любого почтового клиента">
+            <Mail size={16} /> Письмо .eml
+          </button>
+          <input
+            ref={eml}
+            type="file"
+            hidden
+            accept=".eml,message/rfc822"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) letter(f);
+            }}
+          />
           <button className="button primary" disabled={!!busy} onClick={() => file.current?.click()}>
             {busy === "upload" ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />}
             Свой файл
@@ -258,6 +297,7 @@ export function InboxPage({
                   {new Date(doc.created).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </small>
                 <h2>{doc.kind ? inbox.data.kinds[doc.kind] : doc.name || "Документ"}</h2>
+                {doc.mail && <p className="muted">Письмо от {doc.mail.from || "—"} · «{doc.mail.subject || "без темы"}»</p>}
                 {doc.summary && <p className="muted">Модель: «{doc.summary}»</p>}
               </div>
               <span className={"ib-pill big " + (STATUS[doc.status] || ["", "wait"])[1]}>

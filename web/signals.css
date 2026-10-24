@@ -16,3 +16,5 @@
 .sg-item em { font-style: normal; font-size: 13px; color: var(--text-2); }
 .sg-item i { font-style: normal; font-size: 13px; }
 .sg-more { margin: 8px 0 0; font-size: 13px; }
+.sg-export { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+.sg-export .button { font-size: 13px; padding: 6px 10px; }

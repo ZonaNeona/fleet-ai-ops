@@ -4,13 +4,17 @@
 set -euo pipefail
 [ $# -ge 1 ] || { echo "usage: setup_site.sh <nginx site file>..." >&2; exit 2; }
 for site in "$@"; do
-  grep -q 'location ~ \^/(auto' "$site" && continue
+  if grep -q 'location ~ \^/(auto' "$site"; then
+    # an earlier release routed only the site: add the training portal to the same location
+    grep -q 'gov(/' "$site" || sed -i 's#location ~ ^/(auto(/\.\*)?|sitemap#location ~ ^/(auto(/.*)?|gov(/.*)?|sitemap#' "$site"
+    continue
+  fi
   cp -a "$site" "$site.before-site"
   python3 - "$site" <<'PY'
 import sys
 path = sys.argv[1]
 text = open(path).read()
-block = r""" location ~ ^/(auto(/.*)?|sitemap\.xml|robots\.txt)$ {
+block = r""" location ~ ^/(auto(/.*)?|gov(/.*)?|sitemap\.xml|robots\.txt)$ {
    proxy_pass http://127.0.0.1:3008;
    proxy_set_header Host $host;
    proxy_set_header X-Forwarded-Proto $scheme;

@@ -30,6 +30,8 @@ PROVIDERS = {
         "https://openrouter.ai/api/v1",
         "OPENROUTER_API_KEY",
     ),
+    # A model on own hardware (Ollama's OpenAI-compatible API): documents with personal data stay inside.
+    "ollama": ("OLLAMA_URL", "http://127.0.0.1:11434/v1", "OLLAMA_URL"),
 }
 RETRYABLE = {408, 409, 425, 429, 500, 502, 503, 504}
 
@@ -42,9 +44,14 @@ def client(provider):
     base_env, base_default, key_env = PROVIDERS[provider]
     return httpx.Client(
         base_url=os.getenv(base_env, base_default).rstrip("/") + "/",
-        headers={"Authorization": "Bearer " + os.environ[key_env]},
-        timeout=70,
+        headers={} if provider == "ollama" else {"Authorization": "Bearer " + os.environ[key_env]},
+        timeout=180 if provider == "ollama" else 70,  # a CPU-only box reads a page slower than a cloud model
     )
+
+
+def local_documents() -> bool:
+    """Documents may carry personal data: with PII_LOCAL=1 they are read only by the local model."""
+    return os.getenv("PII_LOCAL") == "1"
 
 
 @lru_cache(maxsize=2)
@@ -53,6 +60,9 @@ def models(provider="openrouter"):
         r = c.get("models")
         r.raise_for_status()
         data = {x["id"]: x for x in r.json()["data"]}
+    if provider == "ollama":  # own hardware: no per-token price
+        for x in data.values():
+            x["pricing"] = {"prompt": "0", "completion": "0"}
     if provider == "deepseek":
         # DeepSeek не отдаёт тарифы в /models — для дневного бюджета берём их из окружения (USD за токен)
         price = {
@@ -64,9 +74,11 @@ def models(provider="openrouter"):
     return data
 
 
-def chain(vision=False):
+def chain(vision=False, local=False):
     """Упорядоченный список (провайдер, модель), доступных прямо сейчас."""
-    if vision:
+    if local:
+        wanted = [("ollama", os.getenv("OLLAMA_VISION_MODEL" if vision else "OLLAMA_MODEL", "qwen2.5vl:3b"))]
+    elif vision:
         wanted = [
             ("openrouter", os.getenv("VISION_MODEL", "google/gemini-2.5-flash-lite"))
         ]

@@ -12,6 +12,8 @@ type Obs = {
   stats: Record<string, number>;
   sentry: boolean;
   hermes: { configured: boolean; ok?: boolean; ms?: number };
+  documents_llm: "local" | "cloud";
+  ollama: boolean;
   queue: { worker_heartbeat_age_seconds: number; jobs: Record<string, number>; jobs_failed_today: number; queue_wait_seconds: number; ai_spend_usd_today: number; ai_calls_today: number };
 };
 type Pay = {
@@ -115,6 +117,10 @@ export function OpsView() {
           <div className={o?.hermes.ok ? "ok" : "bad"}>
             <b>Hermes Agent</b>
             <small>{!o?.hermes.configured ? "не подключён: агент отвечает встроенным циклом" : o.hermes.ok ? `на связи · ${o.hermes.ms} мс · профиль fleet` : "недоступен — отвечает встроенный цикл"}</small>
+          </div>
+          <div className="ok">
+            <b>Документы с ПДн</b>
+            <small>{o?.documents_llm === "local" ? "читает только локальная модель (Ollama) — в облако не уходят" : `облачная vision-модель; локальная — переменной PII_LOCAL=1${o?.ollama ? "" : " и OLLAMA_URL"}`}</small>
           </div>
           <div className={o?.sentry ? "ok" : "bad"}><b>Sentry</b><small>{o?.sentry ? "ошибки уходят в Sentry" : "выключен: SENTRY_DSN не задан"}</small></div>
         </div>

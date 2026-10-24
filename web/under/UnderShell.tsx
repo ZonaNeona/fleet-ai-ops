@@ -14,6 +14,7 @@ import { BotFlow } from "./BotFlow";
 import { DocsView } from "./DocsView";
 import { McpView } from "./McpView";
 import { OpsView } from "./OpsView";
+import { RobotView } from "./RobotView";
 import { ModeSwitch, SECTIONS } from "./mode";
 
 type Ctx = { job?: string; prompt?: string; run?: string };
@@ -137,6 +138,7 @@ export function UnderShell({
           {section === "docs" && <DocsView data={data} openInbox={openInbox} />}
           {section === "mcp" && <McpView />}
           {section === "ops" && <OpsView />}
+          {section === "robot" && <RobotView />}
           {section === "log" && <LogView data={data} go={go} />}
         </main>
         <footer className="k-foot">

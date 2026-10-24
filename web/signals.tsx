@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronRight, Zap } from "lucide-react";
+import { AlertTriangle, ChevronRight, FileSpreadsheet, Sheet, Zap } from "lucide-react";
 import { api, Data, Row } from "./lib";
 import "./signals.css";
 
@@ -13,6 +13,19 @@ const PAGE: Record<string, string> = { "hiring-stuck": "crm", "crm-paid-gap": "c
 export function SignalsWidget({ data, open, go }: { data: Data; open: (row: Row) => void; go: (page: string) => void }) {
   const q = useQuery({ queryKey: ["signals"], queryFn: () => api<Signals>("/signals"), refetchInterval: 60000 });
   const [rule, setRule] = useState("");
+  const owner = ["owner", "admin", "finance"].includes(data.session.role);
+  const exp = useQuery({ queryKey: ["export"], queryFn: () => api<{ sheets: boolean; url: string | null }>("/export"), enabled: owner });
+  const [sent, setSent] = useState("");
+  const mirror = async () => {
+    setSent("…");
+    try {
+      const r = await api<{ url: string }>("/export/sheets", { method: "POST", body: "{}" });
+      setSent(r.url);
+    } catch (e: any) {
+      setSent("");
+      alert(e.message);
+    }
+  };
   if (!q.data) return null;
   const rows = q.data.rows.filter((r) => !rule || r.rule === rule);
   const target = (s: Signal) =>
@@ -22,6 +35,15 @@ export function SignalsWidget({ data, open, go }: { data: Data; open: (row: Row)
     <section className="sg">
       <div className="sg-head">
         <h2><Zap size={18} /> Сделать сейчас {q.data.rows.length ? <b>{q.data.rows.length}</b> : null}</h2>
+        {owner && (
+          <div className="sg-export">
+            <a className="button ghost" href="/api/v1/export.xlsx"><FileSpreadsheet size={15} /> XLSX: сводка, сигналы, документы</a>
+            {exp.data?.sheets && (
+              <button className="button ghost" onClick={mirror} disabled={sent === "…"}><Sheet size={15} /> {sent && sent !== "…" ? "Обновлено" : "В Google Таблицу"}</button>
+            )}
+            {sent && sent !== "…" && <a href={sent} target="_blank" rel="noreferrer">открыть</a>}
+          </div>
+        )}
         <div className="sg-chips">
           <button className={!rule ? "on" : ""} onClick={() => setRule("")}>Все</button>
           {q.data.summary.map((x) => (

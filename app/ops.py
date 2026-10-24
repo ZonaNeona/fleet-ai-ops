@@ -312,7 +312,8 @@ def summary():
     from .hermes import health
 
     return {"routes": routes[:15], "requests": len(RECENT), "errors": list(ERRORS)[-10:], "redis": info, "stats": dict(STATS),
-            "sentry": bool(os.getenv("SENTRY_DSN")), "queue": gauges(), "hermes": health()}
+            "sentry": bool(os.getenv("SENTRY_DSN")), "queue": gauges(), "hermes": health(),
+            "documents_llm": "local" if os.getenv("PII_LOCAL") == "1" else "cloud", "ollama": bool(os.getenv("OLLAMA_URL"))}
 
 
 def init_sentry():

@@ -142,6 +142,8 @@ export function BotPage({
     }
   }
   const [error, setError] = useState("");
+  const [wire, setWire] = useState<{ vk: any[]; max: any[] } | null>(null);
+  const [wireTab, setWireTab] = useState<"vk" | "max">("vk");
   const feed = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [miniUrl, setMiniUrl] = useState("");
@@ -236,6 +238,7 @@ export function BotPage({
         await new Promise((r) => setTimeout(r, i < 5 ? 400 : 900));
         const r = await api("/bot/sim/" + id);
         if (r.state === "done") {
+          if (r.result.channels) setWire(r.result.channels);
           const out: Msg[] = (r.result.messages || []).map((x: any) => ({
             ...x,
             from: "bot",
@@ -379,6 +382,21 @@ export function BotPage({
             В кабинете внутри телефона можно загрузить учебные документы и
             фотографии. Реальные списания отключены.
           </p>
+        </div>
+        <div className="bot-how card bot-wire">
+          <h3>Тот же сценарий в VK и MAX</h3>
+          <p className="muted">
+            Ядро бота одно: событие VK или MAX приводится к тому же виду, что апдейт Telegram, а ответ — к вызову API
+            канала. Нажмите кнопку в телефоне — здесь появится, что получил бы каждый канал.
+          </p>
+          <div className="tabs">
+            {(["vk", "max"] as const).map((c) => (
+              <button key={c} className={wireTab === c ? "active" : ""} onClick={() => setWireTab(c)}>
+                {c === "vk" ? "VK · messages.send" : "MAX · POST /messages"}
+              </button>
+            ))}
+          </div>
+          <pre className="bot-wire-json">{wire ? JSON.stringify(wire[wireTab], null, 2).slice(0, 2400) : "Ответов ещё не было."}</pre>
         </div>
       </section>
 

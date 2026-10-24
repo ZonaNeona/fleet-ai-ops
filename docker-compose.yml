@@ -17,6 +17,10 @@ x-app: &app
     INTEGRATION_SECRET: ${INTEGRATION_SECRET:-local-only-not-a-secret}
     B24APP_URL: http://web/b24app
     B24_EMULATOR_URL: http://api:3008
+    ROBOT_BASE: http://api:3008
+    # Local model for documents with personal data: OLLAMA_URL=http://ollama:11434/v1 PII_LOCAL=1 with --profile local-llm
+    OLLAMA_URL: ${OLLAMA_URL:-}
+    PII_LOCAL: ${PII_LOCAL:-0}
   volumes:
     - files:/data/files
   depends_on:
@@ -77,6 +81,14 @@ services:
       b24app:
         condition: service_started
 
+  # OLLAMA_URL=http://ollama:11434/v1 PII_LOCAL=1 docker compose --profile local-llm up
+  # then once: docker compose exec ollama ollama pull qwen2.5vl:3b  (about 3 GB; needs 8 GB of RAM, not the demo server)
+  ollama:
+    image: ollama/ollama:0.12.6
+    profiles: ["local-llm"]
+    volumes:
+      - ollama:/root/.ollama
+
   # docker compose --profile observability up → Prometheus :9090 and Grafana :3000 with the «Fleet» dashboard
   prometheus:
     image: prom/prometheus:v3.5.0
@@ -102,3 +114,4 @@ services:
 volumes:
   pg:
   files:
+  ollama:

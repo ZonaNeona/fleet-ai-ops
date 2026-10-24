@@ -34,6 +34,10 @@
 | [`#under/docs`](https://fleet.shvarev-demo.ru/#under/docs) | Граф документов на LangGraph: путь реального документа, `interrupt()` на решении человека, чекпойнты в PostgreSQL |
 | [`#under/mcp`](https://fleet.shvarev-demo.ru/#under/mcp) | MCP-сервер: личный ключ к своему демо-пространству, конфиги для Claude Desktop и Cursor, проверка `initialize` / `tools/list` / `tools/call` прямо из консоли |
 | [`#under/n8n`](https://fleet.shvarev-demo.ru/#under/n8n) | Настоящие workflow n8n для 1С, Яндекс Про, штрафов и телематики, сверка расхождений, история запусков |
+| [`#under/robot`](https://fleet.shvarev-demo.ru/#under/robot) | Playwright-робот: учебный портал штрафов (капча-заглушка, постраничная выдача, сбои 503/429), снимок каждого шага, сверка с n8n и загрузка нового в учёт |
+| [`#app/inbox`](https://fleet.shvarev-demo.ru/#app/inbox) → «Письмо от СТО» | Почта как канал: вложения письма (.eml или IMAP-ящик) идут тем же графом документов |
+| [`#app/today`](https://fleet.shvarev-demo.ru/#app/today) → «XLSX» | Сводка, «сделать сейчас» и реестр документов — в XLSX; в Google Sheets по сервисному аккаунту |
+| [`#app/bot`](https://fleet.shvarev-demo.ru/#app/bot) → «VK и MAX» | Один сценарий бота на трёх транспортах: что получили бы VK `messages.send` и MAX `POST /messages` |
 | [`#under/ops`](https://fleet.shvarev-demo.ru/#under/ops) | Эксплуатация: задержки по маршрутам, очередь и пульс воркера, Redis (лимиты, кэш, живая лента), журнал онлайн-оплат с возвратом; [`/api/metrics`](https://fleet.shvarev-demo.ru/api/metrics) для Prometheus |
 | [`#under/log`](https://fleet.shvarev-demo.ru/#under/log) | Живая лента: ИИ-задания, вебхуки, синхронизации, аудит. Любое событие можно проиграть на холсте |
 
