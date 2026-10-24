@@ -51,9 +51,11 @@ def buttons(m):
     return rows
 
 
-def vk_payload(peer, m) -> dict:
+def vk_payload(peer, m, random_id=None) -> dict:
+    """random_id makes VK drop a repeated send: unique per real send, a placeholder in the preview."""
     rows = buttons(m)[:6]
-    body = {"peer_id": peer, "message": plain(m.get("text", ""))[:4000] or "…", "random_id": secrets.randbelow(2**31)}
+    body = {"peer_id": peer, "message": plain(m.get("text", ""))[:4000] or "…",
+            "random_id": secrets.randbelow(2**31) if random_id is None else random_id}
     if m.get("photo") or m.get("document"):
         body["message"] += "\n\n(вложение доступно в Telegram и в кабинете)"
     if rows:
@@ -76,7 +78,8 @@ def max_payload(chat, m) -> dict:
 
 def formats(messages) -> dict:
     """What each channel's API would receive for these answers — shown by the cabinet's emulator."""
-    return {"vk": [vk_payload("<peer_id>", m) for m in messages], "max": [max_payload("<chat_id>", m) for m in messages]}
+    return {"vk": [vk_payload("<peer_id>", m, "<random_id>") for m in messages],
+            "max": [max_payload("<chat_id>", m) for m in messages]}
 
 
 # ---------------------------------------------------------------- inbound → the core's update shape
