@@ -32,9 +32,12 @@ def lines(paths, suffixes):
 def main():
     cov = ROOT / ".coverage.json"
     tests = run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--cov=app",
-                 f"--cov-report=json:{cov}", "-k", "not lease"])
+                 f"--cov-report=json:{cov}", "-k", "not lease", "-rfE", "--tb=line"])
     passed = int(m.group(1)) if (m := re.search(r"(\d+) passed", tests.stdout)) else 0
-    failed = int(m.group(1)) if (m := re.search(r"(\d+) failed", tests.stdout)) else 0
+    failed = sum(int(m.group(1)) for m in re.finditer(r"(\d+) (?:failed|errors?)", tests.stdout))
+    names = [line.split(" - ")[0] for line in tests.stdout.splitlines() if line.startswith(("FAILED ", "ERROR "))]
+    for line in names + [x for x in tests.stdout.splitlines() if x.startswith("E ")][:10]:
+        print(line, file=sys.stderr)  # the release log shows what broke without opening the report
     coverage = 0.0
     if cov.exists():
         coverage = round(json.loads(cov.read_text(encoding="utf-8"))["totals"]["percent_covered"], 1)
@@ -44,7 +47,7 @@ def main():
     report = {
         "at": datetime.now(UTC).isoformat(),
         "python": {
-            "tests": passed + failed, "passed": passed, "coverage": coverage,
+            "tests": passed + failed, "passed": passed, "coverage": coverage, "failed": names,
             "ruff": run([sys.executable, "-m", "ruff", "check", "app", "scripts", "tests", "tools"]).returncode == 0,
             "mypy": run([sys.executable, "-m", "mypy"]).returncode == 0,
             "files": py_files, "lines": py_lines,

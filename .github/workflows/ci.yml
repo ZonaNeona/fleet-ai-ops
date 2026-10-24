@@ -98,9 +98,9 @@ jobs:
       # Build and start separately; on failure the tail of the output becomes annotations (readable without a login).
       - run: |
           set -o pipefail
-          docker compose build 2>&1 | tee build.log || { grep -iE 'error|failed|ERR!' build.log | tail -30 | sed 's/^/::error::/'; exit 1; }
+          docker compose build --progress plain 2>&1 | tee build.log || { tail -40 build.log | sed 's/^/::error::build: /'; exit 1; }
       - run: |
-          docker compose up -d
+          docker compose up -d 2>&1 | tee up.log || { tail -30 up.log | sed 's/^/::error::up: /'; docker compose ps -a | sed 's/^/::error::ps: /'; exit 1; }
           for i in $(seq 1 60); do
             if curl -fsS http://localhost:8080/api/health; then exit 0; fi
             sleep 5

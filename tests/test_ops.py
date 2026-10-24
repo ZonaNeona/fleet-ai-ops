@@ -48,7 +48,8 @@ def test_yookassa_emulator_round_trip(client):  # noqa: F811
     c.post("/api/v1/session/role", json={"role": "driver"})
     state = c.get("/api/v1/miniapp/state").json()
     debt = next(x for x in state["contracts"] if float(x["debt"]) > 0)
-    intent = c.post("/api/v1/commands", json={"action": "demo_payment.create", "payload": {"purpose": "rent", "target": debt["id"]}}).json()
+    intent = c.post("/api/v1/commands", json={"action": "demo_payment.create", "payload": {"purpose": "rent", "target": debt["id"]}},
+                    headers={"Idempotency-Key": secrets.token_hex(8)}).json()
     started = c.post(f"/api/v1/payments/{intent['id']}/yookassa", json={"back": "/?tg=1#tg/profile"}).json()
     assert started["mode"] == "emulator" and started["confirmation_url"].endswith(started["provider_id"])
     # The same payment asked twice is one provider payment (Idempotence-Key).
