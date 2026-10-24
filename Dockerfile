@@ -1,6 +1,6 @@
 # API and worker share one image; docker-compose picks the command.
 FROM python:3.12-slim AS app
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app \
     FASTEMBED_CACHE_PATH=/opt/fastembed FLEET_ENV=/dev/null FLEET_INTEGRATIONS_ENV=/dev/null
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libpangoft2-1.0-0 fonts-dejavu-core curl \
