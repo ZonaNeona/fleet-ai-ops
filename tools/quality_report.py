@@ -20,8 +20,16 @@ OUT = ROOT / "reports" / "code.json"
 
 
 def run(cmd):
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          check=False, env={**os.environ, "PYTHONPATH": str(ROOT)})
+    return subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+    )
 
 
 def lines(paths, suffixes):
@@ -31,8 +39,22 @@ def lines(paths, suffixes):
 
 def main():
     cov = ROOT / ".coverage.json"
-    tests = run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--cov=app",
-                 f"--cov-report=json:{cov}", "-k", "not lease", "-rfE", "--tb=line"])
+    tests = run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "--cov=app",
+            f"--cov-report=json:{cov}",
+            "-k",
+            "not lease",
+            "-rfE",
+            "--tb=line",
+        ]
+    )
     passed = int(m.group(1)) if (m := re.search(r"(\d+) passed", tests.stdout)) else 0
     failed = sum(int(m.group(1)) for m in re.finditer(r"(\d+) (?:failed|errors?)", tests.stdout))
     names = [line.split(" - ")[0] for line in tests.stdout.splitlines() if line.startswith(("FAILED ", "ERROR "))]
@@ -47,10 +69,14 @@ def main():
     report = {
         "at": datetime.now(UTC).isoformat(),
         "python": {
-            "tests": passed + failed, "passed": passed, "coverage": coverage, "failed": names,
+            "tests": passed + failed,
+            "passed": passed,
+            "coverage": coverage,
+            "failed": names,
             "ruff": run([sys.executable, "-m", "ruff", "check", "app", "scripts", "tests", "tools"]).returncode == 0,
             "mypy": run([sys.executable, "-m", "mypy"]).returncode == 0,
-            "files": py_files, "lines": py_lines,
+            "files": py_files,
+            "lines": py_lines,
         },
         "web": {"tsc": True, "files": ts_files, "lines": ts_lines},
         "checks": "pytest на PostgreSQL + pgvector, ruff (ошибки и вероятные баги), mypy, tsc; те же проверки в CI на каждый push",

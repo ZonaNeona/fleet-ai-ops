@@ -94,8 +94,7 @@
   font-family: var(--font);
   background:
     radial-gradient(1100px 560px at 72% -12%, rgba(139, 92, 246, 0.11), transparent 62%),
-    radial-gradient(900px 520px at 8% 112%, rgba(34, 211, 238, 0.07), transparent 60%),
-    var(--k-bg);
+    radial-gradient(900px 520px at 8% 112%, rgba(34, 211, 238, 0.07), transparent 60%), var(--k-bg);
   color-scheme: dark;
 }
 .k-shell button {
@@ -1831,54 +1830,231 @@
 }
 
 /* Документы: выбор документа над холстом, текстовый слой и проверки в инспекторе */
-.k-prompt.k-docs-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.k-prompt.k-docs-bar .k-role { flex: 1 1 260px; min-width: 0; max-width: none; }
-.k-pre {
-  margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
-  white-space: pre-wrap; color: inherit; opacity: 0.85;
+.k-prompt.k-docs-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
-.k-checks { display: grid; gap: 8px; margin-top: 10px; }
-.k-checks div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
-.k-checks div.ok b { color: #34d399; }
-.k-checks div.bad b { color: #fbbf24; }
-.k-checks small { opacity: 0.7; }
+.k-prompt.k-docs-bar .k-role {
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: none;
+}
+.k-pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font:
+    12px/1.5 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  color: inherit;
+  opacity: 0.85;
+}
+.k-checks {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.k-checks div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.k-checks div.ok b {
+  color: #34d399;
+}
+.k-checks div.bad b {
+  color: #fbbf24;
+}
+.k-checks small {
+  opacity: 0.7;
+}
 
 /* MCP */
-.k-mcp { grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "canvas ins"; }
-.k-mcp-main { grid-area: canvas; padding: 22px 26px; overflow: auto; display: grid; gap: 14px; align-content: start; }
-.k-mcp-key { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.k-mcp-key code { padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 12px; overflow-wrap: anywhere; }
-.k-mcp-probe { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-@media (max-width: 900px) { .k-mcp { grid-template-columns: 1fr; grid-template-areas: "canvas" "ins"; grid-template-rows: auto auto; } }
+.k-mcp {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "canvas ins";
+}
+.k-mcp-main {
+  grid-area: canvas;
+  padding: 22px 26px;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.k-mcp-key {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.k-mcp-key code {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.k-mcp-probe {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+@media (max-width: 900px) {
+  .k-mcp {
+    grid-template-columns: 1fr;
+    grid-template-areas: "canvas" "ins";
+    grid-template-rows: auto auto;
+  }
+}
 /* Эксплуатация */
-.k-ops-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.k-ops-kpis div { display: grid; gap: 2px; padding: 12px; border-radius: 12px; background: var(--k-panel2); border: 1px solid var(--k-line); }
-.k-ops-kpis div svg { color: var(--k-cyan); }
-.k-ops-kpis b { font-size: 20px; }
-.k-ops-kpis span { font-size: 12px; color: var(--k-text2); }
-.k-ops-kpis div.bad b { color: #fbbf24; }
-.k-ops-table { overflow-x: auto; }
-.k-ops-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.k-ops-table th, .k-ops-table td { padding: 6px 8px; border-bottom: 1px solid var(--k-line); text-align: left; }
-.k-ops-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.k-ops-table code { overflow-wrap: anywhere; }
-.k-pay { padding: 10px 12px; border-radius: 12px; background: var(--k-panel2); border: 1px solid var(--k-line); margin-top: 8px; }
-.k-pay-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
-.k-pay-head span { color: var(--k-text2); }
-.k-pay-status { padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); font-size: 11px; }
-.k-pay-status.paid { color: #34d399; }
-.k-pay-status.refunded { color: #fbbf24; }
-.k-pay ol { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--k-text2); display: grid; gap: 3px; }
-.k-pay ol small { color: var(--k-text3); font-variant-numeric: tabular-nums; }
+.k-ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.k-ops-kpis div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--k-panel2);
+  border: 1px solid var(--k-line);
+}
+.k-ops-kpis div svg {
+  color: var(--k-cyan);
+}
+.k-ops-kpis b {
+  font-size: 20px;
+}
+.k-ops-kpis span {
+  font-size: 12px;
+  color: var(--k-text2);
+}
+.k-ops-kpis div.bad b {
+  color: #fbbf24;
+}
+.k-ops-table {
+  overflow-x: auto;
+}
+.k-ops-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.k-ops-table th,
+.k-ops-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--k-line);
+  text-align: left;
+}
+.k-ops-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.k-ops-table code {
+  overflow-wrap: anywhere;
+}
+.k-pay {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--k-panel2);
+  border: 1px solid var(--k-line);
+  margin-top: 8px;
+}
+.k-pay-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.k-pay-head span {
+  color: var(--k-text2);
+}
+.k-pay-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+.k-pay-status.paid {
+  color: #34d399;
+}
+.k-pay-status.refunded {
+  color: #fbbf24;
+}
+.k-pay ol {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--k-text2);
+  display: grid;
+  gap: 3px;
+}
+.k-pay ol small {
+  color: var(--k-text3);
+  font-variant-numeric: tabular-nums;
+}
 /* Робот */
-.k-robot-shot { border-radius: 12px; overflow: hidden; border: 1px solid var(--k-line); background: #0b0f15; min-height: 120px; }
-.k-robot-shot img { display: block; width: 100%; height: auto; }
-.k-robot-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
-.k-robot-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; background: var(--k-panel2); }
-.k-robot-steps li.on { outline: 1px solid var(--k-accent); }
-.k-robot-steps li.success svg { color: #34d399; }
-.k-robot-steps li.retry svg { color: #fbbf24; }
-.k-robot-steps li.error svg { color: #f87171; }
-.k-robot-steps small { color: var(--k-text3); font-variant-numeric: tabular-nums; }
-.k-demo-note { border-left: 2px solid var(--k-accent); padding-left: 10px; }
+.k-robot-shot {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--k-line);
+  background: #0b0f15;
+  min-height: 120px;
+}
+.k-robot-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.k-robot-steps {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.k-robot-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--k-panel2);
+}
+.k-robot-steps li.on {
+  outline: 1px solid var(--k-accent);
+}
+.k-robot-steps li.success svg {
+  color: #34d399;
+}
+.k-robot-steps li.retry svg {
+  color: #fbbf24;
+}
+.k-robot-steps li.error svg {
+  color: #f87171;
+}
+.k-robot-steps small {
+  color: var(--k-text3);
+  font-variant-numeric: tabular-nums;
+}
+.k-demo-note {
+  border-left: 2px solid var(--k-accent);
+  padding-left: 10px;
+}

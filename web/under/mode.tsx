@@ -1,4 +1,17 @@
-import { Network, BookOpen, Bot, Workflow, TerminalSquare, Cpu, LayoutDashboard, Send, FileInput, Plug, Gauge, ScanSearch } from "lucide-react";
+import {
+  Network,
+  BookOpen,
+  Bot,
+  Workflow,
+  TerminalSquare,
+  Cpu,
+  LayoutDashboard,
+  Send,
+  FileInput,
+  Plug,
+  Gauge,
+  ScanSearch,
+} from "lucide-react";
 
 /* Лёгкая часть контура «Под капотом»: нужна шапке продукта, поэтому не тянет за собой холсты. */
 
@@ -47,4 +60,3 @@ export function ModeSwitch({
     </div>
   );
 }
-

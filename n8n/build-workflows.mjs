@@ -9,8 +9,7 @@ const sources = ["1c", "yandex-pro", "fines", "telematics"];
 const normalizers = {
   "1c": "({vehicle_code:r.Ref_Key,mileage:String(r.Distance),charges:String(r.AccruedAmount)})",
   "yandex-pro": "({vehicle_code:r.car_id,payments:String(r.income)})",
-  fines:
-    "({vehicle_code:r.registration,fine:String(r.amount),external_id:r.resolution})",
+  fines: "({vehicle_code:r.registration,fine:String(r.amount),external_id:r.resolution})",
   telematics: "({vehicle_code:r.vehicle,mileage:String(r.odometer)})",
 };
 for (const source of sources) {
@@ -86,17 +85,12 @@ for (const source of sources) {
       jsCode:
         "const data=$input.first().json; const runs=data.runs||[data.body||data]; return runs.map(c=>{if(!c.run||!c.space||!c.signature)throw new Error('Нет подписанного контекста');return {json:c}});",
     }),
-    http(
-      "Загрузить источник",
-      [660, 0],
-      BASE + "/api/mock/" + source + "/snapshot",
-      {
-        method: "POST",
-        sendBody: true,
-        specifyBody: "json",
-        jsonBody: "={{$json}}",
-      },
-    ),
+    http("Загрузить источник", [660, 0], BASE + "/api/mock/" + source + "/snapshot", {
+      method: "POST",
+      sendBody: true,
+      specifyBody: "json",
+      jsonBody: "={{$json}}",
+    }),
     node(
       "Нормализовать данные",
       "code",
@@ -107,29 +101,20 @@ for (const source of sources) {
       },
       { onError: "continueErrorOutput" },
     ),
-    http(
-      "Подписанный пакет → учёт",
-      [1100, 0],
-      BASE + "/api/v1/integrations/ingest",
-      {
-        method: "POST",
-        sendBody: true,
-        specifyBody: "json",
-        jsonBody: "={{$json}}",
-      },
-    ),
+    http("Подписанный пакет → учёт", [1100, 0], BASE + "/api/v1/integrations/ingest", {
+      method: "POST",
+      sendBody: true,
+      specifyBody: "json",
+      jsonBody: "={{$json}}",
+    }),
     node("Ошибка источника", "code", [880, 240], {
-      jsCode:
-        "throw new Error('Источник не прошёл проверку или приём. Учётные операции не изменены.');",
+      jsCode: "throw new Error('Источник не прошёл проверку или приём. Учётные операции не изменены.');",
     }),
   ];
   const connections = {};
   const link = (a, b, error) =>
     (connections[a] = {
-      main: [
-        [{ node: b, type: "main", index: 0 }],
-        ...(error ? [[{ node: error, type: "main", index: 0 }]] : []),
-      ],
+      main: [[{ node: b, type: "main", index: 0 }], ...(error ? [[{ node: error, type: "main", index: 0 }]] : [])],
     });
   link("Запуск из кабинета", "Контекст запуска");
   link("По расписанию", "Выбрать активные сессии");
@@ -138,9 +123,7 @@ for (const source of sources) {
   link("Загрузить источник", "Нормализовать данные", "Ошибка источника");
   link("Нормализовать данные", "Подписанный пакет → учёт", "Ошибка источника");
   link("Подписанный пакет → учёт", "Готово", "Ошибка источника");
-  nodes.push(
-    node("Готово", "code", [1320, 0], { jsCode: "return $input.all();" }),
-  );
+  nodes.push(node("Готово", "code", [1320, 0], { jsCode: "return $input.all();" }));
   const w = {
     id: PREFIX + "-" + source,
     name: "Парк · " + source,
@@ -153,16 +136,10 @@ for (const source of sources) {
       saveDataErrorExecution: "all",
       executionTimeout: 60,
     },
-    versionId: createHash("sha256")
-      .update(JSON.stringify(nodes))
-      .digest("hex")
-      .slice(0, 32),
+    versionId: createHash("sha256").update(JSON.stringify(nodes)).digest("hex").slice(0, 32),
     pinData: {},
     tags: [],
   };
-  writeFileSync(
-    new URL(source + ".json", out),
-    JSON.stringify(w, null, 2),
-  );
+  writeFileSync(new URL(source + ".json", out), JSON.stringify(w, null, 2));
 }
 console.log("Generated four credential-free workflow definitions");

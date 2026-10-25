@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   CarFront,
@@ -39,16 +34,7 @@ import {
   Compass,
   ArrowLeftRight,
 } from "lucide-react";
-import {
-  api,
-  Data,
-  Row,
-  dirs,
-  getLabel,
-  staffRoles,
-  financialRoles,
-  CREDIT,
-} from "./lib";
+import { api, Data, Row, dirs, getLabel, staffRoles, financialRoles, CREDIT } from "./lib";
 import { SearchBox, Loading, Empty, ThemeToggle } from "./ui";
 import { AskFab, Credit } from "./fab";
 import type { Action } from "./actions";
@@ -69,9 +55,7 @@ import { SourcesWidget } from "./under/Integrations";
 const views = () => import("./views");
 /** Ленивый именованный экспорт с сохранением типов пропсов. */
 function pick<M, K extends keyof M>(load: () => Promise<M>, key: K): M[K] {
-  return lazy(() =>
-    load().then((m) => ({ default: m[key] as any })),
-  ) as unknown as M[K];
+  return lazy(() => load().then((m) => ({ default: m[key] as any }))) as unknown as M[K];
 }
 const Dashboard = pick(views, "Dashboard");
 const Fleet = pick(views, "Fleet");
@@ -159,9 +143,7 @@ function App() {
   const [page, setPage] = useState<string>(pageFromHash() || "today");
   // No landing: any visit opens the cabinet at once in a fresh guest session of the owner.
   const [auto, setAuto] = useState(true);
-  const [mode, setMode] = useState<"product" | "under">(
-    underFromHash() ? "under" : "product",
-  );
+  const [mode, setMode] = useState<"product" | "under">(underFromHash() ? "under" : "product");
   const [section, setSection] = useState(underFromHash() || "map");
   useEffect(() => {
     const followHash = () => {
@@ -178,18 +160,12 @@ function App() {
       history.replaceState(
         null,
         "",
-        location.pathname +
-          location.search +
-          (mode === "under" ? "#under/" + section : ""),
+        location.pathname + location.search + (mode === "under" ? "#under/" + section : ""),
       ),
     );
   }, [mode, section]);
   /** Смена контура: тёмная консоль «растекается» кругом от переключателя (View Transitions). */
-  function switchMode(
-    next: "product" | "under",
-    e?: { clientX: number; clientY: number },
-    s?: string,
-  ) {
+  function switchMode(next: "product" | "under", e?: { clientX: number; clientY: number }, s?: string) {
     const apply = () =>
       flushSync(() => {
         setMode(next);
@@ -197,18 +173,12 @@ function App() {
         setMenu(false);
       });
     const doc = document as any;
-    if (
-      !doc.startViewTransition ||
-      matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return apply();
+    if (!doc.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return apply();
     const root = document.documentElement;
     root.style.setProperty("--vt-x", (e?.clientX ?? innerWidth - 140) + "px");
     root.style.setProperty("--vt-y", (e?.clientY ?? 32) + "px");
     root.dataset.vt = next;
-    doc
-      .startViewTransition(apply)
-      .finished.finally(() => delete root.dataset.vt);
+    doc.startViewTransition(apply).finished.finally(() => delete root.dataset.vt);
   }
   const [search, setSearch] = useState("");
   const [branch, setBranch] = useState("");
@@ -220,9 +190,7 @@ function App() {
   const [toast, setToast] = useState("");
   const [menu, setMenu] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
-  const [notifications, setNotifications] = useState<
-    { title: string; at: string }[]
-  >([]);
+  const [notifications, setNotifications] = useState<{ title: string; at: string }[]>([]);
   const [showNotes, setShowNotes] = useState(false);
   const health = useQuery({
     queryKey: ["health"],
@@ -255,10 +223,7 @@ function App() {
   }, [end, period]);
   const report = useQuery({
     queryKey: ["report", start, end, branch, direction, data?.session.role],
-    queryFn: () =>
-      api(
-        `/report?start=${start}&end=${end}&branch=${branch}&direction=${direction}`,
-      ),
+    queryFn: () => api(`/report?start=${start}&end=${end}&branch=${branch}&direction=${direction}`),
     enabled: !!data,
   });
   useEffect(() => {
@@ -318,8 +283,7 @@ function App() {
         tg.expand();
       }
     });
-    if ("serviceWorker" in navigator)
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, [q]);
   async function begin(asRole?: string) {
     setStarting(true);
@@ -354,10 +318,7 @@ function App() {
       q.setQueryData(["session"], session);
       q.setQueryData(["bootstrap"], fresh);
       q.removeQueries({
-        predicate: (query) =>
-          !["session", "bootstrap", "health"].includes(
-            String(query.queryKey[0]),
-          ),
+        predicate: (query) => !["session", "bootstrap", "health"].includes(String(query.queryKey[0])),
       });
       setEntered(true);
     } catch (e: any) {
@@ -379,8 +340,7 @@ function App() {
     q.invalidateQueries();
   }
   const open = (row: Row) => setSelected(row);
-  const act = (id: string, label: string, target?: Row) =>
-    setAction({ id, label, target });
+  const act = (id: string, label: string, target?: Row) => setAction({ id, label, target });
   if (!data) {
     if (boot.isLoading || session.isLoading || auto)
       return (
@@ -392,7 +352,9 @@ function App() {
       <div className="fullscreen">
         <div className="start-error">
           <h1>Таксопарк · концепт</h1>
-          <p>{fatal || boot.error?.message || (online ? "Не удалось открыть демосессию." : "Нет соединения с сетью.")}</p>
+          <p>
+            {fatal || boot.error?.message || (online ? "Не удалось открыть демосессию." : "Нет соединения с сетью.")}
+          </p>
           <button className="button primary" disabled={starting} onClick={() => begin("owner")}>
             {starting ? "Открываем…" : "Открыть кабинет"}
           </button>
@@ -403,32 +365,12 @@ function App() {
   const common = { data, open, act, search, branch, direction };
   const pageInfo = nav.find((n) => n[0] === page) || nav[0];
   const allowedNav = nav
-    .filter(
-      (n) =>
-        !["finance", "analytics"].includes(n[0]) ||
-        financialRoles.includes(data.session.role),
-    )
-    .filter(
-      (n) =>
-        n[0] !== "settings" ||
-        ["owner", "admin", "finance"].includes(data.session.role),
-    )
+    .filter((n) => !["finance", "analytics"].includes(n[0]) || financialRoles.includes(data.session.role))
+    .filter((n) => n[0] !== "settings" || ["owner", "admin", "finance"].includes(data.session.role))
     .filter((n) => n[0] !== "people" || staffRoles.includes(data.session.role))
-    .filter(
-      (n) =>
-        data.session.role !== "screening" ||
-          ["today", "people", "bot"].includes(n[0]),
-    )
-    .filter(
-      (n) =>
-        data.session.role !== "service" ||
-        !["people", "contracts"].includes(n[0]),
-    )
-    .filter(
-      (n) =>
-        n[0] !== "inbox" ||
-        ["owner", "admin", "finance", "manager", "service"].includes(data.session.role),
-    )
+    .filter((n) => data.session.role !== "screening" || ["today", "people", "bot"].includes(n[0]))
+    .filter((n) => data.session.role !== "service" || !["people", "contracts"].includes(n[0]))
+    .filter((n) => n[0] !== "inbox" || ["owner", "admin", "finance", "manager", "service"].includes(data.session.role))
     .filter((n) => n[0] !== "crm" || ["owner", "admin", "finance", "manager"].includes(data.session.role))
     .filter((n) => n[0] !== "calls" || ["owner", "admin", "manager"].includes(data.session.role))
     .filter((n) => n[0] !== "onec" || ["owner", "admin", "finance"].includes(data.session.role))
@@ -449,14 +391,14 @@ function App() {
           role={role}
           onSwitch={(m, e) => switchMode(m, e)}
           openBot={() => {
-          switchMode("product");
-          setPage("bot");
-        }}
+            switchMode("product");
+            setPage("bot");
+          }}
           openInbox={() => {
             switchMode("product");
             setPage("inbox");
           }}
-        openRow={(r) => {
+          openRow={(r) => {
             switchMode("product");
             setSelected(r);
           }}
@@ -473,11 +415,7 @@ function App() {
           <div className="wordmark">
             Таксопарк<span>концепт и прототип</span>
           </div>
-          <button
-            className="mobile-close icon-button"
-            onClick={() => setMenu(false)}
-            aria-label="Закрыть меню"
-          >
+          <button className="mobile-close icon-button" onClick={() => setMenu(false)} aria-label="Закрыть меню">
             <X />
           </button>
         </div>
@@ -504,20 +442,13 @@ function App() {
               <Icon size={18} />
               {label}
               {id === "service" && (
-                <span className="nav-count">
-                  {data.ticket.filter((t) => t.status !== "closed").length}
-                </span>
+                <span className="nav-count">{data.ticket.filter((t) => t.status !== "closed").length}</span>
               )}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <a
-            href="/guide.html"
-            target="_blank"
-            rel="noreferrer"
-            className="demo-label"
-          >
+          <a href="/guide.html" target="_blank" rel="noreferrer" className="demo-label">
             Показ за 5 минут ↗
           </a>
           <span className="demo-label">
@@ -536,11 +467,7 @@ function App() {
       <div className="main">
         <header className="topbar">
           <div className="breadcrumb">
-            <button
-              className="mobile-toggle icon-button"
-              onClick={() => setMenu(true)}
-              aria-label="Открыть меню"
-            >
+            <button className="mobile-toggle icon-button" onClick={() => setMenu(true)} aria-label="Открыть меню">
               <Menu />
             </button>
             <span>Рабочее пространство</span>
@@ -574,11 +501,7 @@ function App() {
               <Bell size={18} />
               {notifications.length > 0 && <i />}
             </button>
-            <select
-              aria-label="Демонстрационная роль"
-              value={data.session.role}
-              onChange={(e) => role(e.target.value)}
-            >
+            <select aria-label="Демонстрационная роль" value={data.session.role} onChange={(e) => role(e.target.value)}>
               {Object.entries(data.session.roles).map(([id, name]) => (
                 <option key={id} value={id}>
                   {name}
@@ -596,71 +519,47 @@ function App() {
         <main>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">
-                {mobileRole ? "ВАШ ЛИЧНЫЙ КАБИНЕТ" : "ТАКСОПАРК · КОНЦЕПТ"}
-              </div>
+              <div className="eyebrow">{mobileRole ? "ВАШ ЛИЧНЫЙ КАБИНЕТ" : "ТАКСОПАРК · КОНЦЕПТ"}</div>
               <h1>
-                {page === "today"
-                  ? mobileRole
-                    ? "Всё важное — под рукой"
-                    : "Обзор бизнеса"
-                  : pageInfo[1]}
+                {page === "today" ? (mobileRole ? "Всё важное — под рукой" : "Обзор бизнеса") : pageInfo[1]}
                 <span className="heading-dot">.</span>
               </h1>
               <p>
                 {page === "today"
                   ? "Контроль процессов. Прозрачные цифры. Следующее действие."
                   : {
-                      fleet:
-                        "Каждый автомобиль — от выдачи до финансового результата.",
-                      people:
-                        "От первого обращения до долгосрочного сотрудничества.",
-                      contracts:
-                        "Условия, обязательства и история в одном месте.",
-                      service:
-                        "От обращения до возвращения автомобиля в работу.",
-                      inbox:
-                        "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
+                      fleet: "Каждый автомобиль — от выдачи до финансового результата.",
+                      people: "От первого обращения до долгосрочного сотрудничества.",
+                      contracts: "Условия, обязательства и история в одном месте.",
+                      service: "От обращения до возвращения автомобиля в работу.",
+                      inbox: "Фото и PDF от водителей и подрядчиков — распознаны, сверены, проведены.",
                       crm: "Найм водителей и заявки на прокат из Битрикс24 — и сверка оплат с учётом.",
                       calls: "Запись → расшифровка → разбор по чек-листу диспетчера.",
                       onec: "Начисления и оплаты уходят в 1С документами — и сверяются обратно.",
                       work: "Путь заказчика, дорожная карта этого стенда и измеренное качество.",
                       finance: "Каждая сумма имеет источник и основание.",
-                      analytics:
-                        "Разбирайтесь в результате до отдельной операции.",
-                      settings:
-                        "Источники данных, правила и состояние системы.",
+                      analytics: "Разбирайтесь в результате до отдельной операции.",
+                      settings: "Источники данных, правила и состояние системы.",
                       bot: "Водители, клиенты и отделы — в одном боте.",
                     }[page]}
               </p>
             </div>
             <div className="heading-actions">
-              {["owner", "admin", "manager", "driver", "client"].includes(
-                data.session.role,
-              ) &&
+              {["owner", "admin", "manager", "driver", "client"].includes(data.session.role) &&
                 ["today", "fleet", "contracts"].includes(page) && (
-                  <button
-                    className="button primary"
-                    onClick={() => act("contract.create", "Новый договор")}
-                  >
+                  <button className="button primary" onClick={() => act("contract.create", "Новый договор")}>
                     <Plus size={17} />
                     Новый договор
                   </button>
                 )}
               {page === "people" && (
-                <button
-                  className="button primary"
-                  onClick={() => act("client.create", "Новый клиент")}
-                >
+                <button className="button primary" onClick={() => act("client.create", "Новый клиент")}>
                   <Plus size={17} />
                   Новый клиент
                 </button>
               )}
               {page === "service" && (
-                <button
-                  className="button primary"
-                  onClick={() => act("ticket.create", "Новое обращение")}
-                >
+                <button className="button primary" onClick={() => act("ticket.create", "Новое обращение")}>
                   <Plus size={17} />
                   Создать заявку
                 </button>
@@ -672,28 +571,17 @@ function App() {
             style={["bot", "inbox", "crm", "calls", "onec", "work"].includes(page) ? { display: "none" } : undefined}
           >
             <div className="segment">
-              <button
-                className={!direction ? "selected" : ""}
-                onClick={() => setDirection("")}
-              >
+              <button className={!direction ? "selected" : ""} onClick={() => setDirection("")}>
                 Вся группа
               </button>
               {Object.entries(dirs).map(([id, name]) => (
-                <button
-                  key={id}
-                  className={direction === id ? "selected" : ""}
-                  onClick={() => setDirection(id)}
-                >
+                <button key={id} className={direction === id ? "selected" : ""} onClick={() => setDirection(id)}>
                   {name}
                 </button>
               ))}
             </div>
             <div className="filter-right">
-              <select
-                aria-label="Филиал"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-              >
+              <select aria-label="Филиал" value={branch} onChange={(e) => setBranch(e.target.value)}>
                 <option value="">Все площадки</option>
                 {data.branches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -701,11 +589,7 @@ function App() {
                   </option>
                 ))}
               </select>
-              <select
-                aria-label="Период"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-              >
+              <select aria-label="Период" value={period} onChange={(e) => setPeriod(e.target.value)}>
                 <option value="7">7 дней</option>
                 <option value="30">30 дней</option>
                 <option value="90">90 дней</option>
@@ -714,11 +598,7 @@ function App() {
           </div>
           {!["today", "settings", "bot"].includes(page) && (
             <div className="page-search">
-              <SearchBox
-                value={search}
-                onChange={setSearch}
-                placeholder="Найти автомобиль, договор или клиента…"
-              />
+              <SearchBox value={search} onChange={setSearch} placeholder="Найти автомобиль, договор или клиента…" />
             </div>
           )}
           <Suspense fallback={<Loading />}>
@@ -739,27 +619,17 @@ function App() {
                     }
                   }}
                 />
-              ) : ["manager", "service", "screening"].includes(
-                  data.session.role,
-                ) ? (
+              ) : ["manager", "service", "screening"].includes(data.session.role) ? (
                 <Operations data={data} open={open} />
               ) : (
                 <Dashboard {...common} report={report.data} go={setPage} />
               ))}
-            {page === "today" &&
-              ["owner", "admin", "finance", "manager"].includes(data.session.role) && (
-                <SignalsWidget data={data} open={open} go={setPage} />
-              )}
-            {page === "today" &&
-              ["owner", "admin", "finance", "manager"].includes(
-                data.session.role,
-              ) && (
-                <SourcesWidget
-                  data={data}
-                  open={open}
-                  go={() => switchMode("under", undefined, "n8n")}
-                />
-              )}
+            {page === "today" && ["owner", "admin", "finance", "manager"].includes(data.session.role) && (
+              <SignalsWidget data={data} open={open} go={setPage} />
+            )}
+            {page === "today" && ["owner", "admin", "finance", "manager"].includes(data.session.role) && (
+              <SourcesWidget data={data} open={open} go={() => switchMode("under", undefined, "n8n")} />
+            )}
             {page === "fleet" && <Fleet {...common} />}
             {page === "people" && <People {...common} />}
             {page === "contracts" && <Contracts {...common} />}
@@ -776,26 +646,14 @@ function App() {
                 underGraph={() => switchMode("under", undefined, "docs")}
               />
             )}
-            {page === "finance" && (
-              <Finance {...common} report={report.data} done={done} />
-            )}
-            {page === "analytics" && (
-              <Analytics {...common} report={report.data} />
-            )}
+            {page === "finance" && <Finance {...common} report={report.data} done={done} />}
+            {page === "analytics" && <Analytics {...common} report={report.data} />}
             {page === "settings" && <SettingsPage {...common} done={done} />}
             {page === "bot" && (
-              <BotPage
-                data={data}
-                bot={health.data?.telegram_username}
-                openCabinet={() => setPage("today")}
-              />
+              <BotPage data={data} bot={health.data?.telegram_username} openCabinet={() => setPage("today")} />
             )}
           </Suspense>
-          {report.error && (
-            <div className="error">
-              Не удалось обновить отчёт: {report.error.message}
-            </div>
-          )}
+          {report.error && <div className="error">Не удалось обновить отчёт: {report.error.message}</div>}
           <div className="page-footer">
             <span>
               <Credit /> · учебные данные
@@ -807,55 +665,20 @@ function App() {
       {mobileRole && (
         <nav className="mobile-bottom-nav">
           {allowedNav
-            .filter((n) =>
-              ["today", "contracts", "service", "finance", "bot"].includes(n[0]),
-            )
+            .filter((n) => ["today", "contracts", "service", "finance", "bot"].includes(n[0]))
             .map(([id, label, Icon]) => (
-              <button
-                key={id}
-                className={page === id ? "active" : ""}
-                onClick={() => setPage(id)}
-              >
+              <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)}>
                 <Icon size={20} />
-                <span>
-                  {id === "today"
-                    ? "Главная"
-                    : id === "service"
-                      ? "Помощь"
-                      : id === "bot"
-                        ? "Бот"
-                        : label}
-                </span>
+                <span>{id === "today" ? "Главная" : id === "service" ? "Помощь" : id === "bot" ? "Бот" : label}</span>
               </button>
             ))}
         </nav>
       )}
       <Suspense fallback={null}>
-        {selected && (
-          <DetailPanel
-            row={selected}
-            {...common}
-            onClose={() => setSelected(null)}
-          />
-        )}
-        {action && (
-          <ActionDialog
-            action={action}
-            data={data}
-            onClose={() => setAction(null)}
-            onDone={done}
-          />
-        )}
-        {globalSearch && (
-          <GlobalSearch
-            data={data}
-            open={open}
-            onClose={() => setGlobalSearch(false)}
-          />
-        )}
-        {ai && (
-          <AIPanel data={data} target={selected} onClose={() => setAi(false)} />
-        )}
+        {selected && <DetailPanel row={selected} {...common} onClose={() => setSelected(null)} />}
+        {action && <ActionDialog action={action} data={data} onClose={() => setAction(null)} onDone={done} />}
+        {globalSearch && <GlobalSearch data={data} open={open} onClose={() => setGlobalSearch(false)} />}
+        {ai && <AIPanel data={data} target={selected} onClose={() => setAi(false)} />}
       </Suspense>
       {/* на странице бота сам чат — это агент, плавающая кнопка не нужна */}
       <AskFab onClick={() => setAi(true)} hidden={ai || page === "bot"} />
@@ -872,11 +695,7 @@ function App() {
         <div className="notifications card">
           <div className="card-head">
             <h3>События пространства</h3>
-            <button
-              className="icon-button"
-              onClick={() => setShowNotes(false)}
-              aria-label="Закрыть"
-            >
+            <button className="icon-button" onClick={() => setShowNotes(false)} aria-label="Закрыть">
               <X size={16} />
             </button>
           </div>
@@ -905,7 +724,17 @@ function RootRouter() {
     window.addEventListener("hashchange", follow);
     return () => window.removeEventListener("hashchange", follow);
   }, []);
-  return <Suspense fallback={<div className="fullscreen"><Loading /></div>}>{route === "tg" ? <MiniApp /> : <App />}</Suspense>;
+  return (
+    <Suspense
+      fallback={
+        <div className="fullscreen">
+          <Loading />
+        </div>
+      }
+    >
+      {route === "tg" ? <MiniApp /> : <App />}
+    </Suspense>
+  );
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

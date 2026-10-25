@@ -1,6 +1,7 @@
 """Initial isolated fleet model and transaction constraints."""
 
 from alembic import op
+
 from app.db import Base
 
 revision = "001"

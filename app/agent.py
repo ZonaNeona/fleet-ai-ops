@@ -1,14 +1,20 @@
-import json, time, hashlib, os, re
+import hashlib
+import json
+import os
+import re
+import time
 from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
-from .db import db, Space, Item, Job, now
-from .domain import visible, command, fail, WRITE
-from .seed import add
+
 from . import ai, rag
+from .db import Item, Job, Space, db, now
+from .domain import WRITE, command, fail, visible
 from .reports import report
+from .seed import add
 
 FINANCE = {"owner", "admin", "finance", "driver", "client", "investor"}
 
@@ -52,7 +58,9 @@ class Pipeline(Args):
 
 
 class Signals(Args):
-    rule: str | None = Field(default=None, pattern="^(debt-silent|rental-overdue|ticket-overdue|hiring-stuck|crm-paid-gap|call-low)$")
+    rule: str | None = Field(
+        default=None, pattern="^(debt-silent|rental-overdue|ticket-overdue|hiring-stuck|crm-paid-gap|call-low)$"
+    )
 
 
 class CrmTask(Args):
@@ -142,14 +150,28 @@ def execute(space, role, name, arguments, key):
             old = s.scalar(select(Item).where(Item.space == space, Item.kind == "agent_draft", Item.code == code))
             if old:
                 return {"draft": {"id": old.id, **old.data}}
-            row = add(s, space, "agent_draft", code, {
-                "role": role, "action": "crm.task", "status": "pending",
-                "payload": {"title": args.title, "description": args.description, "deal": args.deal_id,
-                            "responsible": RESPONSIBLE[args.responsible]},
-                "expires": (now() + timedelta(minutes=10)).isoformat(),
-            })
-            return {"draft": {"id": row.id, **row.data},
-                    "notice": "Это черновик. Задача в Битрикс24 ещё не создана; нужна кнопка подтверждения."}
+            row = add(
+                s,
+                space,
+                "agent_draft",
+                code,
+                {
+                    "role": role,
+                    "action": "crm.task",
+                    "status": "pending",
+                    "payload": {
+                        "title": args.title,
+                        "description": args.description,
+                        "deal": args.deal_id,
+                        "responsible": RESPONSIBLE[args.responsible],
+                    },
+                    "expires": (now() + timedelta(minutes=10)).isoformat(),
+                },
+            )
+            return {
+                "draft": {"id": row.id, **row.data},
+                "notice": "Это черновик. Задача в Битрикс24 ещё не создана; нужна кнопка подтверждения.",
+            }
         if name == "get_balance":
             r = report(s, sp)
             return {
@@ -166,14 +188,10 @@ def execute(space, role, name, arguments, key):
             }
         if name == "vehicle_economics":
             r = report(s, sp)
-            rows = [
-                x for x in r["rows"] if not args.code or x["code"] == args.code.upper()
-            ]
+            rows = [x for x in r["rows"] if not args.code or x["code"] == args.code.upper()]
             return {
                 "period": [r["start"], r["end"]],
-                "vehicles": sorted(rows, key=lambda x: Decimal(x["result"]))[
-                    : args.worst
-                ],
+                "vehicles": sorted(rows, key=lambda x: Decimal(x["result"]))[: args.worst],
                 "methodology": r["methodology"],
             }
         if name == "find_contract":
@@ -203,19 +221,13 @@ def execute(space, role, name, arguments, key):
             for v in vehicles:
                 d = v.data
                 since = d.get("down_since")
-                days = (
-                    max(0, (now() - datetime.fromisoformat(since)).days)
-                    if since
-                    else None
-                )
+                days = max(0, (now() - datetime.fromisoformat(since)).days) if since else None
                 if args.status and d["status"] != args.status:
                     continue
                 if args.direction and d["direction"] != args.direction:
                     continue
                 if args.min_days_in_repair and (
-                    d["status"] != "repair"
-                    or days is None
-                    or days < args.min_days_in_repair
+                    d["status"] != "repair" or days is None or days < args.min_days_in_repair
                 ):
                     continue
                 result.append(
@@ -237,11 +249,7 @@ def execute(space, role, name, arguments, key):
         if not v:
             fail("Автомобиль недоступен этой роли", 403)
         code = "DRAFT-" + hashlib.sha256(key.encode()).hexdigest()[:24]
-        old = s.scalar(
-            select(Item).where(
-                Item.space == space, Item.kind == "agent_draft", Item.code == code
-            )
-        )
+        old = s.scalar(select(Item).where(Item.space == space, Item.kind == "agent_draft", Item.code == code))
         if old:
             return {"draft": {"id": old.id, **old.data}}
         row = add(
@@ -271,9 +279,7 @@ def execute(space, role, name, arguments, key):
 
 def confirm(s, sp, draft_id, via="web"):
     d = s.scalar(
-        select(Item)
-        .where(Item.space == sp.id, Item.id == draft_id, Item.kind == "agent_draft")
-        .with_for_update()
+        select(Item).where(Item.space == sp.id, Item.id == draft_id, Item.kind == "agent_draft").with_for_update()
     )
     if not d or d.data["role"] != sp.role:
         fail("Черновик не найден для текущей роли", 404)
@@ -302,7 +308,12 @@ RULES = re.compile(
     r"регламент|по правилам|можно ли|разрешен|допуст|кто платит|за чей сч[её]т|штраф за|залог|страховк|"
     r"лимит пробега|перепробег|выходн\w* по графику|досрочн\w* выкуп|подменн"
 )
-ENGINES = {"rules": "Быстрый ответ без модели", "kb": "База знаний", "hermes": "Hermes Agent · MCP", "model": "Встроенный цикл"}
+ENGINES = {
+    "rules": "Быстрый ответ без модели",
+    "kb": "База знаний",
+    "hermes": "Hermes Agent · MCP",
+    "model": "Встроенный цикл",
+}
 
 
 def run(job):
@@ -319,11 +330,28 @@ def run(job):
     trace: list = []
     reply = quick.answer(job.space, role, prompt, trace)
     route = "rules" if reply else "kb" if RULES.search(prompt.lower()) else "hermes" if hermes.configured() else "model"
-    trace.insert(0, {"step": "route", "title": "Маршрутизация: " + ENGINES[route], "status": "success",
-                     "ms": round((time.monotonic() - started) * 1000), "output": {"route": route}})
+    trace.insert(
+        0,
+        {
+            "step": "route",
+            "title": "Маршрутизация: " + ENGINES[route],
+            "status": "success",
+            "ms": round((time.monotonic() - started) * 1000),
+            "output": {"route": route},
+        },
+    )
     if reply:
-        return {"answer": reply, "engine": "rules", "model": "без модели", "cost": "0", "tokens": 0, "trace": trace,
-                "sources": [], "drafts": [], "fields": {}}
+        return {
+            "answer": reply,
+            "engine": "rules",
+            "model": "без модели",
+            "cost": "0",
+            "tokens": 0,
+            "trace": trace,
+            "sources": [],
+            "drafts": [],
+            "fields": {},
+        }
     if route == "kb":
         result = rag.answer(job)
         return {**result, "engine": "kb", "trace": trace + list(result.get("trace") or [])}
@@ -332,15 +360,34 @@ def run(job):
         try:
             res = hermes.run(job, trace)
             with db() as s:
-                drafts = [{"id": d.id, **d.data} for d in s.scalars(select(Item).where(
-                    Item.space == job.space, Item.kind == "agent_draft", Item.created >= begun))
-                    if d.data.get("role") == role]
-            return {"answer": res.text or "Hermes не дал ответа — переформулируйте вопрос.", "engine": "hermes",
-                    "model": res.model, "cost": str(res.cost), "tokens": res.tokens, "trace": trace,
-                    "sources": [], "drafts": drafts, "fields": {}}
+                drafts = [
+                    {"id": d.id, **d.data}
+                    for d in s.scalars(
+                        select(Item).where(Item.space == job.space, Item.kind == "agent_draft", Item.created >= begun)
+                    )
+                    if d.data.get("role") == role
+                ]
+            return {
+                "answer": res.text or "Hermes не дал ответа — переформулируйте вопрос.",
+                "engine": "hermes",
+                "model": res.model,
+                "cost": str(res.cost),
+                "tokens": res.tokens,
+                "trace": trace,
+                "sources": [],
+                "drafts": drafts,
+                "fields": {},
+            }
         except hermes.HermesUnavailable as e:
-            trace.append({"step": "fallback", "title": "Hermes недоступен — отвечает встроенный цикл",
-                          "status": "retry", "ms": 0, "output": {"reason": str(e)}})
+            trace.append(
+                {
+                    "step": "fallback",
+                    "title": "Hermes недоступен — отвечает встроенный цикл",
+                    "status": "retry",
+                    "ms": 0,
+                    "output": {"reason": str(e)},
+                }
+            )
     return {**_loop(job, trace), "engine": "model"}
 
 
@@ -400,22 +447,19 @@ def _loop(job, trace):
                     },
                 ]
             )
-    messages[0][
-        "content"
-    ] += " История нужна только для понимания уточнений. Актуальные суммы, доступность и права всегда заново проверяй инструментами."
+    messages[0]["content"] += (
+        " История нужна только для понимания уточнений. Актуальные суммы, доступность и права всегда заново проверяй инструментами."
+    )
     messages[1:1] = history
     for step in range(4):
-        message, meta = ai.call_chain(
-            job.space, messages, trace=trace, tools=tools_for(role) if step < 3 else []
-        )
+        message, meta = ai.call_chain(job.space, messages, trace=trace, tools=tools_for(role) if step < 3 else [])
         last = meta
         total += Decimal(meta["cost"])
         tokens += meta["tokens"]
         calls = message.get("tool_calls") or []
         if not calls:
             return {
-                "answer": message.get("content")
-                or "Не удалось завершить ответ. Попробуйте уточнить вопрос.",
+                "answer": message.get("content") or "Не удалось завершить ответ. Попробуйте уточнить вопрос.",
                 "fields": {},
                 "sources": sources,
                 "drafts": drafts,
@@ -426,9 +470,7 @@ def _loop(job, trace):
             }
         if len(calls) > 4:
             raise RuntimeError("Модель превысила лимит инструментов")
-        messages.append(
-            {k: message[k] for k in ("role", "content", "tool_calls") if k in message}
-        )
+        messages.append({k: message[k] for k in ("role", "content", "tool_calls") if k in message})
         for call in calls:
             started = time.monotonic()
             name = call.get("function", {}).get("name", "")
@@ -436,20 +478,14 @@ def _loop(job, trace):
             status = "success"
             try:
                 arguments = json.loads(call["function"]["arguments"])
-                result = execute(
-                    job.space, role, name, arguments, job.id + ":" + call["id"]
-                )
+                result = execute(job.space, role, name, arguments, job.id + ":" + call["id"])
                 if result.get("draft"):
                     drafts.append(result["draft"])
                 if result.get("sources"):
                     sources.extend(result["sources"])
             except Exception as e:
                 status = "denied"
-                result = {
-                    "error": getattr(
-                        e, "detail", "Аргументы отклонены или инструмент недоступен"
-                    )
-                }
+                result = {"error": getattr(e, "detail", "Аргументы отклонены или инструмент недоступен")}
             trace.append(
                 {
                     "step": "tool",

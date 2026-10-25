@@ -116,8 +116,7 @@ export function useJob(
     queryKey: ["under-job", job, role],
     queryFn: () => api("/jobs/" + job),
     enabled: !!job,
-    refetchInterval: (q) =>
-      ["done", "failed"].includes((q.state.data as any)?.state) ? false : 1000,
+    refetchInterval: (q) => (["done", "failed"].includes((q.state.data as any)?.state) ? false : 1000),
   });
   const state: string | undefined = q.data?.state;
   return {
@@ -169,12 +168,7 @@ export function Timeline({
             <Pause size={15} />
           </button>
         ) : (
-          <button
-            className="k-icon primary"
-            onClick={replay.play}
-            disabled={!frames.length}
-            aria-label="Проиграть"
-          >
+          <button className="k-icon primary" onClick={replay.play} disabled={!frames.length} aria-label="Проиграть">
             {replay.done && frames.length ? <RotateCcw size={15} /> : <Play size={15} />}
           </button>
         )}
@@ -186,15 +180,9 @@ export function Timeline({
       <div className="k-tl-track">
         {!frames.length && <div className="k-tl-empty">{empty}</div>}
         {frames.map((f, i) => {
-          const state =
-            i < replay.pos || replay.done ? f.status || "success" : i === replay.pos ? "now" : "todo";
+          const state = i < replay.pos || replay.done ? f.status || "success" : i === replay.pos ? "now" : "todo";
           return (
-            <button
-              key={f.key}
-              className={"k-tl-step " + state}
-              onClick={() => replay.seek(i)}
-              title={f.label}
-            >
+            <button key={f.key} className={"k-tl-step " + state} onClick={() => replay.seek(i)} title={f.label}>
               <span className="k-tl-dot">
                 {state === "success" ? (
                   <Check size={10} strokeWidth={3} />
@@ -223,7 +211,7 @@ export function Timeline({
 
 /** JSON с подсветкой — для режима инженера. */
 export function Json({ value, max = 4000 }: { value: any; max?: number }) {
-  let text = typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "";
+  let text = typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
   if (text.length > max) text = text.slice(0, max) + "\n…";
   const parts: ReactNode[] = [];
   const re = /("(?:\\.|[^"\\])*")(\s*:)?|\b-?\d+(?:\.\d+)?(?:e[+-]?\d+)?\b|\btrue\b|\bfalse\b|\bnull\b/g;

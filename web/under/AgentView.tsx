@@ -32,15 +32,69 @@ const SUGGEST = [
 ];
 
 const TOOLS = [
-  { id: "get_balance", icon: Wallet, color: "#34d399", title: "Баланс и долг", what: "Начисления, платежи и просрочка — только по доступным роли договорам." },
-  { id: "list_vehicles", icon: CarFront, color: "#60a5fa", title: "Автомобили", what: "Список машин роли с фильтром по статусу и дням в ремонте." },
-  { id: "vehicle_economics", icon: ChartNoAxesCombined, color: "#fbbf24", title: "Экономика авто", what: "Доход, расходы и результат по машине или N худших." },
-  { id: "find_contract", icon: FileText, color: "#a78bfa", title: "Договоры", what: "Поиск договоров, доступных роли." },
-  { id: "search_knowledge", icon: BookOpen, color: "#22d3ee", title: "Регламенты", what: "Гибридный поиск RAG по базе знаний." },
-  { id: "create_ticket", icon: TicketPlus, color: "#f472b6", title: "Черновик заявки", what: "Только готовит черновик — создать заявку может лишь человек кнопкой «Подтвердить»." },
-  { id: "crm_pipeline", icon: Handshake, color: "#fb923c", title: "Битрикс24: воронки", what: "Найм водителей и прокат по стадиям, зависшие сделки, новые лиды, расхождения оплат с учётом." },
-  { id: "crm_task", icon: ListTodo, color: "#f472b6", title: "Черновик задачи", what: "Готовит задачу менеджеру в Битрикс24 — создаётся только после подтверждения человеком." },
-  { id: "get_signals", icon: Zap, color: "#ef4444", title: "Сделать сейчас", what: "Правила над учётом, сервисом, Битрикс24 и звонками: что требует человека сегодня и следующее действие." },
+  {
+    id: "get_balance",
+    icon: Wallet,
+    color: "#34d399",
+    title: "Баланс и долг",
+    what: "Начисления, платежи и просрочка — только по доступным роли договорам.",
+  },
+  {
+    id: "list_vehicles",
+    icon: CarFront,
+    color: "#60a5fa",
+    title: "Автомобили",
+    what: "Список машин роли с фильтром по статусу и дням в ремонте.",
+  },
+  {
+    id: "vehicle_economics",
+    icon: ChartNoAxesCombined,
+    color: "#fbbf24",
+    title: "Экономика авто",
+    what: "Доход, расходы и результат по машине или N худших.",
+  },
+  {
+    id: "find_contract",
+    icon: FileText,
+    color: "#a78bfa",
+    title: "Договоры",
+    what: "Поиск договоров, доступных роли.",
+  },
+  {
+    id: "search_knowledge",
+    icon: BookOpen,
+    color: "#22d3ee",
+    title: "Регламенты",
+    what: "Гибридный поиск RAG по базе знаний.",
+  },
+  {
+    id: "create_ticket",
+    icon: TicketPlus,
+    color: "#f472b6",
+    title: "Черновик заявки",
+    what: "Только готовит черновик — создать заявку может лишь человек кнопкой «Подтвердить».",
+  },
+  {
+    id: "crm_pipeline",
+    icon: Handshake,
+    color: "#fb923c",
+    title: "Битрикс24: воронки",
+    what: "Найм водителей и прокат по стадиям, зависшие сделки, новые лиды, расхождения оплат с учётом.",
+  },
+  {
+    id: "crm_task",
+    icon: ListTodo,
+    color: "#f472b6",
+    title: "Черновик задачи",
+    what: "Готовит задачу менеджеру в Битрикс24 — создаётся только после подтверждения человеком.",
+  },
+  {
+    id: "get_signals",
+    icon: Zap,
+    color: "#ef4444",
+    title: "Сделать сейчас",
+    what: "Правила над учётом, сервисом, Битрикс24 и звонками: что требует человека сегодня и следующее действие.",
+  },
 ];
 
 /** Зеркало app/agent.py → tools_for(role): права проверяются на сервере, здесь — для наглядности. */
@@ -123,7 +177,8 @@ export function AgentView({
       }
     });
     out.push({ key: "answer", node: "answer", label: "Ответ", edges: ["model-answer"], hold: 900 });
-    if (r.drafts?.length) out.push({ key: "draft", node: "draft", label: "Черновик", edges: [draftTool(r) + "-draft"], hold: 900 });
+    if (r.drafts?.length)
+      out.push({ key: "draft", node: "draft", label: "Черновик", edges: [draftTool(r) + "-draft"], hold: 900 });
     return out;
   }, [r]); // eslint-disable-line react-hooks/exhaustive-deps
   const replay = useReplay(frames, job.job + ":" + !!r);
@@ -132,13 +187,28 @@ export function AgentView({
   const seen = new Set(frames.slice(0, replay.done ? frames.length : replay.pos + 1).map((f) => f.node));
   const order: Record<string, number[]> = {};
   frames.forEach((f, i) => {
-    if (f.node.startsWith("tool:")) (order[f.node.slice(5)] ||= []).push(frames.slice(0, i + 1).filter((x) => x.node.startsWith("tool:")).length);
+    if (f.node.startsWith("tool:"))
+      (order[f.node.slice(5)] ||= []).push(frames.slice(0, i + 1).filter((x) => x.node.startsWith("tool:")).length);
   });
 
   const nodes: FNode[] = [
-    { id: "q", x: 0, y: Y0, icon: MessageSquareText, color: "#a78bfa", title: "Вопрос", sub: eng ? "role=" + role : data.session.roles[role] },
     {
-      id: "model", x: 270, y: Y0 - 6, icon: BrainCircuit, color: "#22d3ee", size: "lg", title: "Модель",
+      id: "q",
+      x: 0,
+      y: Y0,
+      icon: MessageSquareText,
+      color: "#a78bfa",
+      title: "Вопрос",
+      sub: eng ? "role=" + role : data.session.roles[role],
+    },
+    {
+      id: "model",
+      x: 270,
+      y: Y0 - 6,
+      icon: BrainCircuit,
+      color: "#22d3ee",
+      size: "lg",
+      title: "Модель",
       sub: eng ? "tool calling · ≤4 раунда" : "выбирает инструменты",
       badge: r ? trace.filter((s) => s.step === "llm").length + "×" : undefined,
     },
@@ -148,28 +218,55 @@ export function AgentView({
       let state: RunState | undefined = replay.states["tool:" + t.id];
       if (!can.has(t.id) && !state) state = "locked";
       return {
-        id: "tool:" + t.id, x: 600, y: toolY(i), icon: t.icon, color: t.color, size: "sm",
+        id: "tool:" + t.id,
+        x: 600,
+        y: toolY(i),
+        icon: t.icon,
+        color: t.color,
+        size: "sm",
         title: eng ? t.id : t.title,
-        sub: used ? ms(calls(t.id)[0]?.ms) + (denied ? " · отказ" : "") : !can.has(t.id) ? "нет доступа у роли" : eng ? t.title : undefined,
+        sub: used
+          ? ms(calls(t.id)[0]?.ms) + (denied ? " · отказ" : "")
+          : !can.has(t.id)
+            ? "нет доступа у роли"
+            : eng
+              ? t.title
+              : undefined,
         state,
         badge: used ? order[t.id]?.join(",") : undefined,
         dim: !can.has(t.id) || (!!r && !used && replay.done),
       };
     }),
     {
-      id: "answer", x: 270, y: Y0 + 330, icon: FileCheck2, color: "#34d399", title: "Ответ",
+      id: "answer",
+      x: 270,
+      y: Y0 + 330,
+      icon: FileCheck2,
+      color: "#34d399",
+      title: "Ответ",
       sub: r && seen.has("answer") ? (r.tokens || 0) + " ток. · $" + Number(r.cost || 0).toFixed(5) : undefined,
       state: replay.states.answer,
     },
   ];
   if (r?.drafts?.length)
-    nodes.push({ id: "draft", x: 880, y: toolY(TOOLS.findIndex((t) => t.id === draftTool(r))), icon: ClipboardCheck, color: "#f472b6", title: "Ждёт подтверждения", sub: "черновик · 10 мин", state: replay.states.draft ? "retry" : undefined });
+    nodes.push({
+      id: "draft",
+      x: 880,
+      y: toolY(TOOLS.findIndex((t) => t.id === draftTool(r))),
+      icon: ClipboardCheck,
+      color: "#f472b6",
+      title: "Ждёт подтверждения",
+      sub: "черновик · 10 мин",
+      state: replay.states.draft ? "retry" : undefined,
+    });
 
   const edges: FEdge[] = [
     { id: "q-model", from: "q", to: "model" },
     ...TOOLS.map((t) => ({ id: "model-" + t.id, from: "model", to: "tool:" + t.id, dashed: !can.has(t.id) })),
     { id: "model-answer", from: "model", to: "answer", out: "b" as const, in: "t" as const },
-    ...(r?.drafts?.length ? [{ id: draftTool(r) + "-draft", from: "tool:" + draftTool(r), to: "draft", label: "человек решает" }] : []),
+    ...(r?.drafts?.length
+      ? [{ id: draftTool(r) + "-draft", from: "tool:" + draftTool(r), to: "draft", label: "человек решает" }]
+      : []),
   ];
   const painted = replay.paint(edges).map((e) => (job.busy && e.id === "q-model" ? { ...e, flow: true } : e));
   if (job.busy) {
@@ -205,9 +302,16 @@ export function AgentView({
           <>
             <span className="k-eyebrow">Вопрос</span>
             <h3 className="k-h">{data.session.roles[role]}</h3>
-            {r ? <blockquote className="k-quote">{r.query || job.prompt || initialPrompt || "—"}</blockquote> : <p className="k-lead">Задайте вопрос в строке над схемой.</p>}
+            {r ? (
+              <blockquote className="k-quote">{r.query || job.prompt || initialPrompt || "—"}</blockquote>
+            ) : (
+              <p className="k-lead">Задайте вопрос в строке над схемой.</p>
+            )}
             <p className="k-hint">
-              <Say simple="Роль закрепляется за заданием на сервере — её нельзя «подменить» текстом вопроса." eng="role пишется в job.data при постановке и не берётся из промпта; инструменты строятся tools_for(role)." />
+              <Say
+                simple="Роль закрепляется за заданием на сервере — её нельзя «подменить» текстом вопроса."
+                eng="role пишется в job.data при постановке и не берётся из промпта; инструменты строятся tools_for(role)."
+              />
             </p>
           </>
         )}
@@ -221,35 +325,75 @@ export function AgentView({
                 eng="OpenAI-совместимый tools API; схемы аргументов — Pydantic → JSON Schema; каждый раунд — отдельный вызов call_chain с откатом на резервную модель."
               />
             </p>
-            {trace.filter((s) => s.step === "llm" || s.step === "fallback").map((s, i) => (
-              <div className={"k-call " + (s.step === "fallback" ? "warn" : "")} key={i}>
-                <b>{s.step === "fallback" ? "Откат: " + (s.output?.reason || "") : "Раунд " + (i + 1)}</b>
-                <Kv items={[["Модель", s.model], ["Токены", s.tokens], ["Стоимость", s.cost ? "$" + Number(s.cost).toFixed(6) : ""], ["Время", ms(s.ms)]]} />
-              </div>
-            ))}
+            {trace
+              .filter((s) => s.step === "llm" || s.step === "fallback")
+              .map((s, i) => (
+                <div className={"k-call " + (s.step === "fallback" ? "warn" : "")} key={i}>
+                  <b>{s.step === "fallback" ? "Откат: " + (s.output?.reason || "") : "Раунд " + (i + 1)}</b>
+                  <Kv
+                    items={[
+                      ["Модель", s.model],
+                      ["Токены", s.tokens],
+                      ["Стоимость", s.cost ? "$" + Number(s.cost).toFixed(6) : ""],
+                      ["Время", ms(s.ms)],
+                    ]}
+                  />
+                </div>
+              ))}
           </>
         )}
-        {info?.startsWith("tool:") && <ToolInfo id={info.slice(5)} calls={calls(info.slice(5))} can={can.has(info.slice(5))} role={data.session.roles[role]} />}
+        {info?.startsWith("tool:") && (
+          <ToolInfo
+            id={info.slice(5)}
+            calls={calls(info.slice(5))}
+            can={can.has(info.slice(5))}
+            role={data.session.roles[role]}
+          />
+        )}
         {(info === "answer" || info === "draft") && r && (
           <>
             <span className="k-eyebrow">Результат</span>
-            <div className="k-answer"><AnswerText text={r.answer} /></div>
+            <div className="k-answer">
+              <AnswerText text={r.answer} />
+            </div>
             {(r.sources || []).map((s: any, i: number) => (
-              <a className="k-source" key={i} href={s.url || undefined} target={s.url ? "_blank" : undefined} rel="noreferrer">
+              <a
+                className="k-source"
+                key={i}
+                href={s.url || undefined}
+                target={s.url ? "_blank" : undefined}
+                rel="noreferrer"
+              >
                 <span>ист.</span>
                 {s.title}
               </a>
             ))}
             <Drafts drafts={r.drafts || []} />
-            <Kv items={[["Ответил", ENGINE[r.engine] || "Встроенный цикл"], ["Модель", r.model], ["Токены", r.tokens], ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)], ["Вызовов инструментов", trace.filter((s) => s.step === "tool").length]]} />
-            {r.engine === "rules" && <p className="k-hint">Частый вопрос: ответ собран из инструментов без модели — бесплатно и не тратит лимит.</p>}
+            <Kv
+              items={[
+                ["Ответил", ENGINE[r.engine] || "Встроенный цикл"],
+                ["Модель", r.model],
+                ["Токены", r.tokens],
+                ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)],
+                ["Вызовов инструментов", trace.filter((s) => s.step === "tool").length],
+              ]}
+            />
+            {r.engine === "rules" && (
+              <p className="k-hint">
+                Частый вопрос: ответ собран из инструментов без модели — бесплатно и не тратит лимит.
+              </p>
+            )}
           </>
         )}
       </aside>
       <Timeline
         frames={frames}
         replay={replay}
-        empty={job.busy ? "Модель думает — трасса появится, как только задание выполнится" : "Поручите задачу — здесь появится каждый вызов модели и инструментов"}
+        empty={
+          job.busy
+            ? "Модель думает — трасса появится, как только задание выполнится"
+            : "Поручите задачу — здесь появится каждый вызов модели и инструментов"
+        }
       />
     </div>
   );
@@ -295,7 +439,9 @@ function ToolInfo({ id, calls, can, role }: { id: string; calls: any[]; can: boo
         </span>
         <div>
           <span className="k-eyebrow">инструмент</span>
-          <h3><code>{id}</code></h3>
+          <h3>
+            <code>{id}</code>
+          </h3>
         </div>
       </div>
       <p className="k-lead">{t.what}</p>
@@ -355,10 +501,20 @@ function Drafts({ drafts }: { drafts: any[] }) {
           <div className={"k-draft " + (ok ? "ok" : "")} key={d.id}>
             <span className="k-eyebrow">{ok ? "Создано" : "Требует подтверждения человека"}</span>
             <strong>{d.payload?.title}</strong>
-            <p>{d.action === "crm.task" ? "Задача в Битрикс24" : d.vehicle_code} · {d.payload?.description}</p>
-            <button className="k-btn primary wide" disabled={!!status[d.id] && status[d.id] !== "" && (ok || status[d.id] === "…")} onClick={() => confirm(d)}>
+            <p>
+              {d.action === "crm.task" ? "Задача в Битрикс24" : d.vehicle_code} · {d.payload?.description}
+            </p>
+            <button
+              className="k-btn primary wide"
+              disabled={!!status[d.id] && status[d.id] !== "" && (ok || status[d.id] === "…")}
+              onClick={() => confirm(d)}
+            >
               <CheckCircle2 size={15} />
-              {ok ? status[d.id] : d.action === "crm.task" ? "Подтвердить задачу в Битрикс24" : "Подтвердить создание заявки"}
+              {ok
+                ? status[d.id]
+                : d.action === "crm.task"
+                  ? "Подтвердить задачу в Битрикс24"
+                  : "Подтвердить создание заявки"}
             </button>
             {status[d.id] && !ok && status[d.id] !== "…" && <p className="k-alert">{status[d.id]}</p>}
           </div>

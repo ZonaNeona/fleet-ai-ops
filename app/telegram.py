@@ -5,8 +5,8 @@
 (domain.command — роли, статусы, ключ идемпотентности), и отправляет ответ.
 """
 
-import base64
 import asyncio
+import base64
 import hashlib
 import hmac
 import html
@@ -29,11 +29,11 @@ from aiogram.types import (
     WebAppInfo,
 )
 from fastapi import HTTPException
-from sqlalchemy import select, func, text as sqltext
-
 from psycopg.types.range import Range
+from sqlalchemy import func, select
+from sqlalchemy import text as sqltext
 
-from .db import FILES, ROOT, URL, Booking, Item, Space, Job, Event, Receipt, db, now, uid
+from .db import FILES, ROOT, URL, Booking, Event, Item, Job, Receipt, Space, db, now, uid
 from .domain import command, fail, get, today, visible
 from .reports import report
 from .seed import claim_space
@@ -97,16 +97,19 @@ def kb(*rows):
         for text, action in row:
             if action == "app" or action.startswith("app:"):
                 buttons.append(
-                    InlineKeyboardButton(text=text, web_app=WebAppInfo(url=URL + "/?tg=1" + ("#tg/" + action[4:] if action.startswith("app:") else "")))
+                    InlineKeyboardButton(
+                        text=text,
+                        web_app=WebAppInfo(
+                            url=URL + "/?tg=1" + ("#tg/" + action[4:] if action.startswith("app:") else "")
+                        ),
+                    )
                 )
             elif action == "web":
                 buttons.append(InlineKeyboardButton(text=text, web_app=WebAppInfo(url=URL + "/?web=1")))
             elif action.startswith("url:"):
                 buttons.append(InlineKeyboardButton(text=text, url=action[4:]))
             else:
-                buttons.append(
-                    InlineKeyboardButton(text=text, callback_data=action[:64])
-                )
+                buttons.append(InlineKeyboardButton(text=text, callback_data=action[:64]))
         out.append(buttons)
     return InlineKeyboardMarkup(inline_keyboard=out)
 
@@ -159,8 +162,14 @@ async def _deliver(chat, messages, callback_id=None):
                 continue
             if m.get("edit_target"):
                 try:
-                    sent = await bot.edit_message_text(chat_id=chat, message_id=int(m["edit_target"]),
-                        text=m["text"][:4000], parse_mode="HTML", reply_markup=markup, disable_web_page_preview=True)
+                    sent = await bot.edit_message_text(
+                        chat_id=chat,
+                        message_id=int(m["edit_target"]),
+                        text=m["text"][:4000],
+                        parse_mode="HTML",
+                        reply_markup=markup,
+                        disable_web_page_preview=True,
+                    )
                     delivered.append(m["edit_target"])
                     continue
                 except TelegramBadRequest as exc:
@@ -205,10 +214,8 @@ async def photo_bytes(file_id):
 
 def role_picker(prefix=""):
     return {
-        "text": prefix
-        + "Это бот учебного таксопарка. Выберите, кем зайти: у водителя, клиента проката, сотрудника "
-        "и собственника свои кнопки и права. Роль можно сменить в любой момент — /roles.\n\n"
-        + f"<i>{DISCLAIMER}</i>",
+        "text": prefix + "Это бот учебного таксопарка. Выберите, кем зайти: у водителя, клиента проката, сотрудника "
+        "и собственника свои кнопки и права. Роль можно сменить в любой момент — /roles.\n\n" + f"<i>{DISCLAIMER}</i>",
         "kb": kb(
             [("🚕 Я водитель", "role:driver"), ("🔑 Я клиент проката", "role:client")],
             [("🧰 Я сотрудник парка", "staff")],
@@ -235,9 +242,19 @@ def staff_picker():
 def menu(sp):
     role = sp.role
     if role in ("manager", "service", "finance", "owner"):
-        return {"text": f"<b>{ROLES[role]}</b>\n" + ("Экономика бизнеса и решения — в мобильном дашборде." if role == "owner" else "В демо доступно в веб-кабинете."),
-            "kb": kb([("📊 Дашборд" if role == "owner" else "Открыть веб-кабинет", "web")],
-                     *([[("🌅 Утренняя сводка", "o:digest")]] if role == "owner" else []), [("Сменить роль", "roles")])}
+        return {
+            "text": f"<b>{ROLES[role]}</b>\n"
+            + (
+                "Экономика бизнеса и решения — в мобильном дашборде."
+                if role == "owner"
+                else "В демо доступно в веб-кабинете."
+            ),
+            "kb": kb(
+                [("📊 Дашборд" if role == "owner" else "Открыть веб-кабинет", "web")],
+                *([[("🌅 Утренняя сводка", "o:digest")]] if role == "owner" else []),
+                [("Сменить роль", "roles")],
+            ),
+        }
     title = f"<b>{ROLES.get(role, role)}</b> · что сделать?"
     rows = {
         "driver": [
@@ -301,11 +318,7 @@ def driver_action(s, sp, act, uid_key):
     c = active_contract(s, sp)
     if act == "balance":
         r = report(s, sp)
-        rate = (
-            rub(c.data["rate"]) + " в сутки · график " + c.data["schedule"]
-            if c
-            else "договора нет"
-        )
+        rate = rub(c.data["rate"]) + " в сутки · график " + c.data["schedule"] if c else "договора нет"
         return [
             {
                 "text": "<b>Баланс за 30 дней</b>\n"
@@ -351,9 +364,7 @@ def driver_action(s, sp, act, uid_key):
                 Item.code == "fines:" + v.code,
             )
         )
-        when = (
-            fresh.finished.astimezone(MSK).strftime("%H:%M") if fresh.finished else "—"
-        )
+        when = fresh.finished.astimezone(MSK).strftime("%H:%M") if fresh.finished else "—"
         src = f"\n\n<i>Источник: ГИБДД (учебный) · n8n #{fresh.execution_id or '—'} · {when} МСК</i>"
         if rec and rec.data["values"].get("fine"):
             val = rec.data["values"]
@@ -389,9 +400,7 @@ def driver_action(s, sp, act, uid_key):
             {
                 "photo": d.get("image"),
                 "text": f"<b>{esc(d['model'])}</b> · {d['year']}\n{v.code} · {esc(d['plate'])}\n"
-                f"Пробег {d['mileage']:,} км · следующее ТО на {d['next_to']:,} км\n".replace(
-                    ",", " "
-                )
+                f"Пробег {d['mileage']:,} км · следующее ТО на {d['next_to']:,} км\n".replace(",", " ")
                 + f"Договор {c.code}: {rub(c.data['rate'])}/сутки, график {c.data['schedule']}",
                 "kb": back(sp),
             }
@@ -464,6 +473,7 @@ def driver_action(s, sp, act, uid_key):
 def client_action(s, sp, act, arg, uid_key):
     if act in ("dates", "month", "pick", "reserve", "noop"):
         from .tg_calendar import handle as calendar_handle
+
         try:
             return calendar_handle(s, sp, act, arg, uid_key)
         except HTTPException as exc:
@@ -488,9 +498,7 @@ def client_action(s, sp, act, arg, uid_key):
         cars = [
             v
             for v in visible(s, sp, "vehicle")
-            if v.data["direction"] == "rental"
-            and v.data["status"] == "ready"
-            and v.id not in busy
+            if v.data["direction"] == "rental" and v.data["status"] == "ready" and v.id not in busy
         ]
         seen, picks = set(), []
         for v in cars:  # по одной машине каждой модели
@@ -544,9 +552,7 @@ def client_action(s, sp, act, arg, uid_key):
             }
         ]
     if act == "mine":
-        cs = sorted(visible(s, sp, "contract"), key=lambda c: c.created, reverse=True)[
-            :5
-        ]
+        cs = sorted(visible(s, sp, "contract"), key=lambda c: c.created, reverse=True)[:5]
         status = {
             "draft": "ждёт подтверждения",
             "confirmed": "подтверждена",
@@ -571,17 +577,8 @@ def client_action(s, sp, act, arg, uid_key):
 def staff_action(s, sp, act, arg, uid_key):
     if act == "summary":
         vs = visible(s, sp, "vehicle")
-        by = {
-            k: sum(1 for v in vs if v.data["status"] == k)
-            for k in ("ready", "repair", "inspection")
-        }
-        busy = len(
-            {
-                c.data["vehicle"]
-                for c in visible(s, sp, "contract")
-                if c.data["status"] == "active"
-            }
-        )
+        by = {k: sum(1 for v in vs if v.data["status"] == k) for k in ("ready", "repair", "inspection")}
+        busy = len({c.data["vehicle"] for c in visible(s, sp, "contract") if c.data["status"] == "active"})
         open_t = [t for t in visible(s, sp, "ticket") if t.data["status"] != "closed"]
         return [
             {
@@ -592,9 +589,7 @@ def staff_action(s, sp, act, arg, uid_key):
             }
         ]
     if act == "drafts":
-        drafts = [c for c in visible(s, sp, "contract") if c.data["status"] == "draft"][
-            -5:
-        ]
+        drafts = [c for c in visible(s, sp, "contract") if c.data["status"] == "draft"][-5:]
         if not drafts:
             return [
                 {
@@ -619,15 +614,12 @@ def staff_action(s, sp, act, arg, uid_key):
         r, err = run(s, sp, "contract.confirm", {"id": arg}, uid_key)
         return [
             {
-                "text": err
-                or f"Бронь {r['code']} подтверждена — клиент увидит это в боте.",
+                "text": err or f"Бронь {r['code']} подтверждена — клиент увидит это в боте.",
                 "kb": back(sp),
             }
         ]
     if act == "tickets":
-        ts = [
-            t for t in visible(s, sp, "ticket") if t.data["status"] not in ("closed",)
-        ][:6]
+        ts = [t for t in visible(s, sp, "ticket") if t.data["status"] not in ("closed",)][:6]
         nxt = {
             "new": ("Составить смету", "s:est"),
             "approved": ("Взять в работу", "s:start"),
@@ -648,11 +640,7 @@ def staff_action(s, sp, act, arg, uid_key):
             out.append(
                 {
                     "text": f"<b>{t.code}</b> · {esc(d['title'])}\n{esc(v.data['model'])} · {status.get(d['status'], d['status'])}"
-                    + (
-                        f" · {rub(d['estimate'])}"
-                        if float(d.get("estimate") or 0)
-                        else ""
-                    ),
+                    + (f" · {rub(d['estimate'])}" if float(d.get("estimate") or 0) else ""),
                     "kb": kb([(step[0], f"{step[1]}:{t.id}")]) if step else None,
                 }
             )
@@ -709,9 +697,7 @@ def finance_action(s, sp, act, arg, uid_key):
         r, err = run(s, sp, "ticket.approve", {"id": arg}, uid_key)
         return [{"text": err or f"Смета {r['code']} согласована.", "kb": back(sp)}]
     if act == "holidays":
-        cs = [c for c in visible(s, sp, "contract") if c.data.get("holiday_request")][
-            :5
-        ]
+        cs = [c for c in visible(s, sp, "contract") if c.data.get("holiday_request")][:5]
         if not cs:
             return [
                 {
@@ -742,9 +728,7 @@ def finance_action(s, sp, act, arg, uid_key):
     if act == "economy":
         r = report(s, sp)
         top = sorted(r["rows"], key=lambda x: float(x["result"]))[:3]
-        worst = "\n".join(
-            f"· {esc(x['model'])} {x['code']}: {rub(x['result'])}" for x in top
-        )
+        worst = "\n".join(f"· {esc(x['model'])} {x['code']}: {rub(x['result'])}" for x in top)
         return [
             {
                 "text": f"<b>Экономика за 30 дней</b>\nВыручка: {rub(r['revenue'])}\nРасходы: {rub(r['expenses'])}\n"
@@ -761,11 +745,7 @@ def finance_action(s, sp, act, arg, uid_key):
 
 def _space(s, telegram_id, chat_id):
     s.execute(sqltext("SELECT pg_advisory_xact_lock(hashtext(:id))"), {"id": "telegram:" + telegram_id})
-    sp = s.scalar(
-        select(Space)
-        .where(Space.data["tg_user"].astext == telegram_id)
-        .with_for_update()
-    )
+    sp = s.scalar(select(Space).where(Space.data["tg_user"].astext == telegram_id).with_for_update())
     created = False
     if not sp:
         sp = claim_space(s)
@@ -801,9 +781,8 @@ def _save_photo(s, sp, raw, update_id):
     return fid
 
 
-HELP = re.compile(
-    r"что (ты )?(умеешь|можешь)|^помо(щь|ги)|^help\b|^меню$|^привет|^здравствуй", re.I
-)
+HELP = re.compile(r"что (ты )?(умеешь|можешь)|^помо(щь|ги)|^help\b|^меню$|^привет|^здравствуй", re.I)
+
 
 def help_text(sp):
     common = "Пишите своими словами: найду ответ в правилах или ваших данных. Для проблемы подготовлю заявку — создание подтвердите кнопкой."
@@ -812,9 +791,7 @@ def help_text(sp):
         "client": "Как клиент проката вы можете: подобрать свободную машину и забронировать её, посмотреть свои брони, задать вопрос или сообщить о проблеме.",
     }
     return {
-        "text": by_role.get(sp.role, "У сотрудников — свои кнопки в меню роли.")
-        + "\n\n"
-        + common,
+        "text": by_role.get(sp.role, "У сотрудников — свои кнопки в меню роли.") + "\n\n" + common,
         "kb": menu(sp)["kb"],
     }
 
@@ -829,18 +806,36 @@ def inbox_reply(s, sp, file=None, sample=False):
             if sample:
                 _, raw, name = inbox.sample(s, sp, "fine_scan")
                 file = _save_photo(s, sp, raw, "sample-" + uid()[:8])
-            used = s.scalar(select(func.count()).select_from(Item).where(
-                Item.space == sp.id, Item.kind == "inbox", Item.data["engine"].astext == "model",
-                Item.created > now() - timedelta(days=1)))
+            used = s.scalar(
+                select(func.count())
+                .select_from(Item)
+                .where(
+                    Item.space == sp.id,
+                    Item.kind == "inbox",
+                    Item.data["engine"].astext == "model",
+                    Item.created > now() - timedelta(days=1),
+                )
+            )
             if used >= inbox.MODEL_DOCS_PER_DAY:
-                return [{"text": "Лимит распознавания на сегодня исчерпан (учебный стенд). Документ можно загрузить в кабинете завтра.", "kb": back(sp)}]
-            doc = inbox.create(s, sp.id, "bot", file=file, name="Фото из Telegram" if not sample else "Пример скана из бота")
+                return [
+                    {
+                        "text": "Лимит распознавания на сегодня исчерпан (учебный стенд). Документ можно загрузить в кабинете завтра.",
+                        "kb": back(sp),
+                    }
+                ]
+            doc = inbox.create(
+                s, sp.id, "bot", file=file, name="Фото из Telegram" if not sample else "Пример скана из бота"
+            )
             inbox.enqueue(s, sp.id, [doc.id])
     except HTTPException as e:
         return [{"text": esc(str(e.detail)), "kb": back(sp)}]
-    return [{"text": f"Документ <b>{doc.code}</b> принят. Распознаю и сверю с учётом: машина, договор на дату, "
-             "дубли. Если всё сойдётся — проведу сам, иначе передам сотруднику. Ход проверки — в кабинете, раздел «Документы».",
-             "kb": back(sp)}]
+    return [
+        {
+            "text": f"Документ <b>{doc.code}</b> принят. Распознаю и сверю с учётом: машина, договор на дату, "
+            "дубли. Если всё сойдётся — проведу сам, иначе передам сотруднику. Ход проверки — в кабинете, раздел «Документы».",
+            "kb": back(sp),
+        }
+    ]
 
 
 def ticket_draft_reply(s, sp, text, title, priority, photos, key):
@@ -855,27 +850,33 @@ def ticket_draft_reply(s, sp, text, title, priority, photos, key):
             "kb": back(sp),
         }
     if priority not in ("urgent", "technical", "normal"):
-        priority = (
-            "urgent"
-            if any(w in text.lower() for w in ("дтп", "авари", "не завод"))
-            else "technical"
-        )
+        priority = "urgent" if any(w in text.lower() for w in ("дтп", "авари", "не завод")) else "technical"
     payload = {
-            "vehicle": vehicle,
-            "title": title[:150],
-            "description": text,
-            "priority": priority,
-            "photos": photos,
+        "vehicle": vehicle,
+        "title": title[:150],
+        "description": text,
+        "priority": priority,
+        "photos": photos,
     }
     code = "DRAFT-" + hashlib.sha256(key.encode()).hexdigest()[:24]
     draft = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "agent_draft", Item.code == code))
     if not draft:
         from .seed import add
-        draft = add(s, sp.id, "agent_draft", code, {
-            "role": sp.role, "action": "ticket.create", "payload": payload,
-            "status": "pending", "expires": (now() + timedelta(minutes=10)).isoformat(),
-            "vehicle_code": get(s, sp, vehicle, "vehicle").code,
-        })
+
+        draft = add(
+            s,
+            sp.id,
+            "agent_draft",
+            code,
+            {
+                "role": sp.role,
+                "action": "ticket.create",
+                "payload": payload,
+                "status": "pending",
+                "expires": (now() + timedelta(minutes=10)).isoformat(),
+                "vehicle_code": get(s, sp, vehicle, "vehicle").code,
+            },
+        )
     return {
         "text": f"Подготовлен черновик обращения «{esc(title[:80])}»{' с фото' if photos else ''}.\n"
         f"Автомобиль: {esc(draft.data['vehicle_code'])}. В сервис пока не отправлено.",
@@ -888,9 +889,7 @@ def agent_message(space_id, role, message, key):
 
     jid = hashlib.sha256((space_id + ":" + role + ":agent:" + key).encode()).hexdigest()[:32]
     with db() as s:
-        s.execute(
-            sqltext("SELECT pg_advisory_xact_lock(hashtext(:id))"), {"id": space_id}
-        )
+        s.execute(sqltext("SELECT pg_advisory_xact_lock(hashtext(:id))"), {"id": space_id})
         old = s.get(Job, jid)
         if old:
             return (
@@ -988,11 +987,7 @@ def handle(data, space_id=None):
     if not user or chat.get("type") != "private":
         return None
     key = "tg:" + str(data["update_id"])
-    raw = (
-        asyncio.run(photo_bytes(m["photo"][-1]["file_id"]))
-        if (not cb and m.get("photo") and not space_id)
-        else None
-    )
+    raw = asyncio.run(photo_bytes(m["photo"][-1]["file_id"])) if (not cb and m.get("photo") and not space_id) else None
     heard, voice_error = None, None
     if not cb and m.get("voice") and not space_id:
         # A voice note becomes ordinary text before anything else: same routing, same consent rules.
@@ -1020,9 +1015,7 @@ def handle(data, space_id=None):
             sp0 = (
                 s.get(Space, space_id)
                 if space_id
-                else s.scalar(
-                    select(Space).where(Space.data["tg_user"].astext == str(user["id"]))
-                )
+                else s.scalar(select(Space).where(Space.data["tg_user"].astext == str(user["id"])))
             )
             ctx = (
                 (
@@ -1047,19 +1040,13 @@ def handle(data, space_id=None):
         if cached:
             restored = thaw_reply(cached.result["messages"]) if cached.result["role"] == sp.role else [menu(sp)]
             return chat["id"], restored, (cb.get("id") if cb else None), sp.role
-        received = s.scalar(
-            select(Event.id).where(
-                Event.space == sp.id, Event.data["webhook_key"].astext == key
-            )
-        )
+        received = s.scalar(select(Event.id).where(Event.space == sp.id, Event.data["webhook_key"].astext == key))
         if not received:
             s.add(
                 Event(
                     space=sp.id,
                     title=(
-                        "Эмулятор бота: сообщение обработано"
-                        if space_id
-                        else "Telegram: входящий вебхук обработан"
+                        "Эмулятор бота: сообщение обработано" if space_id else "Telegram: входящий вебхук обработан"
                     ),
                     role=sp.role,
                     data={
@@ -1097,7 +1084,10 @@ def handle(data, space_id=None):
                     r = confirm(s, sp, rest, via="telegram")
                     out = [
                         {
-                            "text": ("Задача" if r.get("task") else "Заявка") + " <b>" + esc(r["code"]) + "</b> создана.",
+                            "text": ("Задача" if r.get("task") else "Заявка")
+                            + " <b>"
+                            + esc(r["code"])
+                            + "</b> создана.",
                             "kb": back(sp),
                         }
                     ]
@@ -1138,15 +1128,9 @@ def handle(data, space_id=None):
                     )
                     for d in triage.get("drafts", [])
                 ]
-                citations = "; ".join(
-                    dict.fromkeys(x["title"] for x in triage.get("sources", []))
-                )
-                msg = re.sub(
-                    r"\*\*([^*\n]+)\*\*", r"<b>\1</b>", esc(triage["answer"][:3200])
-                ) + (
-                    "\n\n<i>Источники: " + esc(citations[:500]) + "</i>"
-                    if citations
-                    else ""
+                citations = "; ".join(dict.fromkeys(x["title"] for x in triage.get("sources", [])))
+                msg = re.sub(r"\*\*([^*\n]+)\*\*", r"<b>\1</b>", esc(triage["answer"][:3200])) + (
+                    "\n\n<i>Источники: " + esc(citations[:500]) + "</i>" if citations else ""
                 )
                 out = [
                     {
@@ -1164,7 +1148,12 @@ def handle(data, space_id=None):
                 photos = [_save_photo(s, sp, raw, data["update_id"])]
                 out = [ticket_draft_reply(s, sp, text, text or "Фото из Telegram", None, photos, key)]
             elif text and not text.startswith("/"):
-                out = [{"text": "Не удалось получить ответ помощника. Повторите вопрос или откройте кабинет. Заявка не создавалась.", "kb": back(sp)}]
+                out = [
+                    {
+                        "text": "Не удалось получить ответ помощника. Повторите вопрос или откройте кабинет. Заявка не создавалась.",
+                        "kb": back(sp),
+                    }
+                ]
             else:
                 out = [menu(sp)]
         if heard and out and out[0].get("text"):
@@ -1179,8 +1168,16 @@ def handle(data, space_id=None):
             out[0]["edit_target"] = str(m["message_id"])
             out[0]["id"] = str(m["message_id"])
         if sp not in s.deleted:
-            s.add(Receipt(space=sp.id, key=reply_key, result={"messages": freeze_reply(out), "role": role,
-}))
+            s.add(
+                Receipt(
+                    space=sp.id,
+                    key=reply_key,
+                    result={
+                        "messages": freeze_reply(out),
+                        "role": role,
+                    },
+                )
+            )
     return chat_id, out, (cb.get("id") if cb else None), role
 
 
@@ -1203,7 +1200,7 @@ def _as_json(m):
     """Сообщение бота → JSON для веб-эмулятора (тот же текст и те же кнопки)."""
     rows = []
     markup = m.get("kb")
-    for row in (markup.inline_keyboard if markup else []):
+    for row in markup.inline_keyboard if markup else []:
         rows.append(
             [
                 {
@@ -1218,18 +1215,13 @@ def _as_json(m):
         )
     out = {"text": m.get("text", ""), "kb": rows, "id": m.get("id"), "edit_target": m.get("edit_target")}
     # фото — только если файл реально есть в статике (в старых пространствах путь мог устареть)
-    if m.get("photo") and any(
-        (base / m["photo"].lstrip("/")).is_file()
-        for base in (ROOT / "dist", ROOT / "public")
-    ):
+    if m.get("photo") and any((base / m["photo"].lstrip("/")).is_file() for base in (ROOT / "dist", ROOT / "public")):
         out["photo"] = m["photo"]
     if m.get("document"):
         raw, name = m["document"]
         out["document"] = {"name": name, "size": len(raw)}
         if len(raw) < 600_000:
-            out["document"]["data"] = (
-                "data:application/pdf;base64," + base64.b64encode(raw).decode()
-            )
+            out["document"]["data"] = "data:application/pdf;base64," + base64.b64encode(raw).decode()
     return out
 
 

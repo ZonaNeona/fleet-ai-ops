@@ -1,50 +1,60 @@
-import os, json, secrets, hashlib, io, csv, time
-from datetime import timedelta, datetime
+import csv
+import hashlib
+import io
+import json
+import os
+import secrets
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
-from fastapi import FastAPI, Request, Response, HTTPException, UploadFile, File
+
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import (
-    StreamingResponse,
     FileResponse,
+    StreamingResponse,
+)
+from fastapi.responses import (
     ORJSONResponse as JSONResponse,
 )
-from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy import select, func, text, or_
-from sqlalchemy.exc import IntegrityError
 from psycopg.types.range import Range
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, or_, select, text
+from sqlalchemy.exc import IntegrityError
+
+from . import ops
 from .db import (
-    db,
-    Space,
-    Item,
-    Entry,
-    Event,
-    Job,
-    Usage,
-    System,
-    Booking,
-    AccessToken,
     FILES,
     URL,
+    AccessToken,
+    Booking,
+    Entry,
+    Event,
+    Item,
+    Job,
+    Space,
+    System,
+    Usage,
+    db,
     now,
     uid,
 )
-from .seed import claim_space, ROLES, BRANCHES, SOURCES, add
 from .domain import (
-    command,
-    visible,
-    get,
-    cansee,
-    serialize,
-    fail,
-    today,
+    READ,
     calendar,
+    cansee,
+    command,
+    fail,
+    file_access,
+    get,
     money,
     parse_date,
-    READ,
-    file_access,
+    serialize,
+    today,
+    visible,
 )
-from .reports import report, entries, ledger_row, scope, payment_allocation
-from . import ops
+from .reports import entries, ledger_row, payment_allocation, report, scope
+from .seed import BRANCHES, ROLES, SOURCES, add, claim_space
 
 app = FastAPI(
     title="Taxi Fleet Concept",
@@ -97,10 +107,7 @@ class AIInput(BaseModel):
 
 @app.middleware("http")
 async def headers(request, call_next):
-    if (
-        request.method not in ("GET", "HEAD", "OPTIONS")
-        and request.url.path != "/api/v1/telegram/webhook"
-    ):
+    if request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path != "/api/v1/telegram/webhook":
         origin = request.headers.get("origin")
         if origin and origin not in (
             URL,
@@ -113,9 +120,7 @@ async def headers(request, call_next):
         r = await call_next(request)
     except IntegrityError:
         return JSONResponse(
-            {
-                "detail": "Конфликт: объект уже существует или автомобиль занят в выбранный период."
-            },
+            {"detail": "Конфликт: объект уже существует или автомобиль занят в выбранный период."},
             409,
         )
     r.headers["X-Content-Type-Options"] = "nosniff"
@@ -177,28 +182,16 @@ def health():
     with db() as s:
         s.execute(text("SELECT 1"))
         worker = s.get(System, "worker")
-        age = (
-            (now() - datetime.fromisoformat(worker.data["heartbeat"])).total_seconds()
-            if worker
-            else None
-        )
-        pending = s.scalar(
-            select(func.count()).select_from(Job).where(Job.state == "pending")
-        )
+        age = (now() - datetime.fromisoformat(worker.data["heartbeat"])).total_seconds() if worker else None
+        pending = s.scalar(select(func.count()).select_from(Job).where(Job.state == "pending"))
         return {
             "status": "ok" if age is not None and age < 90 else "degraded",
             "database": "ok",
             "worker_age_seconds": age,
             "pending": pending,
             "telegram": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
-            "telegram_username": (
-                os.getenv("TELEGRAM_USERNAME")
-                if os.getenv("TELEGRAM_BOT_TOKEN")
-                else None
-            ),
-            "ai": bool(
-                os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-            ),
+            "telegram_username": (os.getenv("TELEGRAM_USERNAME") if os.getenv("TELEGRAM_BOT_TOKEN") else None),
+            "ai": bool(os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")),
         }
 
 
@@ -283,18 +276,9 @@ def bootstrap(request: Request):
             "knowledge",
             "document",
         ]
-        items = s.scalars(
-            select(Item)
-            .where(Item.space == sp.id, Item.kind.in_(kinds))
-            .order_by(Item.code)
-        ).all()
+        items = s.scalars(select(Item).where(Item.space == sp.id, Item.kind.in_(kinds)).order_by(Item.code)).all()
         owned = (
-            {
-                x.id
-                for x in items
-                if x.kind == "vehicle"
-                and x.data.get("investor") == sp.data.get("investor")
-            }
+            {x.id for x in items if x.kind == "vehicle" and x.data.get("investor") == sp.data.get("investor")}
             if sp.role == "investor"
             else {
                 x.data["vehicle"]
@@ -309,17 +293,9 @@ def bootstrap(request: Request):
             if sp.role in READ:
                 return x.kind in READ[sp.role]
             if x.kind == "vehicle":
-                return (
-                    x.id in owned
-                    or sp.role == "client"
-                    and x.data["direction"] in ("rental", "commercial")
-                )
+                return x.id in owned or sp.role == "client" and x.data["direction"] in ("rental", "commercial")
             if x.kind == "contract":
-                return (
-                    x.data["vehicle"] in owned
-                    if sp.role == "investor"
-                    else x.data["client"] == sp.data.get(sp.role)
-                )
+                return x.data["vehicle"] in owned if sp.role == "investor" else x.data["client"] == sp.data.get(sp.role)
             if x.kind in ("ticket", "document", "inspection"):
                 return x.data.get("vehicle") in owned
             if x.kind == "client":
@@ -329,9 +305,7 @@ def bootstrap(request: Request):
                     x.id if x.kind == "investor" else x.data.get("investor")
                 ) == sp.data.get("investor")
             if x.kind == "referral":
-                return sp.role == "driver" and x.data.get("client") == sp.data.get(
-                    "driver"
-                )
+                return sp.role == "driver" and x.data.get("client") == sp.data.get("driver")
             if x.kind == "knowledge":
                 return sp.role in x.data.get("roles", [])
             return x.kind == "tariff"
@@ -356,11 +330,7 @@ def bootstrap(request: Request):
             {
                 "id": b.id,
                 "vehicle": b.vehicle,
-                "contract": (
-                    b.contract
-                    if sp.role in ("owner", "admin", "manager", "finance")
-                    else None
-                ),
+                "contract": (b.contract if sp.role in ("owner", "admin", "manager", "finance") else None),
                 "start": b.period.lower.isoformat(),
                 "end": b.period.upper.isoformat(),
                 "state": b.state,
@@ -375,9 +345,7 @@ def bootstrap(request: Request):
             sources=SOURCES,
             today=str(today()),
             telegram_username=os.getenv("TELEGRAM_USERNAME"),
-            ai_configured=bool(
-                os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-            ),
+            ai_configured=bool(os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")),
         )
         return JSONResponse(result)
 
@@ -397,8 +365,12 @@ def reports(
     with db() as s:
         sp = auth(s, request)
         who = sp.role + ":" + str(sp.data.get(sp.role) or "")
-        value, hit = ops.cached(sp.id, "report:" + who, [start, end, branch, direction],
-                                lambda: report(s, sp, start, end, branch, direction))
+        value, hit = ops.cached(
+            sp.id,
+            "report:" + who,
+            [start, end, branch, direction],
+            lambda: report(s, sp, start, end, branch, direction),
+        )
         r = JSONResponse(value)
         r.headers["X-Cache"] = "hit" if hit else "miss"
         return r
@@ -455,11 +427,7 @@ def availability(request: Request, start: str, end: str, direction: str | None =
                     "reason": (
                         "Автомобиль занят"
                         if v.id in occupied
-                        else (
-                            "Нужна подготовка"
-                            if v.data["status"] != "ready"
-                            else "Доступен"
-                        )
+                        else ("Нужна подготовка" if v.data["status"] != "ready" else "Доступен")
                     ),
                     "rate": v.data["rate"],
                 }
@@ -490,9 +458,7 @@ def ledger(
         if contract:
             q = q.where(Entry.contract == contract)
         total = s.scalar(select(func.count()).select_from(q.subquery()))
-        rows = s.scalars(
-            q.order_by(Entry.date.desc(), Entry.id).offset(max(0, offset)).limit(200)
-        ).all()
+        rows = s.scalars(q.order_by(Entry.date.desc(), Entry.id).offset(max(0, offset)).limit(200)).all()
         return JSONResponse({"total": total, "rows": [ledger_row(e) for e in rows]})
 
 
@@ -506,29 +472,16 @@ def detail(id: str, request: Request):
         r = serialize(x)
         if x.kind == "contract":
             r["calendar"] = calendar(x)
-            r["ledger"] = [
-                ledger_row(e) for e in entries(s, sp, contract=id, limit=300)
-            ]
+            r["ledger"] = [ledger_row(e) for e in entries(s, sp, contract=id, limit=300)]
             r["allocation"] = payment_allocation(s, sp, id)
         if x.kind == "vehicle":
-            r["contracts"] = [
-                serialize(c)
-                for c in visible(s, sp, "contract")
-                if c.data["vehicle"] == id
-            ]
-            r["tickets"] = [
-                serialize(t)
-                for t in visible(s, sp, "ticket")
-                if t.data["vehicle"] == id
-            ]
+            r["contracts"] = [serialize(c) for c in visible(s, sp, "contract") if c.data["vehicle"] == id]
+            r["tickets"] = [serialize(t) for t in visible(s, sp, "ticket") if t.data["vehicle"] == id]
             r["ledger"] = [ledger_row(e) for e in entries(s, sp, vehicle=id, limit=300)]
         r["events"] = [
             {"id": e.id, "title": e.title, "role": e.role, "at": e.created.isoformat()}
             for e in s.scalars(
-                select(Event)
-                .where(Event.space == sp.id, Event.target == id)
-                .order_by(Event.id.desc())
-                .limit(100)
+                select(Event).where(Event.space == sp.id, Event.target == id).order_by(Event.id.desc()).limit(100)
             )
         ]
         return JSONResponse(r)
@@ -575,39 +528,36 @@ async def events(request: Request):
                 if not current or current.role != role:
                     break
                 rows = s.scalars(
-                    select(Event)
-                    .where(Event.space == sid, Event.id > last)
-                    .order_by(Event.id)
-                    .limit(100)
+                    select(Event).where(Event.space == sid, Event.id > last).order_by(Event.id).limit(100)
                 ).all()
                 permitted = set()
                 for e in rows:
                     if role in ("owner", "admin", "finance"):
                         permitted.add(e.id)
                     elif e.target:
-                        target = s.scalar(
-                            select(Item).where(Item.space == sid, Item.id == e.target)
-                        )
+                        target = s.scalar(select(Item).where(Item.space == sid, Item.id == e.target))
                         if target and cansee(s, current, target):
                             permitted.add(e.id)
             for e in rows:
                 last = e.id
                 if e.id in permitted:
-                    yield f"id: {e.id}\ndata: " + json.dumps(
-                        {
-                            "title": e.title,
-                            "target": e.target,
-                            "role": e.role,
-                            "at": e.created.isoformat(),
-                        },
-                        ensure_ascii=False,
-                    ) + "\n\n"
+                    yield (
+                        f"id: {e.id}\ndata: "
+                        + json.dumps(
+                            {
+                                "title": e.title,
+                                "target": e.target,
+                                "role": e.role,
+                                "at": e.created.isoformat(),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n\n"
+                    )
             yield ": keepalive\n\n"
             await waiter.wait(2)
 
-    return StreamingResponse(
-        stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"}
-    )
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
 
 @app.post("/api/v1/files")
@@ -641,11 +591,7 @@ async def upload(request: Request, file: UploadFile = File(...)):
             fail("Некорректный XLSX")
     with db() as s:
         sp = auth(s, request)
-        total = s.scalar(
-            select(func.count())
-            .select_from(Item)
-            .where(Item.space == sp.id, Item.kind == "file")
-        )
+        total = s.scalar(select(func.count()).select_from(Item).where(Item.space == sp.id, Item.kind == "file"))
         if total >= 30:
             fail("Лимит 30 файлов на сессию", 429)
         x = add(
@@ -676,9 +622,7 @@ def download(id: str, request: Request):
         path = FILES / sp.id / (x.id + x.data["ext"])
         if not path.exists():
             fail("Файл недоступен", 404)
-        return FileResponse(
-            path, filename=x.data["name"], headers={"Content-Disposition": "attachment"}
-        )
+        return FileResponse(path, filename=x.data["name"], headers={"Content-Disposition": "attachment"})
 
 
 @app.post("/api/v1/import/preview")
@@ -757,7 +701,7 @@ def sample(request: Request):
         w = csv.writer(out)
         w.writerow(["reference", "contract", "date", "amount"])
         for i, c in enumerate(cs):
-            w.writerow([f"DEMO-BANK-{i+1}", c.code, str(today()), 2500 + i * 100])
+            w.writerow([f"DEMO-BANK-{i + 1}", c.code, str(today()), 2500 + i * 100])
         w.writerow(["DEMO-BANK-5", "НЕИЗВЕСТНЫЙ", str(today()), 1200])
         return Response(
             "\ufeff" + out.getvalue(),
@@ -787,9 +731,7 @@ def document(id: str, request: Request, format: str = "pdf"):
                 if format == "pdf"
                 else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ),
-            headers={
-                "Content-Disposition": f'attachment; filename="park-{x.code.replace(":","-")}.{format}"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="park-{x.code.replace(":", "-")}.{format}"'},
         )
 
 
@@ -885,9 +827,7 @@ def settings(request: Request):
             "budget": "0.50",
             "quality": quality.data if quality else None,
             "telegram": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
-            "ai": bool(
-                os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-            ),
+            "ai": bool(os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENROUTER_API_KEY")),
             "closed_months": sp.data.get("closed_months", []),
         }
 
@@ -911,9 +851,7 @@ def telegram_link(request: Request):
 @app.post("/api/v1/telegram/webhook")
 async def telegram_webhook(request: Request):
     secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-    if not secret or not secrets.compare_digest(
-        request.headers.get("x-telegram-bot-api-secret-token", ""), secret
-    ):
+    if not secret or not secrets.compare_digest(request.headers.get("x-telegram-bot-api-secret-token", ""), secret):
         fail("Недопустимый webhook", 403)
     data = await request.json()
     with db() as s:
@@ -992,11 +930,7 @@ def bot_sim_result(id: str, request: Request):
     # без проверки роли: выбор роли в самом чате меняет роль сессии
     with db() as s:
         sp = auth(s, request)
-        j = s.scalar(
-            select(Job).where(
-                Job.space == sp.id, Job.id == id, Job.kind == "telegram_sim"
-            )
-        )
+        j = s.scalar(select(Job).where(Job.space == sp.id, Job.id == id, Job.kind == "telegram_sim"))
         if not j:
             fail("Сообщение не найдено", 404)
         return {"state": j.state, "result": j.result}
@@ -1009,17 +943,13 @@ def telegram_auth(body: dict, response: Response):
     data = validate(body.get("initData", ""))
     with db() as s:
         s.execute(text("SELECT pg_advisory_xact_lock(hashtext(:id))"), {"id": "telegram:" + str(data["id"])})
-        sp = s.scalar(
-            select(Space).where(Space.data["tg_user"].astext == str(data["id"]))
-        )
+        sp = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(data["id"])))
         if not sp:
             sp = claim_space(s)
             sp.role = "driver"
             sp.data = {**sp.data, "tg_user": str(data["id"])}
         token = secrets.token_urlsafe(32)
-        s.add(
-            AccessToken(token=hashlib.sha256(token.encode()).hexdigest(), space=sp.id)
-        )
+        s.add(AccessToken(token=hashlib.sha256(token.encode()).hexdigest(), space=sp.id))
         sp.touched = now()
         set_cookie(response, token)
         return space_data(sp)
@@ -1028,6 +958,7 @@ def telegram_auth(body: dict, response: Response):
 @app.post("/api/v1/rental/quote")
 def rental_price(body: dict, request: Request):
     from .miniapp import rental_quote
+
     with db() as s:
         return rental_quote(s, auth(s, request), body)
 
@@ -1035,6 +966,7 @@ def rental_price(body: dict, request: Request):
 @app.get("/api/v1/miniapp/state")
 def miniapp_state(request: Request):
     from .miniapp import balance, fines
+
     with db() as s:
         sp = auth(s, request)
         if sp.role not in ("driver", "client"):
@@ -1045,55 +977,90 @@ def miniapp_state(request: Request):
             paid = balance(s, sp, c.id, ["payment"])
             dep = balance(s, sp, c.id, ["deposit", "deposit_release"])
             b = s.scalar(select(Booking).where(Booking.space == sp.id, Booking.contract == c.id))
-            contracts.append({"id": c.id, "charged": str(money(charged)), "paid": str(money(paid)),
-                "debt": str(money(max(0, charged - paid))), "deposit_paid": str(money(dep)),
-                "deposit_due": str(money(max(0, money(c.data.get("deposit", 0)) - dep))),
-                "hold_expires": b.expires.isoformat() if b and b.expires else None,
-                "upcoming": calendar(c, start=str(today()), end=str(min(parse_date(c.data["end"]), today() + timedelta(days=6))))
-                    if c.data["status"] == "active" and parse_date(c.data["end"]) >= today() else [],
-                "booking_state": b.state if b else None})
-        receipts = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "demo_payment",
-            Item.data["client"].astext == sp.data.get(sp.role)).order_by(Item.created.desc())).all()
-        return {"role": sp.role, "contracts": contracts, "fines": fines(s, sp) if sp.role == "driver" else [],
-                "receipts": [serialize(x) for x in receipts]}
+            contracts.append(
+                {
+                    "id": c.id,
+                    "charged": str(money(charged)),
+                    "paid": str(money(paid)),
+                    "debt": str(money(max(0, charged - paid))),
+                    "deposit_paid": str(money(dep)),
+                    "deposit_due": str(money(max(0, money(c.data.get("deposit", 0)) - dep))),
+                    "hold_expires": b.expires.isoformat() if b and b.expires else None,
+                    "upcoming": calendar(
+                        c, start=str(today()), end=str(min(parse_date(c.data["end"]), today() + timedelta(days=6)))
+                    )
+                    if c.data["status"] == "active" and parse_date(c.data["end"]) >= today()
+                    else [],
+                    "booking_state": b.state if b else None,
+                }
+            )
+        receipts = s.scalars(
+            select(Item)
+            .where(Item.space == sp.id, Item.kind == "demo_payment", Item.data["client"].astext == sp.data.get(sp.role))
+            .order_by(Item.created.desc())
+        ).all()
+        return {
+            "role": sp.role,
+            "contracts": contracts,
+            "fines": fines(s, sp) if sp.role == "driver" else [],
+            "receipts": [serialize(x) for x in receipts],
+        }
 
 
 @app.get("/api/v1/miniapp/receipts/{id}")
 def demo_receipt(id: str, request: Request):
     from html import escape
+
     from weasyprint import HTML
+
     with db() as s:
         sp = auth(s, request)
         x = get(s, sp, id, "demo_payment")
         if not cansee(s, sp, x) or x.data.get("status") != "paid":
             fail("Квитанция недоступна", 403)
         d = x.data
-        content = f'''<html lang="ru"><meta charset="utf-8"><style>
+        content = f"""<html lang="ru"><meta charset="utf-8"><style>
         body{{font:15px sans-serif;color:#202328;padding:30px}}h1{{font-size:30px}}
         small{{color:#676b75}}.amount{{font-size:40px;margin:32px 0}}</style>
         <h1>Учебный таксопарк</h1><h2>Учебная квитанция {escape(x.code)}</h2>
-        <p>{escape(d['label'])}</p><div class="amount">{escape(d['amount'])} ₽</div>
-        <p>Дата: {escape(d['paid_at'])}</p><p>Операция: {escape(x.id)}</p>
+        <p>{escape(d["label"])}</p><div class="amount">{escape(d["amount"])} ₽</div>
+        <p>Дата: {escape(d["paid_at"])}</p><p>Операция: {escape(x.id)}</p>
         <small>Тестовая операция. Реального списания не было. Не является фискальным чеком.
-        Независимый концепт · Игорь Шварёв.</small></html>'''
+        Независимый концепт · Игорь Шварёв.</small></html>"""
         pdf = HTML(string=content).write_pdf()
-        return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{x.code}.pdf"'})
+        return Response(
+            pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{x.code}.pdf"'}
+        )
 
 
 @app.post("/api/v1/miniapp/fines/sync")
 def miniapp_sync_fines(request: Request):
     from .integrations import enqueue
+
     with db() as s:
         sp = auth(s, request)
         if sp.role != "driver":
             fail("Штрафы доступны водителю", 403)
-        pending = s.scalar(select(Job).where(Job.space == sp.id, Job.kind == "integration",
-            Job.state.in_(["pending", "running"]), Job.data["context"]["source"].astext == "fines"))
+        pending = s.scalar(
+            select(Job).where(
+                Job.space == sp.id,
+                Job.kind == "integration",
+                Job.state.in_(["pending", "running"]),
+                Job.data["context"]["source"].astext == "fines",
+            )
+        )
         if pending:
             return {"id": pending.data["context"]["run"], "status": "queued"}
-        recent = s.scalar(select(func.count()).select_from(Job).where(Job.space == sp.id,
-            Job.kind == "integration", Job.data["context"]["source"].astext == "fines",
-            Job.due > now() - timedelta(minutes=1)))
+        recent = s.scalar(
+            select(func.count())
+            .select_from(Job)
+            .where(
+                Job.space == sp.id,
+                Job.kind == "integration",
+                Job.data["context"]["source"].astext == "fines",
+                Job.due > now() - timedelta(minutes=1),
+            )
+        )
         if recent >= 5:
             fail("Не более пяти обновлений штрафов в минуту", 429)
         job = enqueue(s, sp, "fines")

@@ -150,8 +150,17 @@ class Emulator:
                 raise ReadOnly("Сделка не найдена")
         elif method in WRITE:
             result = self._write(method, params)
-            self.data["log"] = (self.data["log"] + [{"method": method, "at": b24(now()), "source": source,
-                                                     "params": json.dumps(params, ensure_ascii=False)[:300]}])[-60:]
+            self.data["log"] = (
+                self.data["log"]
+                + [
+                    {
+                        "method": method,
+                        "at": b24(now()),
+                        "source": source,
+                        "params": json.dumps(params, ensure_ascii=False)[:300],
+                    }
+                ]
+            )[-60:]
             if self.on_write:
                 self.on_write(self.data)
         else:
@@ -163,9 +172,18 @@ class Emulator:
             extra["total"] = len(rows)
             if start + PAGE < len(rows):
                 extra["next"] = start + PAGE
-        return {"result": result, **extra,
-                "time": {"start": started, "finish": time.time(), "duration": time.time() - started,
-                         "processing": 0, "date_start": b24(now()), "date_finish": b24(now())}}
+        return {
+            "result": result,
+            **extra,
+            "time": {
+                "start": started,
+                "finish": time.time(),
+                "duration": time.time() - started,
+                "processing": 0,
+                "date_start": b24(now()),
+                "date_finish": b24(now()),
+            },
+        }
 
     def _write(self, method, params):
         d, fields = self.data, params.get("fields") or {}
@@ -178,17 +196,27 @@ class Emulator:
             if deal is None:
                 raise ReadOnly("Сделка не найдена")
             if fields.get("STAGE_ID") and fields["STAGE_ID"] != deal["STAGE_ID"]:
-                d["stagehistory"].append({"ID": str(len(d["stagehistory"]) + 1), "OWNER_ID": deal["ID"],
-                                          "STAGE_ID": fields["STAGE_ID"], "CATEGORY_ID": deal["CATEGORY_ID"],
-                                          "CREATED_TIME": b24(now())})
+                d["stagehistory"].append(
+                    {
+                        "ID": str(len(d["stagehistory"]) + 1),
+                        "OWNER_ID": deal["ID"],
+                        "STAGE_ID": fields["STAGE_ID"],
+                        "CATEGORY_ID": deal["CATEGORY_ID"],
+                        "CREATED_TIME": b24(now()),
+                    }
+                )
                 fields = {**fields, "MOVED_TIME": b24(now())}
             deal.update({k: str(v) for k, v in fields.items()})
             return True
         if method == "crm.timeline.comment.add":
-            comment = {"ID": str(1 + len(d["comments"])), "ENTITY_ID": str(fields.get("ENTITY_ID")),
-                       "ENTITY_TYPE": str(fields.get("ENTITY_TYPE", "deal")).lower(),
-                       "COMMENT": str(fields.get("COMMENT", ""))[:4000], "CREATED": b24(now()),
-                       "AUTHOR_ID": str(fields.get("AUTHOR_ID", "1"))}
+            comment = {
+                "ID": str(1 + len(d["comments"])),
+                "ENTITY_ID": str(fields.get("ENTITY_ID")),
+                "ENTITY_TYPE": str(fields.get("ENTITY_TYPE", "deal")).lower(),
+                "COMMENT": str(fields.get("COMMENT", ""))[:4000],
+                "CREATED": b24(now()),
+                "AUTHOR_ID": str(fields.get("AUTHOR_ID", "1")),
+            }
             d["comments"].append(comment)
             return int(comment["ID"])
         if method == "crm.activity.add":
@@ -196,30 +224,64 @@ class Emulator:
             d["activities"].append(activity)
             return int(activity["ID"])
         if method == "crm.item.add":
-            item = {"id": 1 + len(d["cars"]), "entityTypeId": int(params.get("entityTypeId") or CAR_TYPE), **fields,
-                    "createdTime": b24(now())}
+            item = {
+                "id": 1 + len(d["cars"]),
+                "entityTypeId": int(params.get("entityTypeId") or CAR_TYPE),
+                **fields,
+                "createdTime": b24(now()),
+            }
             d["cars"].append(item)
             return {"item": item}
         if method == "crm.lead.add":
-            lead = {"STATUS_ID": "NEW", "SOURCE_ID": "WEB", "ASSIGNED_BY_ID": "7", **fields,
-                    "ID": str(1 + max([int(x["ID"]) for x in d["leads"]] or [499])), "DATE_CREATE": b24(now())}
+            lead = {
+                "STATUS_ID": "NEW",
+                "SOURCE_ID": "WEB",
+                "ASSIGNED_BY_ID": "7",
+                **fields,
+                "ID": str(1 + max([int(x["ID"]) for x in d["leads"]] or [499])),
+                "DATE_CREATE": b24(now()),
+            }
             d["leads"].append(lead)
             return int(lead["ID"])
         if method == "crm.deal.add":
             category = str(fields.get("CATEGORY_ID", "0"))
             stage = str(fields.get("STAGE_ID") or ("NEW" if category == "0" else f"C{category}:NEW"))
-            deal = {"CURRENCY_ID": "RUB", "ASSIGNED_BY_ID": "7", "SOURCE_ID": "WEB", "OPPORTUNITY": "0.00",
-                    "UF_CRM_CONTRACT": "", "UF_CRM_VEHICLE": "", "UF_CRM_PAID": "0.00",
-                    **{k: str(v) for k, v in fields.items()}, "CATEGORY_ID": category, "STAGE_ID": stage,
-                    "STAGE_SEMANTIC_ID": "P", "ID": str(1 + max([int(x["ID"]) for x in d["deals"]] or [100])),
-                    "DATE_CREATE": b24(now()), "MOVED_TIME": b24(now())}
+            deal = {
+                "CURRENCY_ID": "RUB",
+                "ASSIGNED_BY_ID": "7",
+                "SOURCE_ID": "WEB",
+                "OPPORTUNITY": "0.00",
+                "UF_CRM_CONTRACT": "",
+                "UF_CRM_VEHICLE": "",
+                "UF_CRM_PAID": "0.00",
+                **{k: str(v) for k, v in fields.items()},
+                "CATEGORY_ID": category,
+                "STAGE_ID": stage,
+                "STAGE_SEMANTIC_ID": "P",
+                "ID": str(1 + max([int(x["ID"]) for x in d["deals"]] or [100])),
+                "DATE_CREATE": b24(now()),
+                "MOVED_TIME": b24(now()),
+            }
             d["deals"].append(deal)
-            d["stagehistory"].append({"ID": str(len(d["stagehistory"]) + 1), "OWNER_ID": deal["ID"], "STAGE_ID": stage,
-                                      "CATEGORY_ID": category, "CREATED_TIME": b24(now())})
+            d["stagehistory"].append(
+                {
+                    "ID": str(len(d["stagehistory"]) + 1),
+                    "OWNER_ID": deal["ID"],
+                    "STAGE_ID": stage,
+                    "CATEGORY_ID": category,
+                    "CREATED_TIME": b24(now()),
+                }
+            )
             return int(deal["ID"])
         if method == "bizproc.event.send":
-            d["events"].append({"event_token": params.get("event_token"), "return_values": params.get("return_values"),
-                                "log_message": params.get("log_message"), "at": b24(now())})
+            d["events"].append(
+                {
+                    "event_token": params.get("event_token"),
+                    "return_values": params.get("return_values"),
+                    "log_message": params.get("log_message"),
+                    "at": b24(now()),
+                }
+            )
             return True
         raise ReadOnly(f"Эмулятор не реализует {method}")
 
@@ -228,7 +290,7 @@ class Emulator:
         rows = [r for r in self.data[collection] if not gate or parse(r[gate]) <= moment]
         for key, expected in (params.get("filter") or {}).items():
             op = re.match(r"^(>=|<=|>|<|!|)", key).group(1)
-            name = key[len(op):]
+            name = key[len(op) :]
             values = expected if isinstance(expected, list) else [expected]
 
             def ok(r, op=op, name=name, values=values, expected=expected):
@@ -244,8 +306,11 @@ class Emulator:
         if isinstance(order, str):
             order = {params.get("sort") or "ID": order}
         for key, direction in reversed(list(order.items())):
-            rows = sorted(rows, key=lambda r, k=key: (int(r[k]) if str(r.get(k, "")).isdigit() else str(r.get(k, ""))),
-                          reverse=str(direction).upper() == "DESC")
+            rows = sorted(
+                rows,
+                key=lambda r, k=key: int(r[k]) if str(r.get(k, "")).isdigit() else str(r.get(k, "")),
+                reverse=str(direction).upper() == "DESC",
+            )
         select_ = params.get("select")
         if select_ and "*" not in select_:
             rows = [{k: v for k, v in r.items() if k in set(select_) | {"ID", "id"}} for r in rows]
@@ -254,16 +319,49 @@ class Emulator:
 
 # ---------------------------------------------------------------- the emulated portal for this fleet
 
-RENTAL = [("NEW", "Новая заявка", "process"), ("PREPARATION", "Подбор авто", "process"),
-          ("PREPAYMENT_INVOICE", "Залог выставлен", "process"), ("EXECUTING", "Бронь подтверждена", "process"),
-          ("WON", "Авто выдано", "success"), ("LOSE", "Отказ", "failure")]
-HIRING = [("C1:NEW", "Отклик", "process"), ("C1:PREPARATION", "Созвон", "process"),
-          ("C1:EXECUTING", "Проверка документов", "process"), ("C1:FINAL_INVOICE", "Стажировка", "process"),
-          ("C1:WON", "На линии", "success"), ("C1:LOSE", "Отказ", "failure")]
-SOURCES = {"WEB": "Сайт", "CALL": "Звонок", "ADVERTISING": "Авито", "RECOMMENDATION": "Рекомендация", "OTHER": "Telegram"}
-NAMES = ["Руслан Гарипов", "Сергей Белов", "Тимур Алиев", "Никита Фомин", "Олег Чернов", "Вадим Зуев", "Игорь Кравец",
-         "Евгений Пахомов", "Азамат Каримов", "Павел Дроздов", "Максим Ильин", "Роман Лаптев", "Кирилл Осипов",
-         "Андрей Мельник", "Денис Гусев", "Артур Валиев", "Станислав Рябов", "Глеб Никитин"]
+RENTAL = [
+    ("NEW", "Новая заявка", "process"),
+    ("PREPARATION", "Подбор авто", "process"),
+    ("PREPAYMENT_INVOICE", "Залог выставлен", "process"),
+    ("EXECUTING", "Бронь подтверждена", "process"),
+    ("WON", "Авто выдано", "success"),
+    ("LOSE", "Отказ", "failure"),
+]
+HIRING = [
+    ("C1:NEW", "Отклик", "process"),
+    ("C1:PREPARATION", "Созвон", "process"),
+    ("C1:EXECUTING", "Проверка документов", "process"),
+    ("C1:FINAL_INVOICE", "Стажировка", "process"),
+    ("C1:WON", "На линии", "success"),
+    ("C1:LOSE", "Отказ", "failure"),
+]
+SOURCES = {
+    "WEB": "Сайт",
+    "CALL": "Звонок",
+    "ADVERTISING": "Авито",
+    "RECOMMENDATION": "Рекомендация",
+    "OTHER": "Telegram",
+}
+NAMES = [
+    "Руслан Гарипов",
+    "Сергей Белов",
+    "Тимур Алиев",
+    "Никита Фомин",
+    "Олег Чернов",
+    "Вадим Зуев",
+    "Игорь Кравец",
+    "Евгений Пахомов",
+    "Азамат Каримов",
+    "Павел Дроздов",
+    "Максим Ильин",
+    "Роман Лаптев",
+    "Кирилл Осипов",
+    "Андрей Мельник",
+    "Денис Гусев",
+    "Артур Валиев",
+    "Станислав Рябов",
+    "Глеб Никитин",
+]
 
 
 def dataset(s, sp):
@@ -271,20 +369,58 @@ def dataset(s, sp):
     rnd = random.Random(sp.id)
     t = now()
     users = [
-        {"ID": "1", "NAME": "Ольга", "LAST_NAME": "Смирнова", "WORK_POSITION": "Менеджер по найму водителей", "ACTIVE": True, "UF_DEPARTMENT": [3]},
-        {"ID": "7", "NAME": "Артём", "LAST_NAME": "Ковалёв", "WORK_POSITION": "Менеджер проката", "ACTIVE": True, "UF_DEPARTMENT": [4]},
-        {"ID": "12", "NAME": "Дарья", "LAST_NAME": "Ершова", "WORK_POSITION": "Руководитель отдела продаж", "ACTIVE": True, "UF_DEPARTMENT": [4]},
+        {
+            "ID": "1",
+            "NAME": "Ольга",
+            "LAST_NAME": "Смирнова",
+            "WORK_POSITION": "Менеджер по найму водителей",
+            "ACTIVE": True,
+            "UF_DEPARTMENT": [3],
+        },
+        {
+            "ID": "7",
+            "NAME": "Артём",
+            "LAST_NAME": "Ковалёв",
+            "WORK_POSITION": "Менеджер проката",
+            "ACTIVE": True,
+            "UF_DEPARTMENT": [4],
+        },
+        {
+            "ID": "12",
+            "NAME": "Дарья",
+            "LAST_NAME": "Ершова",
+            "WORK_POSITION": "Руководитель отдела продаж",
+            "ACTIVE": True,
+            "UF_DEPARTMENT": [4],
+        },
     ]
     statuses = []
     for entity, stages in (("DEAL_STAGE", RENTAL), ("DEAL_STAGE_1", HIRING)):
         for i, (sid, name, sem) in enumerate(stages):
-            statuses.append({"ID": str(len(statuses) + 1), "ENTITY_ID": entity, "STATUS_ID": sid, "NAME": name,
-                             "SORT": str((i + 1) * 10), "SYSTEM": "Y" if sem != "process" else "N", "EXTRA": {"SEMANTICS": sem}})
+            statuses.append(
+                {
+                    "ID": str(len(statuses) + 1),
+                    "ENTITY_ID": entity,
+                    "STATUS_ID": sid,
+                    "NAME": name,
+                    "SORT": str((i + 1) * 10),
+                    "SYSTEM": "Y" if sem != "process" else "N",
+                    "EXTRA": {"SEMANTICS": sem},
+                }
+            )
     deals, n = [], 100
-    contracts = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "contract",
-                                             Item.data["direction"].astext == "rental").order_by(Item.code)).all()[:18]
-    paid = dict(s.execute(select(Entry.contract, func.sum(Entry.amount)).where(
-        Entry.space == sp.id, Entry.kind == "payment", Entry.contract.in_([c.id for c in contracts])).group_by(Entry.contract)).all())
+    contracts = s.scalars(
+        select(Item)
+        .where(Item.space == sp.id, Item.kind == "contract", Item.data["direction"].astext == "rental")
+        .order_by(Item.code)
+    ).all()[:18]
+    paid = dict(
+        s.execute(
+            select(Entry.contract, func.sum(Entry.amount))
+            .where(Entry.space == sp.id, Entry.kind == "payment", Entry.contract.in_([c.id for c in contracts]))
+            .group_by(Entry.contract)
+        ).all()
+    )
     for i, c in enumerate(contracts):
         car = s.get(Item, c.data["vehicle"])
         days = max(1, (datetime.fromisoformat(c.data["end"]) - datetime.fromisoformat(c.data["start"])).days)
@@ -292,29 +428,56 @@ def dataset(s, sp):
         ledger = paid.get(c.id) or Decimal(0)
         crm_paid = ledger + (Decimal(4800) if i in (2, 9) else 0)  # a manager marked a payment the bank never saw
         n += 1
-        deals.append({
-            "ID": str(n), "TITLE": f"Прокат · {car.data['model']} · {days} дн.", "CATEGORY_ID": "0",
-            "STAGE_ID": "WON", "STAGE_SEMANTIC_ID": "S", "OPPORTUNITY": f"{total:.2f}", "CURRENCY_ID": "RUB",
-            "ASSIGNED_BY_ID": "7", "SOURCE_ID": rnd.choice(["WEB", "CALL", "ADVERTISING"]),
-            "DATE_CREATE": b24(datetime.fromisoformat(c.data["start"] + "T09:00:00+03:00") - timedelta(days=2)),
-            "MOVED_TIME": b24(datetime.fromisoformat(c.data["start"] + "T10:00:00+03:00")),
-            "UF_CRM_CONTRACT": c.code, "UF_CRM_VEHICLE": car.data["plate"], "UF_CRM_PAID": f"{crm_paid:.2f}",
-        })
+        deals.append(
+            {
+                "ID": str(n),
+                "TITLE": f"Прокат · {car.data['model']} · {days} дн.",
+                "CATEGORY_ID": "0",
+                "STAGE_ID": "WON",
+                "STAGE_SEMANTIC_ID": "S",
+                "OPPORTUNITY": f"{total:.2f}",
+                "CURRENCY_ID": "RUB",
+                "ASSIGNED_BY_ID": "7",
+                "SOURCE_ID": rnd.choice(["WEB", "CALL", "ADVERTISING"]),
+                "DATE_CREATE": b24(datetime.fromisoformat(c.data["start"] + "T09:00:00+03:00") - timedelta(days=2)),
+                "MOVED_TIME": b24(datetime.fromisoformat(c.data["start"] + "T10:00:00+03:00")),
+                "UF_CRM_CONTRACT": c.code,
+                "UF_CRM_VEHICLE": car.data["plate"],
+                "UF_CRM_PAID": f"{crm_paid:.2f}",
+            }
+        )
     for stage, _, sem in [RENTAL[0], RENTAL[1], RENTAL[1], RENTAL[2], RENTAL[3], RENTAL[5]]:
         n += 1
         model = rnd.choice(["Haval Jolion", "Geely Preface", "Hongqi H5", "Mercedes-Benz E"])
         created = t - timedelta(hours=rnd.randint(3, 50))
-        deals.append({
-            "ID": str(n), "TITLE": f"Прокат · {model} · {rnd.choice([2, 3, 7, 14])} дн.", "CATEGORY_ID": "0",
-            "STAGE_ID": stage, "STAGE_SEMANTIC_ID": {"process": "P", "success": "S", "failure": "F"}[sem],
-            "OPPORTUNITY": f"{rnd.choice([9600, 14400, 33600, 67200]):.2f}", "CURRENCY_ID": "RUB", "ASSIGNED_BY_ID": "7",
-            "SOURCE_ID": rnd.choice(["WEB", "CALL"]), "DATE_CREATE": b24(created),
-            "MOVED_TIME": b24(created + timedelta(hours=rnd.randint(1, 20))) if stage != "NEW" else b24(created),
-            "UF_CRM_CONTRACT": "", "UF_CRM_VEHICLE": "", "UF_CRM_PAID": "0.00",
-        })
+        deals.append(
+            {
+                "ID": str(n),
+                "TITLE": f"Прокат · {model} · {rnd.choice([2, 3, 7, 14])} дн.",
+                "CATEGORY_ID": "0",
+                "STAGE_ID": stage,
+                "STAGE_SEMANTIC_ID": {"process": "P", "success": "S", "failure": "F"}[sem],
+                "OPPORTUNITY": f"{rnd.choice([9600, 14400, 33600, 67200]):.2f}",
+                "CURRENCY_ID": "RUB",
+                "ASSIGNED_BY_ID": "7",
+                "SOURCE_ID": rnd.choice(["WEB", "CALL"]),
+                "DATE_CREATE": b24(created),
+                "MOVED_TIME": b24(created + timedelta(hours=rnd.randint(1, 20))) if stage != "NEW" else b24(created),
+                "UF_CRM_CONTRACT": "",
+                "UF_CRM_VEHICLE": "",
+                "UF_CRM_PAID": "0.00",
+            }
+        )
     names = NAMES[:]
     rnd.shuffle(names)
-    plan = ["C1:NEW"] * 4 + ["C1:PREPARATION"] * 3 + ["C1:EXECUTING"] * 3 + ["C1:FINAL_INVOICE"] * 2 + ["C1:WON"] * 3 + ["C1:LOSE"] * 2
+    plan = (
+        ["C1:NEW"] * 4
+        + ["C1:PREPARATION"] * 3
+        + ["C1:EXECUTING"] * 3
+        + ["C1:FINAL_INVOICE"] * 2
+        + ["C1:WON"] * 3
+        + ["C1:LOSE"] * 2
+    )
     for i, stage in enumerate(plan):
         n += 1
         sem = next(x[2] for x in HIRING if x[0] == stage)
@@ -329,51 +492,115 @@ def dataset(s, sp):
             created = min(created, moved - timedelta(hours=2))
         elif moved > t:
             moved = t - timedelta(hours=1)
-        deals.append({
-            "ID": str(n), "TITLE": f"Водитель · {names[i % len(names)]}", "CATEGORY_ID": "1", "STAGE_ID": stage,
-            "STAGE_SEMANTIC_ID": {"process": "P", "success": "S", "failure": "F"}[sem], "OPPORTUNITY": "0.00",
-            "CURRENCY_ID": "RUB", "ASSIGNED_BY_ID": "1", "SOURCE_ID": rnd.choice(list(SOURCES)),
-            "DATE_CREATE": b24(created), "MOVED_TIME": b24(moved),
-            "UF_CRM_EXPERIENCE": str(rnd.randint(1, 15)), "UF_CRM_CONTRACT": "", "UF_CRM_VEHICLE": "", "UF_CRM_PAID": "0.00",
-        })
+        deals.append(
+            {
+                "ID": str(n),
+                "TITLE": f"Водитель · {names[i % len(names)]}",
+                "CATEGORY_ID": "1",
+                "STAGE_ID": stage,
+                "STAGE_SEMANTIC_ID": {"process": "P", "success": "S", "failure": "F"}[sem],
+                "OPPORTUNITY": "0.00",
+                "CURRENCY_ID": "RUB",
+                "ASSIGNED_BY_ID": "1",
+                "SOURCE_ID": rnd.choice(list(SOURCES)),
+                "DATE_CREATE": b24(created),
+                "MOVED_TIME": b24(moved),
+                "UF_CRM_EXPERIENCE": str(rnd.randint(1, 15)),
+                "UF_CRM_CONTRACT": "",
+                "UF_CRM_VEHICLE": "",
+                "UF_CRM_PAID": "0.00",
+            }
+        )
     leads = []
     for i in range(12):
         hiring = i % 3 != 2
         # A few leads are dated later today: they appear as the day goes on.
         created = t - timedelta(hours=rnd.randint(1, 70)) if i < 10 else t + timedelta(minutes=40 * (i - 9))
         first, last = names[(i + 5) % len(names)].split()
-        leads.append({
-            "ID": str(500 + i),
-            "TITLE": f"Отклик водителя · стаж {rnd.randint(1, 12)} лет" if hiring
-            else f"Заявка на прокат · {rnd.choice(['Haval Jolion', 'Geely Preface'])} на {rnd.choice([2, 3, 7])} дн.",
-            "NAME": first, "LAST_NAME": last, "STATUS_ID": rnd.choice(["NEW", "NEW", "IN_PROCESS", "JUNK"]),
-            "SOURCE_ID": rnd.choice(list(SOURCES)), "ASSIGNED_BY_ID": "1" if hiring else "7",
-            "PHONE": [{"VALUE": f"+7 900 000-{i:02d}-{rnd.randint(10, 99)}", "VALUE_TYPE": "WORK"}],
-            "DATE_CREATE": b24(created),
-        })
-    return {"users": users, "categories": [{"id": 0, "name": "Прокат", "sort": 100, "entityTypeId": 2, "isDefault": "Y"},
-                                           {"id": 1, "name": "Найм водителей", "sort": 200, "entityTypeId": 2, "isDefault": "N"}],
-            "statuses": statuses, "deals": deals, "leads": leads, "tasks": [], "cars": cars(s, sp),
-            "stagehistory": [{"ID": str(i + 1), "OWNER_ID": d["ID"], "STAGE_ID": d["STAGE_ID"], "CATEGORY_ID": d["CATEGORY_ID"],
-                              "CREATED_TIME": d["MOVED_TIME"]} for i, d in enumerate(deals)],
-            "comments": [], "activities": [], "events": [], "log": []}
+        leads.append(
+            {
+                "ID": str(500 + i),
+                "TITLE": f"Отклик водителя · стаж {rnd.randint(1, 12)} лет"
+                if hiring
+                else f"Заявка на прокат · {rnd.choice(['Haval Jolion', 'Geely Preface'])} на {rnd.choice([2, 3, 7])} дн.",
+                "NAME": first,
+                "LAST_NAME": last,
+                "STATUS_ID": rnd.choice(["NEW", "NEW", "IN_PROCESS", "JUNK"]),
+                "SOURCE_ID": rnd.choice(list(SOURCES)),
+                "ASSIGNED_BY_ID": "1" if hiring else "7",
+                "PHONE": [{"VALUE": f"+7 900 000-{i:02d}-{rnd.randint(10, 99)}", "VALUE_TYPE": "WORK"}],
+                "DATE_CREATE": b24(created),
+            }
+        )
+    return {
+        "users": users,
+        "categories": [
+            {"id": 0, "name": "Прокат", "sort": 100, "entityTypeId": 2, "isDefault": "Y"},
+            {"id": 1, "name": "Найм водителей", "sort": 200, "entityTypeId": 2, "isDefault": "N"},
+        ],
+        "statuses": statuses,
+        "deals": deals,
+        "leads": leads,
+        "tasks": [],
+        "cars": cars(s, sp),
+        "stagehistory": [
+            {
+                "ID": str(i + 1),
+                "OWNER_ID": d["ID"],
+                "STAGE_ID": d["STAGE_ID"],
+                "CATEGORY_ID": d["CATEGORY_ID"],
+                "CREATED_TIME": d["MOVED_TIME"],
+            }
+            for i, d in enumerate(deals)
+        ],
+        "comments": [],
+        "activities": [],
+        "events": [],
+        "log": [],
+    }
 
 
 def cars(s, sp):
     """Smart process «Автомобиль»: the fleet's cars as CRM items, the way a fleet would keep them in Bitrix24."""
     out = []
-    for i, v in enumerate(s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle").order_by(Item.code)).all()[:40]):
-        out.append({"id": i + 1, "entityTypeId": CAR_TYPE, "title": f"{v.data['model']} · {v.data['plate']}",
-                    "stageId": f"DT{CAR_TYPE}_1:" + {"ready": "NEW", "repair": "PREPARATION"}.get(v.data["status"], "CLIENT"),
-                    "ufCrmCarCode": v.code, "ufCrmCarPlate": v.data["plate"], "ufCrmCarMileage": v.data.get("mileage"),
-                    "ufCrmCarDirection": v.data["direction"], "createdTime": b24(now())})
+    for i, v in enumerate(
+        s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle").order_by(Item.code)).all()[:40]
+    ):
+        out.append(
+            {
+                "id": i + 1,
+                "entityTypeId": CAR_TYPE,
+                "title": f"{v.data['model']} · {v.data['plate']}",
+                "stageId": f"DT{CAR_TYPE}_1:"
+                + {"ready": "NEW", "repair": "PREPARATION"}.get(v.data["status"], "CLIENT"),
+                "ufCrmCarCode": v.code,
+                "ufCrmCarPlate": v.data["plate"],
+                "ufCrmCarMileage": v.data.get("mileage"),
+                "ufCrmCarDirection": v.data["direction"],
+                "createdTime": b24(now()),
+            }
+        )
     return out
 
 
 # ---------------------------------------------------------------- sync, mapping, reconciliation
 
-DEAL_FIELDS = ["ID", "TITLE", "CATEGORY_ID", "STAGE_ID", "STAGE_SEMANTIC_ID", "OPPORTUNITY", "ASSIGNED_BY_ID", "SOURCE_ID",
-               "DATE_CREATE", "MOVED_TIME", "UF_CRM_CONTRACT", "UF_CRM_VEHICLE", "UF_CRM_PAID", "UF_CRM_EXPERIENCE"]
+DEAL_FIELDS = [
+    "ID",
+    "TITLE",
+    "CATEGORY_ID",
+    "STAGE_ID",
+    "STAGE_SEMANTIC_ID",
+    "OPPORTUNITY",
+    "ASSIGNED_BY_ID",
+    "SOURCE_ID",
+    "DATE_CREATE",
+    "MOVED_TIME",
+    "UF_CRM_CONTRACT",
+    "UF_CRM_VEHICLE",
+    "UF_CRM_PAID",
+    "UF_CRM_EXPERIENCE",
+]
 LEAD_FIELDS = ["ID", "TITLE", "NAME", "LAST_NAME", "STATUS_ID", "SOURCE_ID", "ASSIGNED_BY_ID", "DATE_CREATE"]
 
 
@@ -402,9 +629,16 @@ def sync(s, sp):
         t = time.perf_counter()
         r = transport.call(method, params)
         rows = r["result"]["categories"] if method == "crm.category.list" else r["result"]
-        trace.append({"method": method, "params": {k: v for k, v in params.items() if k != "select"},
-                      "ms": round((time.perf_counter() - t) * 1000, 1), "rows": len(rows), "total": r.get("total"),
-                      "next": r.get("next")})
+        trace.append(
+            {
+                "method": method,
+                "params": {k: v for k, v in params.items() if k != "select"},
+                "ms": round((time.perf_counter() - t) * 1000, 1),
+                "rows": len(rows),
+                "total": r.get("total"),
+                "next": r.get("next"),
+            }
+        )
         return r
 
     def everything(method, params):
@@ -416,49 +650,92 @@ def sync(s, sp):
                 return out
             start = int(r["next"])
 
-    users = {u["ID"]: f"{u['NAME']} {u['LAST_NAME']}".strip() for u in everything("user.get", {"filter": {"ACTIVE": True}, "sort": "ID", "order": "ASC"})}
+    users = {
+        u["ID"]: f"{u['NAME']} {u['LAST_NAME']}".strip()
+        for u in everything("user.get", {"filter": {"ACTIVE": True}, "sort": "ID", "order": "ASC"})
+    }
     categories = call("crm.category.list", {"entityTypeId": 2})["result"]["categories"]
-    statuses = everything("crm.status.list", {"filter": {"ENTITY_ID": ["DEAL_STAGE", "DEAL_STAGE_1"]}, "order": {"SORT": "ASC"}})
+    statuses = everything(
+        "crm.status.list", {"filter": {"ENTITY_ID": ["DEAL_STAGE", "DEAL_STAGE_1"]}, "order": {"SORT": "ASC"}}
+    )
     deals = everything("crm.deal.list", {"select": DEAL_FIELDS, "order": {"ID": "ASC"}})
     since = b24(now() - timedelta(days=7))
-    leads = everything("crm.lead.list", {"select": LEAD_FIELDS, "filter": {">=DATE_CREATE": since}, "order": {"DATE_CREATE": "DESC"}})
+    leads = everything(
+        "crm.lead.list", {"select": LEAD_FIELDS, "filter": {">=DATE_CREATE": since}, "order": {"DATE_CREATE": "DESC"}}
+    )
 
     funnels = []
     for cat in categories:
         entity = "DEAL_STAGE" if int(cat["id"]) == 0 else f"DEAL_STAGE_{cat['id']}"
-        stages = [{"id": x["STATUS_ID"], "name": x["NAME"], "semantics": (x.get("EXTRA") or {}).get("SEMANTICS", "process")}
-                  for x in statuses if x["ENTITY_ID"] == entity]
-        funnels.append({"id": int(cat["id"]), "name": cat["name"], "key": "rental" if int(cat["id"]) == 0 else "hiring", "stages": stages})
+        stages = [
+            {"id": x["STATUS_ID"], "name": x["NAME"], "semantics": (x.get("EXTRA") or {}).get("SEMANTICS", "process")}
+            for x in statuses
+            if x["ENTITY_ID"] == entity
+        ]
+        funnels.append(
+            {
+                "id": int(cat["id"]),
+                "name": cat["name"],
+                "key": "rental" if int(cat["id"]) == 0 else "hiring",
+                "stages": stages,
+            }
+        )
     t = now()
     mapped = []
     for d in deals:
         moved = parse(d.get("MOVED_TIME")) or parse(d["DATE_CREATE"])
         days = (t - moved).days
         semantic = d.get("STAGE_SEMANTIC_ID") or "P"
-        mapped.append({
-            "id": d["ID"], "title": d["TITLE"], "funnel": int(d.get("CATEGORY_ID") or 0), "stage": d["STAGE_ID"],
-            "open": semantic == "P", "amount": d.get("OPPORTUNITY") or "0", "manager": users.get(d.get("ASSIGNED_BY_ID"), "—"),
-            "source": SOURCES.get(d.get("SOURCE_ID"), d.get("SOURCE_ID") or "—"), "created": d["DATE_CREATE"],
-            "days_in_stage": days, "stuck": semantic == "P" and days > STUCK_DAYS,
-            "contract": d.get("UF_CRM_CONTRACT") or None, "plate": d.get("UF_CRM_VEHICLE") or None,
-            "crm_paid": d.get("UF_CRM_PAID") or "0", "experience": d.get("UF_CRM_EXPERIENCE"),
-        })
+        mapped.append(
+            {
+                "id": d["ID"],
+                "title": d["TITLE"],
+                "funnel": int(d.get("CATEGORY_ID") or 0),
+                "stage": d["STAGE_ID"],
+                "open": semantic == "P",
+                "amount": d.get("OPPORTUNITY") or "0",
+                "manager": users.get(d.get("ASSIGNED_BY_ID"), "—"),
+                "source": SOURCES.get(d.get("SOURCE_ID"), d.get("SOURCE_ID") or "—"),
+                "created": d["DATE_CREATE"],
+                "days_in_stage": days,
+                "stuck": semantic == "P" and days > STUCK_DAYS,
+                "contract": d.get("UF_CRM_CONTRACT") or None,
+                "plate": d.get("UF_CRM_VEHICLE") or None,
+                "crm_paid": d.get("UF_CRM_PAID") or "0",
+                "experience": d.get("UF_CRM_EXPERIENCE"),
+            }
+        )
     reconciliation = reconcile(s, sp, mapped)
     hiring = [d for d in mapped if d["funnel"] == 1]
     won = sum(1 for d in hiring if d["stage"].endswith("WON"))
     snapshot = {
-        "mode": transport.mode, "synced_at": t.isoformat(), "funnels": funnels, "deals": mapped,
-        "leads": [{"id": x["ID"], "title": x["TITLE"], "name": f"{x.get('NAME') or ''} {x.get('LAST_NAME') or ''}".strip(),
-                   "status": x.get("STATUS_ID"), "source": SOURCES.get(x.get("SOURCE_ID"), x.get("SOURCE_ID")),
-                   "manager": users.get(x.get("ASSIGNED_BY_ID"), "—"), "created": x["DATE_CREATE"]} for x in leads],
-        "reconciliation": reconciliation, "trace": trace,
+        "mode": transport.mode,
+        "synced_at": t.isoformat(),
+        "funnels": funnels,
+        "deals": mapped,
+        "leads": [
+            {
+                "id": x["ID"],
+                "title": x["TITLE"],
+                "name": f"{x.get('NAME') or ''} {x.get('LAST_NAME') or ''}".strip(),
+                "status": x.get("STATUS_ID"),
+                "source": SOURCES.get(x.get("SOURCE_ID"), x.get("SOURCE_ID")),
+                "manager": users.get(x.get("ASSIGNED_BY_ID"), "—"),
+                "created": x["DATE_CREATE"],
+            }
+            for x in leads
+        ],
+        "reconciliation": reconciliation,
+        "trace": trace,
         "summary": {
-            "hiring_total": len(hiring), "hiring_won": won,
+            "hiring_total": len(hiring),
+            "hiring_won": won,
             "hiring_conversion": round(won / len(hiring) * 100) if hiring else 0,
             "stuck": sum(1 for d in mapped if d["stuck"]),
             "leads_new": sum(1 for x in leads if x.get("STATUS_ID") == "NEW"),
             "mismatches": sum(1 for r in reconciliation if not r["ok"]),
-            "calls": len(trace), "ms": round(sum(x["ms"] for x in trace), 1),
+            "calls": len(trace),
+            "ms": round(sum(x["ms"] for x in trace), 1),
         },
     }
     item = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "crm"))
@@ -475,22 +752,44 @@ def reconcile(s, sp, deals):
     codes = {d["contract"]: d for d in deals if d["contract"]}
     if not codes:
         return []
-    contracts = {c.code: c for c in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "contract",
-                                                                    Item.code.in_(list(codes))))}
-    paid = dict(s.execute(select(Entry.contract, func.sum(Entry.amount)).where(
-        Entry.space == sp.id, Entry.kind == "payment", Entry.contract.in_([c.id for c in contracts.values()])
-    ).group_by(Entry.contract)).all())
+    contracts = {
+        c.code: c
+        for c in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "contract", Item.code.in_(list(codes))))
+    }
+    paid = dict(
+        s.execute(
+            select(Entry.contract, func.sum(Entry.amount))
+            .where(
+                Entry.space == sp.id, Entry.kind == "payment", Entry.contract.in_([c.id for c in contracts.values()])
+            )
+            .group_by(Entry.contract)
+        ).all()
+    )
     out = []
     for code, d in sorted(codes.items()):
         c = contracts.get(code)
         ledger = paid.get(c.id, Decimal(0)) if c else None
         crm_paid = Decimal(d["crm_paid"])
         diff = crm_paid - ledger if ledger is not None else None
-        out.append({"deal": d["id"], "title": d["title"], "contract": code, "contract_id": c.id if c else None,
-                    "crm_paid": f"{crm_paid:.2f}", "ledger_paid": f"{ledger:.2f}" if ledger is not None else None,
-                    "diff": f"{diff:.2f}" if diff is not None else None, "ok": c is not None and diff == 0,
-                    "note": "договора нет в учёте" if not c else "сходится" if diff == 0
-                    else "в CRM отмечено больше, чем пришло денег" if diff > 0 else "денег пришло больше, чем отмечено в CRM"})
+        out.append(
+            {
+                "deal": d["id"],
+                "title": d["title"],
+                "contract": code,
+                "contract_id": c.id if c else None,
+                "crm_paid": f"{crm_paid:.2f}",
+                "ledger_paid": f"{ledger:.2f}" if ledger is not None else None,
+                "diff": f"{diff:.2f}" if diff is not None else None,
+                "ok": c is not None and diff == 0,
+                "note": "договора нет в учёте"
+                if not c
+                else "сходится"
+                if diff == 0
+                else "в CRM отмечено больше, чем пришло денег"
+                if diff > 0
+                else "денег пришло больше, чем отмечено в CRM",
+            }
+        )
     return out
 
 
@@ -505,13 +804,27 @@ def pipeline(s, sp, funnel=None):
         if funnel and f["key"] != funnel:
             continue
         deals = [d for d in snap["deals"] if d["funnel"] == f["id"]]
-        out["funnels"].append({
-            "name": f["name"], "key": f["key"],
-            "stages": [{"stage": st["name"], "deals": sum(1 for d in deals if d["stage"] == st["id"])} for st in f["stages"]],
-            "stuck": [{"id": d["id"], "title": d["title"], "days_in_stage": d["days_in_stage"], "manager": d["manager"],
-                       "stage": next((st["name"] for st in f["stages"] if st["id"] == d["stage"]), d["stage"])}
-                      for d in deals if d["stuck"]],
-        })
+        out["funnels"].append(
+            {
+                "name": f["name"],
+                "key": f["key"],
+                "stages": [
+                    {"stage": st["name"], "deals": sum(1 for d in deals if d["stage"] == st["id"])}
+                    for st in f["stages"]
+                ],
+                "stuck": [
+                    {
+                        "id": d["id"],
+                        "title": d["title"],
+                        "days_in_stage": d["days_in_stage"],
+                        "manager": d["manager"],
+                        "stage": next((st["name"] for st in f["stages"] if st["id"] == d["stage"]), d["stage"]),
+                    }
+                    for d in deals
+                    if d["stuck"]
+                ],
+            }
+        )
     out["payment_mismatches"] = [r for r in snap["reconciliation"] if not r["ok"]]
     out["new_leads"] = [x for x in snap["leads"] if x["status"] == "NEW"][:10]
     return out
@@ -522,11 +835,18 @@ def add_task(s, sp, payload):
     transport, _ = portal(s, sp)
     if transport.mode == "live":
         fail("Портал подключён только на чтение: задачи в живом Битрикс24 из демо не создаются", 409)
-    r = transport.call("tasks.task.add", {"fields": {
-        "TITLE": payload["title"][:200], "DESCRIPTION": payload.get("description", "")[:2000],
-        "RESPONSIBLE_ID": payload.get("responsible", "1"),
-        "DEADLINE": b24(now() + timedelta(days=1)), "UF_CRM_TASK": [f"D_{payload['deal']}"] if payload.get("deal") else [],
-    }})
+    r = transport.call(
+        "tasks.task.add",
+        {
+            "fields": {
+                "TITLE": payload["title"][:200],
+                "DESCRIPTION": payload.get("description", "")[:2000],
+                "RESPONSIBLE_ID": payload.get("responsible", "1"),
+                "DEADLINE": b24(now() + timedelta(days=1)),
+                "UF_CRM_TASK": [f"D_{payload['deal']}"] if payload.get("deal") else [],
+            }
+        },
+    )
     return {"code": "B24-T" + r["result"]["task"]["id"], "task": r["result"]["task"]}
 
 
@@ -560,7 +880,12 @@ def crm_sync(request: Request):
         if last and now() - datetime.fromisoformat(last.data["synced_at"]) < timedelta(seconds=5):
             fail("Синхронизация только что выполнялась", 429)
         snap = sync(s, sp)
-        audit(s, sp, f"Синхронизация с Битрикс24: {len(snap['deals'])} сделок, {len(snap['leads'])} лидов, "
-                     f"расхождений оплат — {snap['summary']['mismatches']}", None, via="crm")
+        audit(
+            s,
+            sp,
+            f"Синхронизация с Битрикс24: {len(snap['deals'])} сделок, {len(snap['leads'])} лидов, "
+            f"расхождений оплат — {snap['summary']['mismatches']}",
+            None,
+            via="crm",
+        )
         return snap
-

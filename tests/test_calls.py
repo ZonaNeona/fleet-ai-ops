@@ -30,18 +30,31 @@ def test_review_is_cached_for_everyone(client, monkeypatch):  # noqa: F811
     c, sid = client
     with db() as s:
         s.execute(delete(System).where(System.key.like("call:c09:%")))
-    heard = {"text": "Таксопарк, здравствуйте. Стучит спереди. Приезжайте как-нибудь.", "seconds": 17.3,
-             "cost": "0.0004", "model": "google/gemini-2.5-flash-lite", "ms": 900}
+    heard = {
+        "text": "Таксопарк, здравствуйте. Стучит спереди. Приезжайте как-нибудь.",
+        "seconds": 17.3,
+        "cost": "0.0004",
+        "model": "google/gemini-2.5-flash-lite",
+        "ms": 900,
+    }
     monkeypatch.setattr(voice, "transcribe", lambda space, raw: heard)
     paid = []
 
     def fake_call(space, model, messages, max_tokens=1800, provider="openrouter"):
         paid.append(model)
-        items = [{"key": k, "status": "not_found" if k in ("deadline", "record") else "supported",
-                  "evidence": "", "reason": "проверка"} for k, _, _ in CHECKLIST]
+        items = [
+            {
+                "key": k,
+                "status": "not_found" if k in ("deadline", "record") else "supported",
+                "evidence": "",
+                "reason": "проверка",
+            }
+            for k, _, _ in CHECKLIST
+        ]
         items[3]["status"] = "not_applicable"
-        return Answer(answer="Водитель сообщил о стуке; срок не назван.", fields={"items": items, "advice": "Назовите время."}), \
-            {"model": model, "cost": "0.0010", "ms": 1200, "tokens": 500}
+        return Answer(
+            answer="Водитель сообщил о стуке; срок не назван.", fields={"items": items, "advice": "Назовите время."}
+        ), {"model": model, "cost": "0.0010", "ms": 1200, "tokens": 500}
 
     monkeypatch.setattr("app.ai.call", fake_call)
     monkeypatch.setattr("app.ai.chain", lambda vision=False: [("openrouter", "test/model")])

@@ -1,9 +1,17 @@
 """Local embeddings in worker only; shared public corpus, never session documents."""
 
-import hashlib, json, os, re, time, subprocess, sys
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
 from functools import lru_cache
 from pathlib import Path
+
 from sqlalchemy import text
+
 from .db import db
 
 MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -20,9 +28,7 @@ def embed(texts):
         env={**os.environ, "MALLOC_ARENA_MAX": "2", "OMP_NUM_THREADS": "1"},
     )
     if result.returncode:
-        raise RuntimeError(
-            "Локальная модель эмбеддингов недоступна. Проверьте кеш модели."
-        )
+        raise RuntimeError("Локальная модель эмбеддингов недоступна. Проверьте кеш модели.")
     return json.loads(result.stdout)
 
 
@@ -81,26 +87,18 @@ def build():
         pending = []
         for d in docs:
             digest = hashlib.sha256(
-                json.dumps(
-                    {**d, "model": MODEL}, sort_keys=True, ensure_ascii=False
-                ).encode()
+                json.dumps({**d, "model": MODEL}, sort_keys=True, ensure_ascii=False).encode()
             ).hexdigest()
             old = s.execute(text("SELECT hash FROM kb_doc WHERE id=:id"), d).scalar()
             if old == digest:
                 continue
             parts = chunks(d["title"] + "\n\n" + d["body"])
             pending.append((d, digest, parts))
-        vector_iter = (
-            iter(embed([part for _, _, parts in pending for part in parts]))
-            if pending
-            else iter([])
-        )
+        vector_iter = iter(embed([part for _, _, parts in pending for part in parts])) if pending else iter([])
         for d, digest, parts in pending:
             s.execute(text("DELETE FROM kb_doc WHERE id=:id"), d)
             s.execute(
-                text(
-                    "INSERT INTO kb_doc(id,title,url,version,kind,hash) VALUES(:id,:title,:url,:version,:kind,:hash)"
-                ),
+                text("INSERT INTO kb_doc(id,title,url,version,kind,hash) VALUES(:id,:title,:url,:version,:kind,:hash)"),
                 {**d, "hash": digest},
             )
             for n, body in enumerate(parts):
@@ -182,8 +180,7 @@ def search(query, k=5):
         ]
         t3 = time.monotonic()
         pool = {
-            r["id"]: {**r, "rrf": 1 / (60 + i), "vector_rank": i, "fts_rank": None}
-            for i, r in enumerate(vectors, 1)
+            r["id"]: {**r, "rrf": 1 / (60 + i), "vector_rank": i, "fts_rank": None} for i, r in enumerate(vectors, 1)
         }
         for i, r in enumerate(lexical, 1):
             if r["id"] not in pool:
@@ -200,9 +197,7 @@ def search(query, k=5):
                 pool[r["id"]] = {**dict(row), "rrf": 0, "vector_rank": None}
             pool[r["id"]]["rrf"] += 1 / (60 + i)
             pool[r["id"]]["fts_rank"] = i
-    found = sorted(pool.values(), key=lambda x: x["rrf"], reverse=True)[
-        : max(1, min(8, k))
-    ]
+    found = sorted(pool.values(), key=lambda x: x["rrf"], reverse=True)[: max(1, min(8, k))]
     # FTS alone is not sufficient evidence. Gate by semantic relevance as well.
     accepted = [r for r in found if r["cosine"] >= THRESHOLD]
     trace = [
@@ -271,9 +266,7 @@ def answer(job):
         {"role": "system", "content": prompt},
         {
             "role": "user",
-            "content": json.dumps(
-                {"question": job.data["prompt"], "sources": context}, ensure_ascii=False
-            ),
+            "content": json.dumps({"question": job.data["prompt"], "sources": context}, ensure_ascii=False),
         },
     ]
     trace.append(
@@ -291,9 +284,7 @@ def answer(job):
     response, meta = ai.call_chain(job.space, messages, trace=trace)
     valid = {d["id"]: d for d in context}
     if not response.citations or any(i not in valid for i in response.citations):
-        raise RuntimeError(
-            "Ответ отклонён: модель не указала проверяемые фрагменты базы"
-        )
+        raise RuntimeError("Ответ отклонён: модель не указала проверяемые фрагменты базы")
     trace.append(
         {
             "step": "citations",

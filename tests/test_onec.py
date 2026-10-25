@@ -47,9 +47,19 @@ def test_exchange_is_idempotent_and_reconciles(client):  # noqa: F811
         sp = s.get(Space, sid)
         _, item = onec.emulated(s, sp)
         code = s.scalar(select(Item.code).where(Item.space == sid, Item.kind == "contract").order_by(Item.code))
-        item.data = {**item.data, onec.SALES: [{"Ref_Key": "00000000-0000-0000-0000-000000000001", "Number": "ТП00000000",
-                                                 "Date": f"{onec.last_month()[1]}T10:00:00", "Posted": True,
-                                                 "СуммаДокумента": 1.0, "Комментарий": f"FLEET:{code}:{month}:sale"}]}
+        item.data = {
+            **item.data,
+            onec.SALES: [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000001",
+                    "Number": "ТП00000000",
+                    "Date": f"{onec.last_month()[1]}T10:00:00",
+                    "Posted": True,
+                    "СуммаДокумента": 1.0,
+                    "Комментарий": f"FLEET:{code}:{month}:sale",
+                }
+            ],
+        }
     first = c.post("/api/v1/onec/exchange").json()
     assert first["summary"]["exported"] >= 2
     notes = [r["note"] for r in first["rows"] if not r["ok"]]
@@ -60,6 +70,8 @@ def test_exchange_is_idempotent_and_reconciles(client):  # noqa: F811
     # The same base answers over HTTP with the visitor's key; a live base is never proxied.
     url = c.get("/api/v1/onec").json()["odata"]
     docs = c.get(url + onec.SALES, params={"$format": "json", "$filter": "Posted eq true"}).json()["value"]
-    assert len(docs) == first["summary"]["documents"] - sum(1 for r in first["rows"] if r["kind"] == "payment" and r["doc"])
+    assert len(docs) == first["summary"]["documents"] - sum(
+        1 for r in first["rows"] if r["kind"] == "payment" and r["doc"]
+    )
     assert c.get("/api/onec/nope/odata/standard.odata/" + onec.SALES).status_code == 401
     assert c.get(url + "Catalog_Пользователи").status_code == 400

@@ -1,12 +1,18 @@
-import hashlib, secrets, time, shutil, os
+import hashlib
+import os
+import secrets
+import shutil
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select, func, delete
+from sqlalchemy import delete, func, select
+
 from app.api import app
-from app.db import db, Space, Item, Job, System, FILES, URL, now
-from app.seed import create_space, add
+from app.db import FILES, URL, Item, Job, Space, System, db, now
+from app.seed import add, create_space
 from tests.cleanup import drop_space
 
 
@@ -136,7 +142,8 @@ def test_origin_and_invalid_document(client):
 
 
 def test_miniapp_preserves_desktop_session(client, monkeypatch):
-    import hmac, json
+    import hmac
+    import json
     from urllib.parse import urlencode
 
     c, sid = client

@@ -1,11 +1,14 @@
 """Real provider + local RAG checks. Synthetic test space; no Telegram messages."""
 
-import json, time, resource
+import json
+import resource
+import time
 from types import SimpleNamespace
-from app.db import db, Space, uid
-from app.seed import create_space
+
 from app.agent import run
+from app.db import Space, db, uid
 from app.rag import answer
+from app.seed import create_space
 
 cases = [
     ("rag", "driver", "Какие документы нужны водителю?", "driver-documents"),
@@ -30,19 +33,14 @@ results = []
 try:
     for mode, role, q, expected in cases:
         start = time.monotonic()
-        job = SimpleNamespace(
-            id=uid(), space=sid, data={"mode": mode, "prompt": q, "role": role}
-        )
+        job = SimpleNamespace(id=uid(), space=sid, data={"mode": mode, "prompt": q, "role": role})
         try:
             r = (answer if mode == "rag" else run)(job)
             passed = (
                 any(expected in x.get("chunk_id", "") for x in r.get("sources", []))
                 if mode == "rag"
                 else any(
-                    x["step"] == "tool"
-                    and x["title"] == expected
-                    and x.get("status") == "success"
-                    for x in r["trace"]
+                    x["step"] == "tool" and x["title"] == expected and x.get("status") == "success" for x in r["trace"]
                 )
             )
             if expected == "create_ticket":

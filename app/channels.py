@@ -39,7 +39,7 @@ def buttons(m):
     """The core's inline keyboard as (text, kind, value) rows: kind is callback or link."""
     markup = m.get("kb")
     rows = []
-    for row in (markup.inline_keyboard if markup else []):
+    for row in markup.inline_keyboard if markup else []:
         out = []
         for b in row:
             if b.callback_data:
@@ -54,15 +54,29 @@ def buttons(m):
 def vk_payload(peer, m, random_id=None) -> dict:
     """random_id makes VK drop a repeated send: unique per real send, a placeholder in the preview."""
     rows = buttons(m)[:6]
-    body = {"peer_id": peer, "message": plain(m.get("text", ""))[:4000] or "…",
-            "random_id": secrets.randbelow(2**31) if random_id is None else random_id}
+    body = {
+        "peer_id": peer,
+        "message": plain(m.get("text", ""))[:4000] or "…",
+        "random_id": secrets.randbelow(2**31) if random_id is None else random_id,
+    }
     if m.get("photo") or m.get("document"):
         body["message"] += "\n\n(вложение доступно в Telegram и в кабинете)"
     if rows:
-        body["keyboard"] = json.dumps({"inline": True, "buttons": [[
-            {"action": {"type": "callback", "label": t[:40], "payload": json.dumps({"cmd": v})}} if k == "callback"
-            else {"action": {"type": "open_link", "label": t[:40], "link": v}} for t, k, v in row[:5]] for row in rows]},
-            ensure_ascii=False)
+        body["keyboard"] = json.dumps(
+            {
+                "inline": True,
+                "buttons": [
+                    [
+                        {"action": {"type": "callback", "label": t[:40], "payload": json.dumps({"cmd": v})}}
+                        if k == "callback"
+                        else {"action": {"type": "open_link", "label": t[:40], "link": v}}
+                        for t, k, v in row[:5]
+                    ]
+                    for row in rows
+                ],
+            },
+            ensure_ascii=False,
+        )
     return body
 
 
@@ -70,16 +84,31 @@ def max_payload(chat, m) -> dict:
     rows = buttons(m)
     body: dict = {"chat_id": chat, "text": (m.get("text") or "…")[:4000], "format": "html"}
     if rows:
-        body["attachments"] = [{"type": "inline_keyboard", "payload": {"buttons": [[
-            {"type": "callback", "text": t, "payload": v} if k == "callback" else {"type": "link", "text": t, "url": v}
-            for t, k, v in row] for row in rows]}}]
+        body["attachments"] = [
+            {
+                "type": "inline_keyboard",
+                "payload": {
+                    "buttons": [
+                        [
+                            {"type": "callback", "text": t, "payload": v}
+                            if k == "callback"
+                            else {"type": "link", "text": t, "url": v}
+                            for t, k, v in row
+                        ]
+                        for row in rows
+                    ]
+                },
+            }
+        ]
     return body
 
 
 def formats(messages) -> dict:
     """What each channel's API would receive for these answers — shown by the cabinet's emulator."""
-    return {"vk": [vk_payload("<peer_id>", m, "<random_id>") for m in messages],
-            "max": [max_payload("<chat_id>", m) for m in messages]}
+    return {
+        "vk": [vk_payload("<peer_id>", m, "<random_id>") for m in messages],
+        "max": [max_payload("<chat_id>", m) for m in messages],
+    }
 
 
 # ---------------------------------------------------------------- inbound → the core's update shape
@@ -93,17 +122,33 @@ def from_vk(event) -> dict | None:
         who = {"id": f"vk:{msg.get('from_id')}", "first_name": "Гость VK"}
         chat = {"id": f"vk:{msg.get('peer_id')}", "type": "private"}
         if payload.get("cmd"):
-            return {"update_id": "vk-" + str(event.get("event_id")), "callback_query": {
-                "id": None, "from": who, "data": payload["cmd"], "message": {"chat": chat, "from": who}}}
-        return {"update_id": "vk-" + str(event.get("event_id")), "message": {"from": who, "chat": chat, "text": msg.get("text", "")}}
+            return {
+                "update_id": "vk-" + str(event.get("event_id")),
+                "callback_query": {
+                    "id": None,
+                    "from": who,
+                    "data": payload["cmd"],
+                    "message": {"chat": chat, "from": who},
+                },
+            }
+        return {
+            "update_id": "vk-" + str(event.get("event_id")),
+            "message": {"from": who, "chat": chat, "text": msg.get("text", "")},
+        }
     if event.get("type") == "message_event":
         who = {"id": f"vk:{o.get('user_id')}", "first_name": "Гость VK"}
         chat = {"id": f"vk:{o.get('peer_id')}", "type": "private"}
         cmd = (o.get("payload") or {}).get("cmd")
         if cmd:
-            return {"update_id": "vk-" + str(event.get("event_id")), "callback_query": {
-                "id": f"vk:{o.get('event_id')}:{o.get('user_id')}:{o.get('peer_id')}", "from": who, "data": cmd,
-                "message": {"chat": chat, "from": who}}}
+            return {
+                "update_id": "vk-" + str(event.get("event_id")),
+                "callback_query": {
+                    "id": f"vk:{o.get('event_id')}:{o.get('user_id')}:{o.get('peer_id')}",
+                    "from": who,
+                    "data": cmd,
+                    "message": {"chat": chat, "from": who},
+                },
+            }
     return None
 
 
@@ -113,15 +158,24 @@ def from_max(update) -> dict | None:
         m = update.get("message") or {}
         who = {"id": f"max:{(m.get('sender') or {}).get('user_id')}", "first_name": "Гость MAX"}
         chat = {"id": f"max:{(m.get('recipient') or {}).get('chat_id')}", "type": "private"}
-        return {"update_id": "max-" + str(m.get("body", {}).get("mid") or update.get("timestamp")),
-                "message": {"from": who, "chat": chat, "text": (m.get("body") or {}).get("text", "")}}
+        return {
+            "update_id": "max-" + str(m.get("body", {}).get("mid") or update.get("timestamp")),
+            "message": {"from": who, "chat": chat, "text": (m.get("body") or {}).get("text", "")},
+        }
     if kind == "message_callback":
         cb = update.get("callback") or {}
         msg = update.get("message") or {}
         who = {"id": f"max:{(cb.get('user') or {}).get('user_id')}", "first_name": "Гость MAX"}
         chat = {"id": f"max:{(msg.get('recipient') or {}).get('chat_id')}", "type": "private"}
-        return {"update_id": "max-" + str(cb.get("callback_id")), "callback_query": {
-            "id": "max:" + str(cb.get("callback_id")), "from": who, "data": cb.get("payload"), "message": {"chat": chat, "from": who}}}
+        return {
+            "update_id": "max-" + str(cb.get("callback_id")),
+            "callback_query": {
+                "id": "max:" + str(cb.get("callback_id")),
+                "from": who,
+                "data": cb.get("payload"),
+                "message": {"chat": chat, "from": who},
+            },
+        }
     return None
 
 
@@ -134,18 +188,32 @@ def deliver(chat: str, messages, callback_id=None):
         token = os.environ["VK_TOKEN"]
         if callback_id:  # stop the spinner on the pressed button
             _, event_id, user_id, peer = callback_id.split(":", 3)
-            httpx.post(VK_API + "messages.sendMessageEventAnswer", timeout=10, data={
-                "access_token": token, "v": "5.199", "event_id": event_id, "user_id": user_id, "peer_id": peer})
+            httpx.post(
+                VK_API + "messages.sendMessageEventAnswer",
+                timeout=10,
+                data={"access_token": token, "v": "5.199", "event_id": event_id, "user_id": user_id, "peer_id": peer},
+            )
         for m in messages:
-            httpx.post(VK_API + "messages.send", timeout=10, data={**vk_payload(int(target), m), "access_token": token, "v": "5.199"})
+            httpx.post(
+                VK_API + "messages.send",
+                timeout=10,
+                data={**vk_payload(int(target), m), "access_token": token, "v": "5.199"},
+            )
     elif channel == "max":
         headers = {"Authorization": os.environ["MAX_TOKEN"]}
         if callback_id:
-            httpx.post(MAX_API + "answers", params={"callback_id": callback_id.split(":", 1)[1]}, json={"notification": ""},
-                       headers=headers, timeout=10)
+            httpx.post(
+                MAX_API + "answers",
+                params={"callback_id": callback_id.split(":", 1)[1]},
+                json={"notification": ""},
+                headers=headers,
+                timeout=10,
+            )
         for m in messages:
             body = max_payload(int(target), m)
-            httpx.post(MAX_API + "messages", params={"chat_id": body.pop("chat_id")}, json=body, headers=headers, timeout=10)
+            httpx.post(
+                MAX_API + "messages", params={"chat_id": body.pop("chat_id")}, json=body, headers=headers, timeout=10
+            )
     return {"sent": len(messages)}
 
 
@@ -202,4 +270,8 @@ async def max_webhook(request: Request):
 
 @router.get("/api/v1/channels")
 def channels_view():
-    return {"telegram": bool(os.getenv("TELEGRAM_BOT_TOKEN")), "vk": bool(os.getenv("VK_TOKEN")), "max": bool(os.getenv("MAX_TOKEN"))}
+    return {
+        "telegram": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+        "vk": bool(os.getenv("VK_TOKEN")),
+        "max": bool(os.getenv("MAX_TOKEN")),
+    }

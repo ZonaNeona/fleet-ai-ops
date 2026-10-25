@@ -1,10 +1,13 @@
-import secrets, random
-from datetime import timedelta, datetime
-from zoneinfo import ZoneInfo
+import random
+import secrets
+from datetime import datetime, timedelta
 from decimal import Decimal
-from sqlalchemy import select, func
+from zoneinfo import ZoneInfo
+
 from psycopg.types.range import Range
-from .db import Space, Item, Entry, Booking, Event, uid, now
+from sqlalchemy import func, select
+
+from .db import Booking, Entry, Event, Item, Space, now, uid
 
 ROLES = {
     "owner": "Собственник бизнеса",
@@ -170,7 +173,7 @@ def create_space(s, count=160):
     ]
     for i in range(48):
         name = (
-            names[i % 10] + f" · {i+1:02}"
+            names[i % 10] + f" · {i + 1:02}"
             if i < 40
             else [
                 "ООО «Демо Логистика»",
@@ -185,17 +188,13 @@ def create_space(s, count=160):
                 s,
                 space.id,
                 "client",
-                f"CL-{i+1:03}",
+                f"CL-{i + 1:03}",
                 {
                     "name": name,
                     "type": "person" if i < 40 else "company",
-                    "phone": f"+7 (000) 000-{i+1:04}",
+                    "phone": f"+7 (000) 000-{i + 1:04}",
                     "status": "approved" if i < 42 else "new",
-                    "documents": (
-                        ["Паспорт", "ВУ", "КИС АРТ", "Справка", "Самозанятость"]
-                        if i < 42
-                        else []
-                    ),
+                    "documents": (["Паспорт", "ВУ", "КИС АРТ", "Справка", "Самозанятость"] if i < 42 else []),
                     "age": 28 + i % 20,
                     "experience": 4 + i % 12,
                     "representative": "Учебный представитель" if i >= 40 else "",
@@ -233,8 +232,7 @@ def create_space(s, count=160):
             FLEET["moskvich-3"],
         ],
         # премиум в прокате — штучно, основная масса — комфорт и бизнес
-        "rental": [FLEET["haval-jolion"], FLEET["geely-preface"], FLEET["hongqi-h5"]]
-        * 7
+        "rental": [FLEET["haval-jolion"], FLEET["geely-preface"], FLEET["hongqi-h5"]] * 7
         + [
             FLEET["mercedes-e"],
             FLEET["mercedes-e"],
@@ -258,15 +256,7 @@ def create_space(s, count=160):
     contracts = []
     entry_batch = []
     for i in range(count):
-        kind = (
-            "taxi"
-            if i % 160 < 60
-            else (
-                "rental"
-                if i % 160 < 110
-                else "commercial" if i % 160 < 130 else "buyout"
-            )
-        )
+        kind = "taxi" if i % 160 < 60 else ("rental" if i % 160 < 110 else "commercial" if i % 160 < 130 else "buyout")
         car = models[kind][i % len(models[kind])]
         model = car["model"]
         rate = car["rate"] + (200 if kind == "buyout" else 0)
@@ -275,10 +265,10 @@ def create_space(s, count=160):
             s,
             space.id,
             "vehicle",
-            f"TP-{i+1:04}",
+            f"TP-{i + 1:04}",
             {
                 "model": model,
-                "plate": f"ДЕМО {i+1:04}",
+                "plate": f"ДЕМО {i + 1:04}",
                 "year": 2023 + i % 3,
                 "direction": kind,
                 "branch": BRANCHES[i % 3]["id"],
@@ -288,9 +278,7 @@ def create_space(s, count=160):
                 "next_to": 20000 + (i * 739 // 10000) * 10000,
                 "document_until": str(today + timedelta(days=14 + i % 130)),
                 "investor": (
-                    investor.id
-                    if i % 160 in range(60, 72)
-                    else second.id if i % 160 in range(72, 84) else None
+                    investor.id if i % 160 in range(60, 72) else second.id if i % 160 in range(72, 84) else None
                 ),
                 "fuel": 75,
                 "class": car["class"],
@@ -301,37 +289,29 @@ def create_space(s, count=160):
         )
         vehicles.append(v)
         start = today - timedelta(days=60 + i % 28)
-        end = today + timedelta(
-            days=365 if kind == "buyout" else 30 if kind == "taxi" else 4 + i % 10
-        )
+        end = today + timedelta(days=365 if kind == "buyout" else 30 if kind == "taxi" else 4 + i % 10)
         if i % 5 == 0:
             end = today - timedelta(days=7)
         c = add(
             s,
             space.id,
             "contract",
-            f"D-{1001+i}",
+            f"D-{1001 + i}",
             {
                 "vehicle": v.id,
-                "client": customers[
-                    i % 40 if kind in ("taxi", "buyout") else 40 + i % 8
-                ].id,
+                "client": customers[i % 40 if kind in ("taxi", "buyout") else 40 + i % 8].id,
                 "direction": kind,
                 "status": "active" if i % 5 != 0 else "completed",
                 "start": str(start),
                 "end": str(end),
                 "rate": str(rate),
                 "schedule": (
-                    "7/0"
-                    if kind in ("rental", "commercial") or i % 3 == 0
-                    else "6/1" if i % 3 == 1 else "5/2"
+                    "7/0" if kind in ("rental", "commercial") or i % 3 == 0 else "6/1" if i % 3 == 1 else "5/2"
                 ),
                 "free_first": True,
                 "holidays": [],
                 "deposit": str(
-                    (100000 if car["class"] == "Премиум" else 20000)
-                    if kind in ("rental", "commercial")
-                    else 0
+                    (100000 if car["class"] == "Премиум" else 20000) if kind in ("rental", "commercial") else 0
                 ),
                 "km_limit": 250,
                 "extra_km": "30",
@@ -485,7 +465,7 @@ def create_space(s, count=160):
             s,
             space.id,
             "ticket",
-            f"SRV-{201+j}",
+            f"SRV-{201 + j}",
             {
                 "vehicle": v.id,
                 "contract": contracts[idx].id,
@@ -503,9 +483,7 @@ def create_space(s, count=160):
                 "payer": "owner" if v.data["investor"] else "company",
                 "due": (now() + timedelta(minutes=15 if j == 0 else 120)).isoformat(),
                 "opened": now().isoformat(),
-                "repair_started": (
-                    (now() - timedelta(days=9 + j)).isoformat() if j % 4 == 3 else None
-                ),
+                "repair_started": ((now() - timedelta(days=9 + j)).isoformat() if j % 4 == 3 else None),
                 "photos": [],
             },
         )
@@ -530,9 +508,7 @@ def create_space(s, count=160):
                 "schedule": "7/0",
             },
         )
-    for i, title in enumerate(
-        ["Ремонт: кто оплачивает?", "Как начисляется аренда?", "Документы водителя"]
-    ):
+    for i, title in enumerate(["Ремонт: кто оплачивает?", "Как начисляется аренда?", "Документы водителя"]):
         add(
             s,
             space.id,
@@ -642,9 +618,7 @@ def claim_space(s):
     # Время «сейчас» в посеве (SLA заявок, событие готовности) сдвигаем на момент выдачи
     for t in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "ticket")):
         shifted = {
-            k: (datetime.fromisoformat(t.data[k]) + delta).isoformat()
-            for k in ("due", "opened")
-            if t.data.get(k)
+            k: (datetime.fromisoformat(t.data[k]) + delta).isoformat() for k in ("due", "opened") if t.data.get(k)
         }
         if shifted:
             t.data = {**t.data, **shifted}
@@ -663,12 +637,15 @@ def refill_pool(s):
     day = pool_day()
     for old in s.scalars(
         select(Space).where(
-            Space.data.has_key("pool"), (Space.data["pool"].astext != day) | Space.data["seed_version"].astext.is_distinct_from("taxi-3")
+            Space.data.has_key("pool"),
+            (Space.data["pool"].astext != day) | Space.data["seed_version"].astext.is_distinct_from("taxi-3"),
         )
     ):
         s.delete(old)
     ready = s.scalar(
-        select(func.count()).select_from(Space).where(Space.data["pool"].astext == day, Space.data["seed_version"].astext == "taxi-3")
+        select(func.count())
+        .select_from(Space)
+        .where(Space.data["pool"].astext == day, Space.data["seed_version"].astext == "taxi-3")
     )
     if ready >= POOL_SIZE:
         return False

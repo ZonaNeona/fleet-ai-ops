@@ -8,9 +8,12 @@ line-length = 120
 target-version = "py312"
 extend-exclude = ["node_modules", "dist"]
 
+[tool.ruff.format]
+line-ending = "lf"
+
 [tool.ruff.lint]
-# Errors and likely bugs; formatting stays as written.
-select = ["E9", "F", "B"]
+# Errors and likely bugs; layout is left to `ruff format`.
+select = ["E9", "F", "B", "I"]
 # FastAPI declares parameters with File()/Depends() defaults by design.
 ignore = ["B008"]
 

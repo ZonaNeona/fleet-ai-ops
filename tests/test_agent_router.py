@@ -35,8 +35,11 @@ def test_quick_answer_uses_tools_not_the_model(client, monkeypatch):  # noqa: F8
     assert "TP-" in result["answer"]
     # A driver asking for the fleet-wide list does not get it: the question goes to the agent instead.
     seen = []
-    monkeypatch.setattr(agent.ai, "call_chain", lambda space, messages, **k: (seen.append(1) or {"content": "ок"},
-                                                                             {"cost": "0", "tokens": 0, "model": "t"}))
+    monkeypatch.setattr(
+        agent.ai,
+        "call_chain",
+        lambda space, messages, **k: (seen.append(1) or {"content": "ок"}, {"cost": "0", "tokens": 0, "model": "t"}),
+    )
     driver = agent.run(SimpleNamespace(id="j2", space=sid, data={"role": "driver", "prompt": "что сделать сейчас"}))
     assert driver["engine"] == "model" and seen
 
@@ -52,8 +55,18 @@ def test_signals_follow_the_data(client):  # noqa: F811
     c, sid = client
     with db() as s:
         v = s.scalar(select(Item).where(Item.space == sid, Item.kind == "vehicle").order_by(Item.code))
-        tid = add(s, sid, "ticket", "SRV-TEST", {"vehicle": v.id, "title": "Стук в подвеске", "status": "new",
-                                                "due": (now() - timedelta(hours=3)).isoformat()}).id
+        tid = add(
+            s,
+            sid,
+            "ticket",
+            "SRV-TEST",
+            {
+                "vehicle": v.id,
+                "title": "Стук в подвеске",
+                "status": "new",
+                "due": (now() - timedelta(hours=3)).isoformat(),
+            },
+        ).id
     view = c.get("/api/v1/signals").json()
     overdue = [r for r in view["rows"] if r["rule"] == "ticket-overdue"]
     assert any(r["target"] == tid for r in overdue) and overdue[0]["action"]

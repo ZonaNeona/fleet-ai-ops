@@ -31,64 +31,149 @@ type MapNode = Omit<FNode, "title" | "sub"> & {
 
 const NODES: MapNode[] = [
   {
-    id: "telegram", x: 0, y: 40, icon: Send, color: "#38bdf8", title: "Telegram-бот", tech: "Bot API · webhook",
+    id: "telegram",
+    x: 0,
+    y: 40,
+    icon: Send,
+    color: "#38bdf8",
+    title: "Telegram-бот",
+    tech: "Bot API · webhook",
     simple: "Водители и клиенты пишут в бот. Бот — не отдельная программа, а ещё один вход в ту же систему.",
-    engineer: "Webhook /api/v1/telegram/webhook: проверка X-Telegram-Bot-Api-Secret-Token, дедупликация по update_id, Mini App — HMAC initData + auth_date.",
+    engineer:
+      "Webhook /api/v1/telegram/webhook: проверка X-Telegram-Bot-Api-Secret-Token, дедупликация по update_id, Mini App — HMAC initData + auth_date.",
   },
   {
-    id: "web", x: 0, y: 300, icon: MonitorSmartphone, color: "#a78bfa", title: "Кабинет", tech: "React 19 · PWA",
+    id: "web",
+    x: 0,
+    y: 300,
+    icon: MonitorSmartphone,
+    color: "#a78bfa",
+    title: "Кабинет",
+    tech: "React 19 · PWA",
     simple: "Рабочее место сотрудников и личный кабинет водителя. Обновляется само, когда что-то происходит.",
-    engineer: "React 19 + TanStack Query, cookie HttpOnly + проверка Origin, Server-Sent Events для живых обновлений, service worker.",
+    engineer:
+      "React 19 + TanStack Query, cookie HttpOnly + проверка Origin, Server-Sent Events для живых обновлений, service worker.",
   },
   {
-    id: "api", x: 250, y: 170, icon: Server, color: "#60a5fa", title: "API", tech: "FastAPI · OpenAPI",
+    id: "api",
+    x: 250,
+    y: 170,
+    icon: Server,
+    color: "#60a5fa",
+    title: "API",
+    tech: "FastAPI · OpenAPI",
     simple: "Единая дверь в систему: принимает запросы и сразу отвечает, а долгую работу передаёт дальше.",
-    engineer: "FastAPI + Pydantic v2, OpenAPI /api/docs. Тяжёлые операции не выполняются в запросе — ставится Job, ответ 202.",
+    engineer:
+      "FastAPI + Pydantic v2, OpenAPI /api/docs. Тяжёлые операции не выполняются в запросе — ставится Job, ответ 202.",
   },
   {
-    id: "queue", x: 500, y: 170, icon: ListOrdered, color: "#fbbf24", title: "Очередь", tech: "PostgreSQL jobs",
+    id: "queue",
+    x: 500,
+    y: 170,
+    icon: ListOrdered,
+    color: "#fbbf24",
+    title: "Очередь",
+    tech: "PostgreSQL jobs",
     simple: "Задачи ждут своей очереди. Если сервер перезапустится — ничего не потеряется.",
-    engineer: "Таблица job в PostgreSQL: SELECT … FOR UPDATE SKIP LOCKED, lease, повторы с backoff. Неоднозначные вызовы AI не повторяются, чтобы не списать бюджет дважды.",
+    engineer:
+      "Таблица job в PostgreSQL: SELECT … FOR UPDATE SKIP LOCKED, lease, повторы с backoff. Неоднозначные вызовы AI не повторяются, чтобы не списать бюджет дважды.",
   },
   {
-    id: "worker", x: 750, y: 170, icon: Cpu, color: "#fb923c", title: "Воркер", tech: "Python · PM2",
+    id: "worker",
+    x: 750,
+    y: 170,
+    icon: Cpu,
+    color: "#fb923c",
+    title: "Воркер",
+    tech: "Python · PM2",
     simple: "Исполнитель: берёт задачу, делает работу и отправляет результат.",
-    engineer: "Отдельный процесс под PM2; эмбеддинги считаются в коротком дочернем процессе (fastembed, ~690 МБ на время расчёта) — память сервера не держится.",
+    engineer:
+      "Отдельный процесс под PM2; эмбеддинги считаются в коротком дочернем процессе (fastembed, ~690 МБ на время расчёта) — память сервера не держится.",
   },
   {
-    id: "agent", x: 1000, y: 40, icon: Bot, color: "#22d3ee", title: "AI-агент", tech: "tool calling",
-    simple: "Помощник понимает вопрос и сам выбирает, какие данные ему нужны. Но видит только то, что разрешено вашей роли.",
-    engineer: "OpenAI-совместимый tool calling, до 4 раундов; набор инструментов зависит от роли; аргументы — Pydantic-схемы; запись — только через черновик и подтверждение.",
+    id: "agent",
+    x: 1000,
+    y: 40,
+    icon: Bot,
+    color: "#22d3ee",
+    title: "AI-агент",
+    tech: "tool calling",
+    simple:
+      "Помощник понимает вопрос и сам выбирает, какие данные ему нужны. Но видит только то, что разрешено вашей роли.",
+    engineer:
+      "OpenAI-совместимый tool calling, до 4 раундов; набор инструментов зависит от роли; аргументы — Pydantic-схемы; запись — только через черновик и подтверждение.",
   },
   {
-    id: "llm", x: 1250, y: -70, icon: Sparkles, color: "#c084fc", title: "Языковые модели", tech: "qwen3.8 → deepseek",
+    id: "llm",
+    x: 1250,
+    y: -70,
+    icon: Sparkles,
+    color: "#c084fc",
+    title: "Языковые модели",
+    tech: "qwen3.8 → deepseek",
     simple: "Сама «нейросеть». Если основная не отвечает — система переключается на запасную.",
-    engineer: "Цепочка провайдеров: qwen/qwen3.8-flash (выбрана по eval на 60 кейсах) → deepseek-flash. Откат при 429/5xx/таймауте, дневной бюджет $0.50, учёт токенов и стоимости.",
+    engineer:
+      "Цепочка провайдеров: qwen/qwen3.8-flash (выбрана по eval на 60 кейсах) → deepseek-flash. Откат при 429/5xx/таймауте, дневной бюджет $0.50, учёт токенов и стоимости.",
   },
   {
-    id: "rag", x: 1250, y: 140, icon: BookOpen, color: "#34d399", title: "База знаний", tech: "RAG · гибридный поиск",
+    id: "rag",
+    x: 1250,
+    y: 140,
+    icon: BookOpen,
+    color: "#34d399",
+    title: "База знаний",
+    tech: "RAG · гибридный поиск",
     simple: "Регламенты и правила. Ответ строится только по найденным фрагментам — со ссылками.",
-    engineer: "MiniLM-L12 (384d, локально) → pgvector HNSW cosine ∥ FTS russian (GIN) → RRF k=60 → порог 0.38 → LLM со structured output → проверка цитат.",
+    engineer:
+      "MiniLM-L12 (384d, локально) → pgvector HNSW cosine ∥ FTS russian (GIN) → RRF k=60 → порог 0.38 → LLM со structured output → проверка цитат.",
   },
   {
-    id: "commands", x: 1000, y: 330, icon: ShieldCheck, color: "#f472b6", title: "Бизнес-команды", tech: "authz · idempotency",
+    id: "commands",
+    x: 1000,
+    y: 330,
+    icon: ShieldCheck,
+    color: "#f472b6",
+    title: "Бизнес-команды",
+    tech: "authz · idempotency",
     simple: "Любое изменение проходит проверку: кто вы, можно ли это делать сейчас, не повтор ли это.",
-    engineer: "Объектная авторизация по роли, Idempotency-Key, оптимистичная версия, аудит + outbox в одной транзакции.",
+    engineer:
+      "Объектная авторизация по роли, Idempotency-Key, оптимистичная версия, аудит + outbox в одной транзакции.",
   },
   {
-    id: "postgres", x: 1250, y: 360, icon: Database, color: "#60a5fa", title: "PostgreSQL 16", tech: "NUMERIC · EXCLUDE · pgvector",
+    id: "postgres",
+    x: 1250,
+    y: 360,
+    icon: Database,
+    color: "#60a5fa",
+    title: "PostgreSQL 16",
+    tech: "NUMERIC · EXCLUDE · pgvector",
     simple: "Единый учёт: договоры, деньги, история. Две брони одной машины на одни даты физически невозможны.",
-    engineer: "Деньги в NUMERIC, EXCLUDE USING gist для броней, pgvector + GIN в той же базе, ежедневный pg_dump, релизы со снимком.",
+    engineer:
+      "Деньги в NUMERIC, EXCLUDE USING gist для броней, pgvector + GIN в той же базе, ежедневный pg_dump, релизы со снимком.",
   },
   {
-    id: "n8n", x: 750, y: 480, icon: Workflow, color: "#ff6d5a", title: "n8n", tech: "4 workflow",
+    id: "n8n",
+    x: 750,
+    y: 480,
+    icon: Workflow,
+    color: "#ff6d5a",
+    title: "n8n",
+    tech: "4 workflow",
     simple: "Конвейеры, которые забирают данные из внешних систем и приносят их на сверку.",
-    engineer: "Webhook + расписание → HTTP к источнику → Code-нормализация и валидация схемы → подписанный HMAC-пакет → транзакционный ingest. Трасса исполнения читается из БД n8n.",
+    engineer:
+      "Webhook + расписание → HTTP к источнику → Code-нормализация и валидация схемы → подписанный HMAC-пакет → транзакционный ingest. Трасса исполнения читается из БД n8n.",
   },
   {
-    id: "sources", x: 500, y: 480, icon: Building2, color: "#94a3b8", title: "Внешние системы", tech: "1С · Яндекс Про · ГИБДД",
+    id: "sources",
+    x: 500,
+    y: 480,
+    icon: Building2,
+    color: "#94a3b8",
+    title: "Внешние системы",
+    tech: "1С · Яндекс Про · ГИБДД",
     simple: "1С, Яндекс Про, штрафы, телематика. В демо — учебные копии с намеренными расхождениями.",
-    engineer: "Моки в формате источников (OData 1С и т. п.), закрыты снаружи nginx; данные выводятся из пространства сессии.",
+    engineer:
+      "Моки в формате источников (OData 1С и т. п.), закрыты снаружи nginx; данные выводятся из пространства сессии.",
   },
 ];
 
@@ -127,16 +212,75 @@ const SCENARIOS: Scenario[] = [
     title: "Водитель спрашивает долг в боте",
     try: { section: "agent", prompt: "Сколько я должен?", label: "Задать этот вопрос агенту" },
     steps: [
-      { node: "telegram", label: "Сообщение", simple: "Водитель пишет в бот: «Сколько я должен?»", eng: "Telegram доставляет Update на вебхук; заголовок secret_token сверяется в постоянное время." },
-      { node: "api", edges: ["telegram-api"], label: "Приём", simple: "Сервер принимает сообщение и сразу отвечает Telegram «принято».", eng: "update_id уникален — повторная доставка не создаст второй задачи. Ответ 200 за миллисекунды." },
-      { node: "queue", edges: ["api-queue"], label: "Очередь", simple: "Вопрос становится задачей в очереди.", eng: "INSERT job(kind=telegram, role=driver). Роль закреплена в задаче, а не берётся из текста." },
-      { node: "worker", edges: ["queue-worker"], label: "Воркер", simple: "Свободный исполнитель берёт задачу.", eng: "SELECT … FOR UPDATE SKIP LOCKED — два воркера не возьмут одну задачу." },
-      { node: "agent", edges: ["worker-agent"], label: "Агент", simple: "Помощнику выдают только инструменты, разрешённые водителю.", eng: "tools_for(driver): list_vehicles, find_contract, search_knowledge, get_balance, vehicle_economics, create_ticket." },
-      { node: "llm", edges: ["agent-llm"], label: "Модель", simple: "Модель решает: чтобы ответить, нужен баланс.", eng: "qwen3.8-flash → tool_call get_balance({}). Если модель недоступна — откат на deepseek-flash." },
-      { node: "commands", edges: [...back("agent-llm"), "agent-commands"], label: "Права", simple: "Система проверяет: водитель видит только свой долг.", eng: "get_balance → reports.report(sp) в scope роли и объекта; чужие договоры не попадут в выборку." },
-      { node: "postgres", edges: ["commands-postgres"], label: "Учёт", simple: "Цифры берутся из учёта, а не придумываются.", eng: "Начисления − платежи в NUMERIC, просрочка по корзинам (aging)." },
-      { node: "agent", edges: back("commands-postgres", "agent-commands"), label: "Ответ", simple: "Модель получает цифры и пишет ответ человеческим языком.", eng: "Второй раунд: результат инструмента → модель; стоимость и токены пишутся в Usage." },
-      { node: "telegram", edges: back("worker-agent", "queue-worker", "api-queue", "telegram-api"), label: "В чат", simple: "Ответ приходит в чат через несколько секунд.", eng: "sendMessage; ответ и трасса доступны в журнале «Под капотом»." },
+      {
+        node: "telegram",
+        label: "Сообщение",
+        simple: "Водитель пишет в бот: «Сколько я должен?»",
+        eng: "Telegram доставляет Update на вебхук; заголовок secret_token сверяется в постоянное время.",
+      },
+      {
+        node: "api",
+        edges: ["telegram-api"],
+        label: "Приём",
+        simple: "Сервер принимает сообщение и сразу отвечает Telegram «принято».",
+        eng: "update_id уникален — повторная доставка не создаст второй задачи. Ответ 200 за миллисекунды.",
+      },
+      {
+        node: "queue",
+        edges: ["api-queue"],
+        label: "Очередь",
+        simple: "Вопрос становится задачей в очереди.",
+        eng: "INSERT job(kind=telegram, role=driver). Роль закреплена в задаче, а не берётся из текста.",
+      },
+      {
+        node: "worker",
+        edges: ["queue-worker"],
+        label: "Воркер",
+        simple: "Свободный исполнитель берёт задачу.",
+        eng: "SELECT … FOR UPDATE SKIP LOCKED — два воркера не возьмут одну задачу.",
+      },
+      {
+        node: "agent",
+        edges: ["worker-agent"],
+        label: "Агент",
+        simple: "Помощнику выдают только инструменты, разрешённые водителю.",
+        eng: "tools_for(driver): list_vehicles, find_contract, search_knowledge, get_balance, vehicle_economics, create_ticket.",
+      },
+      {
+        node: "llm",
+        edges: ["agent-llm"],
+        label: "Модель",
+        simple: "Модель решает: чтобы ответить, нужен баланс.",
+        eng: "qwen3.8-flash → tool_call get_balance({}). Если модель недоступна — откат на deepseek-flash.",
+      },
+      {
+        node: "commands",
+        edges: [...back("agent-llm"), "agent-commands"],
+        label: "Права",
+        simple: "Система проверяет: водитель видит только свой долг.",
+        eng: "get_balance → reports.report(sp) в scope роли и объекта; чужие договоры не попадут в выборку.",
+      },
+      {
+        node: "postgres",
+        edges: ["commands-postgres"],
+        label: "Учёт",
+        simple: "Цифры берутся из учёта, а не придумываются.",
+        eng: "Начисления − платежи в NUMERIC, просрочка по корзинам (aging).",
+      },
+      {
+        node: "agent",
+        edges: back("commands-postgres", "agent-commands"),
+        label: "Ответ",
+        simple: "Модель получает цифры и пишет ответ человеческим языком.",
+        eng: "Второй раунд: результат инструмента → модель; стоимость и токены пишутся в Usage.",
+      },
+      {
+        node: "telegram",
+        edges: back("worker-agent", "queue-worker", "api-queue", "telegram-api"),
+        label: "В чат",
+        simple: "Ответ приходит в чат через несколько секунд.",
+        eng: "sendMessage; ответ и трасса доступны в журнале «Под капотом».",
+      },
     ],
   },
   {
@@ -145,14 +289,61 @@ const SCENARIOS: Scenario[] = [
     title: "Вопрос по регламенту",
     try: { section: "rag", prompt: "Какие документы нужны водителю?", label: "Открыть конвейер RAG" },
     steps: [
-      { node: "web", label: "Вопрос", simple: "Сотрудник спрашивает: «Какие документы нужны водителю?»", eng: "POST /api/v1/under/rag → 202, job id." },
-      { node: "api", edges: ["web-api"], label: "API", simple: "Вопрос принят.", eng: "Pydantic-валидация, лимит 2000 символов, бюджет сессии." },
-      { node: "queue", edges: ["api-queue"], label: "Очередь", simple: "Задача поставлена в очередь.", eng: "job(kind=ai, mode=rag)." },
-      { node: "worker", edges: ["queue-worker"], label: "Воркер", simple: "Исполнитель начинает поиск.", eng: "Эмбеддинг считается локально — текст не уходит внешним сервисам." },
-      { node: "rag", edges: ["worker-agent", "agent-rag"], label: "Поиск", simple: "Поиск находит фрагменты по смыслу и по словам.", eng: "«документы» ≈ «паспорт, ВУ, СНИЛС» — вектор находит то, что FTS пропустит." },
-      { node: "postgres", edges: ["rag-postgres"], label: "pgvector", simple: "Фрагменты хранятся в той же базе, что и учёт.", eng: "HNSW (cosine) + GIN tsvector, слияние RRF, отсечение ниже порога 0.38." },
-      { node: "llm", edges: [...back("rag-postgres", "agent-rag"), "agent-llm"], label: "Модель", simple: "Модель отвечает только по найденному и ставит ссылки.", eng: "Structured output {answer, citations}; цитата вне найденных → ответ отклоняется." },
-      { node: "web", edges: back("agent-llm", "worker-agent", "queue-worker", "api-queue", "web-api"), label: "Ответ", simple: "Ответ со ссылками на источники. Нет в базе — честно говорит «не нашёл».", eng: "Нет фрагментов выше порога → модель не вызывается вовсе (guard)." },
+      {
+        node: "web",
+        label: "Вопрос",
+        simple: "Сотрудник спрашивает: «Какие документы нужны водителю?»",
+        eng: "POST /api/v1/under/rag → 202, job id.",
+      },
+      {
+        node: "api",
+        edges: ["web-api"],
+        label: "API",
+        simple: "Вопрос принят.",
+        eng: "Pydantic-валидация, лимит 2000 символов, бюджет сессии.",
+      },
+      {
+        node: "queue",
+        edges: ["api-queue"],
+        label: "Очередь",
+        simple: "Задача поставлена в очередь.",
+        eng: "job(kind=ai, mode=rag).",
+      },
+      {
+        node: "worker",
+        edges: ["queue-worker"],
+        label: "Воркер",
+        simple: "Исполнитель начинает поиск.",
+        eng: "Эмбеддинг считается локально — текст не уходит внешним сервисам.",
+      },
+      {
+        node: "rag",
+        edges: ["worker-agent", "agent-rag"],
+        label: "Поиск",
+        simple: "Поиск находит фрагменты по смыслу и по словам.",
+        eng: "«документы» ≈ «паспорт, ВУ, СНИЛС» — вектор находит то, что FTS пропустит.",
+      },
+      {
+        node: "postgres",
+        edges: ["rag-postgres"],
+        label: "pgvector",
+        simple: "Фрагменты хранятся в той же базе, что и учёт.",
+        eng: "HNSW (cosine) + GIN tsvector, слияние RRF, отсечение ниже порога 0.38.",
+      },
+      {
+        node: "llm",
+        edges: [...back("rag-postgres", "agent-rag"), "agent-llm"],
+        label: "Модель",
+        simple: "Модель отвечает только по найденному и ставит ссылки.",
+        eng: "Structured output {answer, citations}; цитата вне найденных → ответ отклоняется.",
+      },
+      {
+        node: "web",
+        edges: back("agent-llm", "worker-agent", "queue-worker", "api-queue", "web-api"),
+        label: "Ответ",
+        simple: "Ответ со ссылками на источники. Нет в базе — честно говорит «не нашёл».",
+        eng: "Нет фрагментов выше порога → модель не вызывается вовсе (guard).",
+      },
     ],
   },
   {
@@ -160,13 +351,54 @@ const SCENARIOS: Scenario[] = [
     icon: CalendarCheck,
     title: "Клиент бронирует автомобиль",
     steps: [
-      { node: "web", label: "Бронь", simple: "Клиент выбирает машину и даты в кабинете.", eng: "POST /api/v1/commands {action: contract.create} + Idempotency-Key." },
-      { node: "api", edges: ["web-api"], label: "API", simple: "Запрос принят.", eng: "Проверка cookie-сессии и Origin." },
-      { node: "commands", edges: ["api-commands"], label: "Проверки", simple: "Проверка прав и правил: можно ли этому клиенту эту машину на эти даты.", eng: "Повторный запрос с тем же ключом вернёт тот же результат — двойного клика не будет." },
-      { node: "postgres", edges: ["commands-postgres"], label: "Транзакция", simple: "Две брони одной машины на одни даты база просто не даст сохранить.", eng: "EXCLUDE USING gist (vehicle WITH =, period WITH &&); договор, аудит и outbox — в одной транзакции." },
-      { node: "queue", edges: [...back("commands-postgres"), "commands-queue"], label: "Outbox", simple: "Уведомление ставится в очередь вместе с бронью — не раньше и не позже.", eng: "Outbox-паттерн: событие не потеряется и не уйдёт, если транзакция откатилась." },
-      { node: "worker", edges: ["queue-worker"], label: "Уведомить", simple: "Менеджер получает сообщение в Telegram, кабинеты обновляются сами.", eng: "notify → Telegram sendMessage; SSE /api/v1/events → TanStack Query invalidate." },
-      { node: "web", edges: back("api-queue", "web-api"), label: "Обновлено", simple: "Бронь видна у всех, кому положено.", eng: "Событие фильтруется по правам получателя." },
+      {
+        node: "web",
+        label: "Бронь",
+        simple: "Клиент выбирает машину и даты в кабинете.",
+        eng: "POST /api/v1/commands {action: contract.create} + Idempotency-Key.",
+      },
+      {
+        node: "api",
+        edges: ["web-api"],
+        label: "API",
+        simple: "Запрос принят.",
+        eng: "Проверка cookie-сессии и Origin.",
+      },
+      {
+        node: "commands",
+        edges: ["api-commands"],
+        label: "Проверки",
+        simple: "Проверка прав и правил: можно ли этому клиенту эту машину на эти даты.",
+        eng: "Повторный запрос с тем же ключом вернёт тот же результат — двойного клика не будет.",
+      },
+      {
+        node: "postgres",
+        edges: ["commands-postgres"],
+        label: "Транзакция",
+        simple: "Две брони одной машины на одни даты база просто не даст сохранить.",
+        eng: "EXCLUDE USING gist (vehicle WITH =, period WITH &&); договор, аудит и outbox — в одной транзакции.",
+      },
+      {
+        node: "queue",
+        edges: [...back("commands-postgres"), "commands-queue"],
+        label: "Outbox",
+        simple: "Уведомление ставится в очередь вместе с бронью — не раньше и не позже.",
+        eng: "Outbox-паттерн: событие не потеряется и не уйдёт, если транзакция откатилась.",
+      },
+      {
+        node: "worker",
+        edges: ["queue-worker"],
+        label: "Уведомить",
+        simple: "Менеджер получает сообщение в Telegram, кабинеты обновляются сами.",
+        eng: "notify → Telegram sendMessage; SSE /api/v1/events → TanStack Query invalidate.",
+      },
+      {
+        node: "web",
+        edges: back("api-queue", "web-api"),
+        label: "Обновлено",
+        simple: "Бронь видна у всех, кому положено.",
+        eng: "Событие фильтруется по правам получателя.",
+      },
     ],
   },
   {
@@ -175,12 +407,47 @@ const SCENARIOS: Scenario[] = [
     title: "Синхронизация с 1С",
     try: { section: "n8n", label: "Открыть workflow n8n" },
     steps: [
-      { node: "n8n", label: "Запуск", simple: "По расписанию или по кнопке запускается конвейер n8n.", eng: "Schedule (каждый час) или Webhook из кабинета с подписанным контекстом запуска." },
-      { node: "sources", edges: [{ id: "sources-n8n", reverse: true }], label: "1С", simple: "n8n забирает данные из 1С: пробег и начисления.", eng: "HTTP → OData Catalog_ТС / AccumulationRegister (учебный мок)." },
-      { node: "n8n", edges: ["sources-n8n"], label: "Нормализация", simple: "Данные приводятся к общему виду и проверяются.", eng: "Code-нода: схема, числа ≥ 0, обязательный код ТС. Ошибка → ветка «Ошибка источника»." },
-      { node: "commands", edges: ["n8n-commands"], label: "Ingest", simple: "Пакет принимается, только если подпись верна.", eng: "HMAC run+space, защита от повтора; повторный запуск не создаёт дубликатов." },
-      { node: "postgres", edges: ["commands-postgres"], label: "Сверка", simple: "Система сравнивает с учётом и показывает расхождения.", eng: "source_sync + Item(kind=discrepancy) → виджет «Сверка» на дашборде." },
-      { node: "web", edges: back("commands-postgres", "api-commands", "web-api"), label: "Дашборд", simple: "Собственник видит: «у 3 машин пробег в 1С не совпадает».", eng: "Клик по расхождению открывает карточку автомобиля." },
+      {
+        node: "n8n",
+        label: "Запуск",
+        simple: "По расписанию или по кнопке запускается конвейер n8n.",
+        eng: "Schedule (каждый час) или Webhook из кабинета с подписанным контекстом запуска.",
+      },
+      {
+        node: "sources",
+        edges: [{ id: "sources-n8n", reverse: true }],
+        label: "1С",
+        simple: "n8n забирает данные из 1С: пробег и начисления.",
+        eng: "HTTP → OData Catalog_ТС / AccumulationRegister (учебный мок).",
+      },
+      {
+        node: "n8n",
+        edges: ["sources-n8n"],
+        label: "Нормализация",
+        simple: "Данные приводятся к общему виду и проверяются.",
+        eng: "Code-нода: схема, числа ≥ 0, обязательный код ТС. Ошибка → ветка «Ошибка источника».",
+      },
+      {
+        node: "commands",
+        edges: ["n8n-commands"],
+        label: "Ingest",
+        simple: "Пакет принимается, только если подпись верна.",
+        eng: "HMAC run+space, защита от повтора; повторный запуск не создаёт дубликатов.",
+      },
+      {
+        node: "postgres",
+        edges: ["commands-postgres"],
+        label: "Сверка",
+        simple: "Система сравнивает с учётом и показывает расхождения.",
+        eng: "source_sync + Item(kind=discrepancy) → виджет «Сверка» на дашборде.",
+      },
+      {
+        node: "web",
+        edges: back("commands-postgres", "api-commands", "web-api"),
+        label: "Дашборд",
+        simple: "Собственник видит: «у 3 машин пробег в 1С не совпадает».",
+        eng: "Клик по расхождению открывает карточку автомобиля.",
+      },
     ],
   },
 ];
@@ -221,11 +488,7 @@ export function SystemMap({ go }: { go: (section: string, prompt?: string) => vo
         <div className="k-canvas-head">
           <div className="k-scenarios">
             {SCENARIOS.map((s) => (
-              <button
-                key={s.id}
-                className={scenario?.id === s.id ? "active" : ""}
-                onClick={() => start(s)}
-              >
+              <button key={s.id} className={scenario?.id === s.id ? "active" : ""} onClick={() => start(s)}>
                 <s.icon size={15} />
                 {s.title}
               </button>
@@ -242,7 +505,9 @@ export function SystemMap({ go }: { go: (section: string, prompt?: string) => vo
         />
         {step && (
           <div className="k-caption" key={replay.pos}>
-            <span>{replay.pos + 1}/{frames.length}</span>
+            <span>
+              {replay.pos + 1}/{frames.length}
+            </span>
             <p>{eng ? step.eng : step.simple}</p>
           </div>
         )}
@@ -272,7 +537,10 @@ export function SystemMap({ go }: { go: (section: string, prompt?: string) => vo
                 eng="Монолит FastAPI + PostgreSQL как единый источник правды; асинхронная работа — через очередь в той же БД; AI и интеграции — изолированные исполнители с ролевыми ограничениями."
               />
             </p>
-            <p className="k-hint">Выберите сценарий — и посмотрите, как запрос проходит через систему. Нажмите на любой узел, чтобы узнать, что он делает.</p>
+            <p className="k-hint">
+              Выберите сценарий — и посмотрите, как запрос проходит через систему. Нажмите на любой узел, чтобы узнать,
+              что он делает.
+            </p>
           </>
         )}
         {scenario && (

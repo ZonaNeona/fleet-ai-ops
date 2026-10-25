@@ -48,8 +48,12 @@ def test_request_lands_in_the_visitors_bitrix24():
     first = re.search(r'href="(/auto/tp-\d{4}-[a-z0-9-]+)"', catalog).group(1)
     page = c.get(first).text
     form = dict(re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)"', page))
-    sent = c.post("/auto/request", data={**form, "name": "Тест Сайтов", "comment": "детское кресло"},
-                  headers={"Origin": URL}, follow_redirects=False)
+    sent = c.post(
+        "/auto/request",
+        data={**form, "name": "Тест Сайтов", "comment": "детское кресло"},
+        headers={"Origin": URL},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303 and sent.headers["location"].startswith("/auto/sent?lead=")
     assert c.cookies.get("fleet_session")  # the request opened a demo space for this visitor
     lead = int(re.search(r"lead=(\d+)", sent.headers["location"]).group(1))
@@ -66,7 +70,9 @@ def test_request_lands_in_the_visitors_bitrix24():
     opened = c.post("/auto/cabinet", headers={"Origin": URL}, follow_redirects=False)
     assert opened.headers["location"] == "/#app/crm" and c.get("/api/v1/session").json()["role"] == "manager"
     with db() as s:
-        sid = s.scalar(select(Space.id).where(Space.token == hashlib.sha256(c.cookies["fleet_session"].encode()).hexdigest()))
+        sid = s.scalar(
+            select(Space.id).where(Space.token == hashlib.sha256(c.cookies["fleet_session"].encode()).hexdigest())
+        )
     drop_space(sid)
 
 

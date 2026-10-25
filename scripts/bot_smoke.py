@@ -1,20 +1,21 @@
-"""Прогон сценариев бота без Telegram: апдейты → process(), отправка подменена печатью.
-Запуск на сервере: .venv/bin/python -m scripts.bot_smoke
-Тестовое пространство (tg_user=9000001) в конце удаляется.
+"""Bot scenarios without Telegram: updates go through process(), outgoing messages are printed instead of sent.
+
+Run on the host: .venv/bin/python -m scripts.bot_smoke
+The test space (tg_user=9000001) is removed at the end.
 """
 
 import itertools
-import re
 import json
-import time
 import os
+import re
+import time
 from datetime import timedelta
 from pathlib import Path
 
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, func, select
 
-from app import telegram, domain
-from app.db import Space, Item, Job, Event, db
+from app import domain, telegram
+from app.db import Event, Item, Job, Space, db
 
 TG = 9000001
 checks = []
@@ -31,9 +32,7 @@ async def fake_deliver(chat, messages, callback_id=None):
         print("   ←", tag + text.replace("\n", " | ")[:230])
         if m.get("kb"):
             buttons = [
-                b.callback_data or ("app" if b.web_app else b.url)
-                for row in m["kb"].inline_keyboard
-                for b in row
+                b.callback_data or ("app" if b.web_app else b.url) for row in m["kb"].inline_keyboard for b in row
             ]
             last_kb += buttons
             print("     [" + ", ".join(buttons) + "]")
@@ -90,27 +89,14 @@ def first(prefix):
 def inspect(tool=None):
     with db() as s:
         sp = s.scalar(select(Space).where(Space.data["tg_user"].astext == str(TG)))
-        count = s.scalar(
-            select(func.count())
-            .select_from(Item)
-            .where(Item.space == sp.id, Item.kind == "ticket")
-        )
+        count = s.scalar(select(func.count()).select_from(Item).where(Item.space == sp.id, Item.kind == "ticket"))
         if tool:
-            job = s.scalar(
-                select(Job)
-                .where(Job.space == sp.id, Job.kind == "ai")
-                .order_by(Job.due.desc())
-            )
+            job = s.scalar(select(Job).where(Job.space == sp.id, Job.kind == "ai").order_by(Job.due.desc()))
             assert job and job.state == "done", "Agent job did not finish"
-            assert any(
-                t.get("title") == tool and t.get("status") == "success"
-                for t in job.result["trace"]
-            ), tool
+            assert any(t.get("title") == tool and t.get("status") == "success" for t in job.result["trace"]), tool
             if tool == "search_knowledge":
                 assert job.result["sources"], "No knowledge citations"
-            checks.append(
-                {"tool": tool, "passed": True, "model": job.result.get("model")}
-            )
+            checks.append({"tool": tool, "passed": True, "model": job.result.get("model")})
         return count
 
 
@@ -188,9 +174,7 @@ try:
     checks.append({"integration": "driver sees GIBDD fine via n8n", "passed": True})
 finally:
     with db() as s:
-        ids = s.scalars(
-            select(Space.id).where(Space.data["tg_user"].astext == str(TG))
-        ).all()
+        ids = s.scalars(select(Space.id).where(Space.data["tg_user"].astext == str(TG))).all()
         if ids:
             s.execute(delete(Space).where(Space.id.in_(ids)))
     print("\nтестовое пространство удалено:", len(ids))

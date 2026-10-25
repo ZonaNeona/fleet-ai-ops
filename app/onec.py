@@ -76,8 +76,14 @@ def matches(row, expr):
         if actual is None:
             return False
         try:
-            ok = {"eq": actual == expected, "ne": actual != expected, "gt": actual > expected,
-                  "ge": actual >= expected, "lt": actual < expected, "le": actual <= expected}[op]
+            ok = {
+                "eq": actual == expected,
+                "ne": actual != expected,
+                "gt": actual > expected,
+                "ge": actual >= expected,
+                "lt": actual < expected,
+                "le": actual <= expected,
+            }[op]
         except TypeError:
             return False
         if not ok:
@@ -121,8 +127,14 @@ class Emulator:
             raise ODataError(f"В набор {entity_set} запись не разрешена")
         rows = self.data.setdefault(entity_set, [])
         number = f"ТП{len(rows) + 1:08d}"
-        doc = {**body, "Ref_Key": str(uuid.uuid4()), "Number": number, "Posted": False,
-               "DeletionMark": False, "Date": body.get("Date") or now().isoformat(timespec="seconds")}
+        doc = {
+            **body,
+            "Ref_Key": str(uuid.uuid4()),
+            "Number": number,
+            "Posted": False,
+            "DeletionMark": False,
+            "Date": body.get("Date") or now().isoformat(timespec="seconds"),
+        }
         rows.append(doc)
         return doc
 
@@ -179,29 +191,63 @@ def base(s, sp):
     people = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "client").order_by(Item.code)).all()
     cars = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle").order_by(Item.code)).all()
     data = {
-        COUNTERPARTIES: [{"Ref_Key": guid(sp.id, p.id), "Description": p.data.get("name", "—"),
-                          "ИНН": "", "DeletionMark": False, "Код": p.code} for p in people],
-        VEHICLES: [{"Ref_Key": guid(sp.id, v.id), "Description": v.data["model"], "ГосНомер": v.data["plate"],
-                    "Код": v.code, "Пробег": v.data.get("mileage")} for v in cars],
-        SALES: [], PAYMENTS: [],
+        COUNTERPARTIES: [
+            {
+                "Ref_Key": guid(sp.id, p.id),
+                "Description": p.data.get("name", "—"),
+                "ИНН": "",
+                "DeletionMark": False,
+                "Код": p.code,
+            }
+            for p in people
+        ],
+        VEHICLES: [
+            {
+                "Ref_Key": guid(sp.id, v.id),
+                "Description": v.data["model"],
+                "ГосНомер": v.data["plate"],
+                "Код": v.code,
+                "Пробег": v.data.get("mileage"),
+            }
+            for v in cars
+        ],
+        SALES: [],
+        PAYMENTS: [],
     }
-    contracts = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "contract",
-                                             Item.data["status"].astext == "active").order_by(Item.code)).all()
+    contracts = s.scalars(
+        select(Item)
+        .where(Item.space == sp.id, Item.kind == "contract", Item.data["status"].astext == "active")
+        .order_by(Item.code)
+    ).all()
     if contracts:
         c = contracts[0]
-        data[PAYMENTS].append({  # the bank statement was loaded into 1С, the fleet never saw this money
-            "Ref_Key": guid(sp.id, "bank-only"), "Number": "БН00000001", "Date": f"{end.isoformat()}T12:00:00",
-            "Posted": True, "Контрагент_Key": guid(sp.id, c.data["client"]), "СуммаДокумента": 12000.0,
-            "Комментарий": "Выписка банка: оплата аренды", "DeletionMark": False,
-        })
+        data[PAYMENTS].append(
+            {  # the bank statement was loaded into 1С, the fleet never saw this money
+                "Ref_Key": guid(sp.id, "bank-only"),
+                "Number": "БН00000001",
+                "Date": f"{end.isoformat()}T12:00:00",
+                "Posted": True,
+                "Контрагент_Key": guid(sp.id, c.data["client"]),
+                "СуммаДокумента": 12000.0,
+                "Комментарий": "Выписка банка: оплата аренды",
+                "DeletionMark": False,
+            }
+        )
     if len(contracts) > 3:
         c = contracts[3]
         month = start.strftime("%Y-%m")
-        data[SALES].append({  # entered by hand before the integration existed, with a typo in the amount
-            "Ref_Key": guid(sp.id, "manual-act"), "Number": "ТП00000000", "Date": f"{end.isoformat()}T18:00:00",
-            "Posted": True, "Контрагент_Key": guid(sp.id, c.data["client"]), "СуммаДокумента": 1000.0,
-            "Комментарий": f"FLEET:{c.code}:{month}:sale", "DeletionMark": False,
-        })
+        data[SALES].append(
+            {  # entered by hand before the integration existed, with a typo in the amount
+                "Ref_Key": guid(sp.id, "manual-act"),
+                "Number": "ТП00000000",
+                "Date": f"{end.isoformat()}T18:00:00",
+                "Posted": True,
+                "Контрагент_Key": guid(sp.id, c.data["client"]),
+                "СуммаДокумента": 1000.0,
+                "Комментарий": f"FLEET:{c.code}:{month}:sale",
+                "DeletionMark": False,
+            }
+        )
     return data
 
 
@@ -226,9 +272,17 @@ def transport_for(s, sp):
 
 
 def sums(s, sp, kind, start, end):
-    rows = s.execute(select(Entry.contract, func.sum(Entry.amount)).where(
-        Entry.space == sp.id, Entry.kind == kind, Entry.contract.is_not(None),
-        Entry.date >= str(start), Entry.date <= str(end)).group_by(Entry.contract)).all()
+    rows = s.execute(
+        select(Entry.contract, func.sum(Entry.amount))
+        .where(
+            Entry.space == sp.id,
+            Entry.kind == kind,
+            Entry.contract.is_not(None),
+            Entry.date >= str(start),
+            Entry.date <= str(end),
+        )
+        .group_by(Entry.contract)
+    ).all()
     return {c: Decimal(a) for c, a in rows if a}
 
 
@@ -261,10 +315,17 @@ def exchange(s, sp):
             if key in existing:
                 skipped += 1
                 continue
-            doc = call("POST", entity, onec.post, {
-                "Date": f"{end.isoformat()}T20:00:00", "Контрагент_Key": guid(sp.id, c.data["client"]),
-                "СуммаДокумента": float(amount), "Комментарий": key,
-            })
+            doc = call(
+                "POST",
+                entity,
+                onec.post,
+                {
+                    "Date": f"{end.isoformat()}T20:00:00",
+                    "Контрагент_Key": guid(sp.id, c.data["client"]),
+                    "СуммаДокумента": float(amount),
+                    "Комментарий": key,
+                },
+            )
             call("POST", f"{entity}(guid'{doc['Ref_Key']}')/Post()", onec.post, {})
             exported += 1
     if item is not None:
@@ -281,26 +342,60 @@ def exchange(s, sp):
         for d in in_onec[entity]:
             m = re.match(r"^FLEET:([^:]+):(\d{4}-\d{2}):(\w+)$", d.get("Комментарий") or "")
             if not m:
-                rows.append({"doc": d["Number"], "kind": label, "contract": None, "onec": d["СуммаДокумента"], "ledger": None,
-                             "ok": False, "note": "есть в 1С, в учёте не найдено: " + (d.get("Комментарий") or "без комментария")})
+                rows.append(
+                    {
+                        "doc": d["Number"],
+                        "kind": label,
+                        "contract": None,
+                        "onec": d["СуммаДокумента"],
+                        "ledger": None,
+                        "ok": False,
+                        "note": "есть в 1С, в учёте не найдено: " + (d.get("Комментарий") or "без комментария"),
+                    }
+                )
                 continue
             c = by_code.get(m.group(1))
             amount = ledger[label].get(c.id) if c else None
             seen.add((label, m.group(1)))
             ok = amount is not None and Decimal(str(d["СуммаДокумента"])) == amount
-            rows.append({"doc": d["Number"], "kind": label, "contract": m.group(1), "contract_id": c.id if c else None,
-                         "onec": d["СуммаДокумента"], "ledger": float(amount) if amount is not None else None, "ok": ok,
-                         "note": "сходится" if ok else "сумма в 1С отличается от учёта — документ введён вручную?"})
+            rows.append(
+                {
+                    "doc": d["Number"],
+                    "kind": label,
+                    "contract": m.group(1),
+                    "contract_id": c.id if c else None,
+                    "onec": d["СуммаДокумента"],
+                    "ledger": float(amount) if amount is not None else None,
+                    "ok": ok,
+                    "note": "сходится" if ok else "сумма в 1С отличается от учёта — документ введён вручную?",
+                }
+            )
     for label, amounts in ledger.items():
         for cid, amount in amounts.items():
             c = contracts.get(cid)
             if c and (label, c.code) not in seen:
-                rows.append({"doc": None, "kind": label, "contract": c.code, "contract_id": cid, "onec": None,
-                             "ledger": float(amount), "ok": False, "note": "есть в учёте, в 1С нет документа"})
+                rows.append(
+                    {
+                        "doc": None,
+                        "kind": label,
+                        "contract": c.code,
+                        "contract_id": cid,
+                        "onec": None,
+                        "ledger": float(amount),
+                        "ok": False,
+                        "note": "есть в учёте, в 1С нет документа",
+                    }
+                )
     summary = {
-        "mode": onec.mode, "month": month, "exported": exported, "skipped": skipped,
-        "documents": sum(len(v) for v in in_onec.values()), "mismatches": sum(1 for r in rows if not r["ok"]),
-        "calls": onec.calls, "ms": round((time.perf_counter() - started) * 1000), "at": now().isoformat(),
+        "mode": onec.mode,
+        "month": month,
+        "exported": exported,
+        "skipped": skipped,
+        "documents": sum(len(v) for v in in_onec.values()),
+        "mismatches": sum(1 for r in rows if not r["ok"]),
+        "calls": onec.calls,
+        "ms": round((time.perf_counter() - started) * 1000),
+        "at": now().isoformat(),
     }
     report = {"summary": summary, "rows": sorted(rows, key=lambda r: r["ok"]), "trace": trace[:40]}
     run = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "onec_exchange"))
@@ -331,8 +426,11 @@ def onec_view(request: Request):
         run = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "onec_exchange"))
         from .b24 import key_for
 
-        return {"report": run.data if run else None, "odata": f"/api/onec/{key_for(s, sp)}/odata/standard.odata/",
-                "sets": list(SETS)}
+        return {
+            "report": run.data if run else None,
+            "odata": f"/api/onec/{key_for(s, sp)}/odata/standard.odata/",
+            "sets": list(SETS),
+        }
 
 
 @router.post("/api/v1/onec/exchange")

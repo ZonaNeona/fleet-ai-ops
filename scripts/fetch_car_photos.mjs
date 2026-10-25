@@ -36,25 +36,41 @@ const MODELS = {
 };
 
 const api = async (params) => {
-  const u = "https://commons.wikimedia.org/w/api.php?" + new URLSearchParams({ format: "json", origin: "*", ...params });
+  const u =
+    "https://commons.wikimedia.org/w/api.php?" + new URLSearchParams({ format: "json", origin: "*", ...params });
   const r = await fetch(u, { headers: { "User-Agent": UA } });
   return r.json();
 };
-const strip = (s = "") => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+const strip = (s = "") =>
+  s
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 async function candidates(query) {
   const j = await api({
-    action: "query", generator: "search", gsrsearch: `${query} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "12",
-    prop: "imageinfo", iiprop: "url|size|extmetadata", iiurlwidth: "1280",
+    action: "query",
+    generator: "search",
+    gsrsearch: `${query} filetype:bitmap`,
+    gsrnamespace: "6",
+    gsrlimit: "12",
+    prop: "imageinfo",
+    iiprop: "url|size|extmetadata",
+    iiurlwidth: "1280",
   });
   return Object.values(j.query?.pages ?? {})
     .map((p) => ({ title: p.title, index: p.index, ...p.imageinfo?.[0] }))
-    .filter((x) => x.width >= 1200 && x.width / x.height > 1.25 && x.width / x.height < 2.2 && /\.jpe?g$/i.test(x.title))
+    .filter(
+      (x) => x.width >= 1200 && x.width / x.height > 1.25 && x.width / x.height < 2.2 && /\.jpe?g$/i.test(x.title),
+    )
     .sort((a, b) => a.index - b.index)
     .slice(0, 4)
     .map((x) => ({
-      title: x.title, thumb: x.thumburl, page: x.descriptionurl,
-      license: strip(x.extmetadata?.LicenseShortName?.value), author: strip(x.extmetadata?.Artist?.value),
+      title: x.title,
+      thumb: x.thumburl,
+      page: x.descriptionurl,
+      license: strip(x.extmetadata?.LicenseShortName?.value),
+      author: strip(x.extmetadata?.Artist?.value),
     }));
 }
 
@@ -71,7 +87,14 @@ if (process.argv[2] === "pick") {
   const credits = [];
   for (const [slug, c] of Object.entries(picks)) {
     await download(c.thumb, path.join(OUT, `${slug}.jpg`));
-    credits.push({ slug, model: c.model, file: c.title.replace(/^File:/, ""), author: c.author, license: c.license, source: c.page });
+    credits.push({
+      slug,
+      model: c.model,
+      file: c.title.replace(/^File:/, ""),
+      author: c.author,
+      license: c.license,
+      source: c.page,
+    });
     console.log("ok", slug);
   }
   fs.writeFileSync(path.join(OUT, "credits.json"), JSON.stringify(credits, null, 1));
@@ -84,7 +107,8 @@ if (process.argv[2] === "pick") {
     if (all[slug]?.length) continue; // уже есть — продолжаем с места остановки
     const list = await candidates(q);
     all[slug] = list;
-    for (const [i, c] of list.entries()) await download(c.thumb, path.join(dir, `${slug}-${i}.jpg`)).catch((e) => console.error(e.message));
+    for (const [i, c] of list.entries())
+      await download(c.thumb, path.join(dir, `${slug}-${i}.jpg`)).catch((e) => console.error(e.message));
     console.log(slug, list.length, list.map((c) => c.license).join(", "));
     fs.writeFileSync(cf, JSON.stringify(all, null, 1));
     await new Promise((r) => setTimeout(r, 2500));

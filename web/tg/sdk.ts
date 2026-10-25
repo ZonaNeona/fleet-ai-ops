@@ -34,9 +34,7 @@ type NativeApp = {
   };
   LocationManager?: {
     init(cb: () => void): void;
-    getLocation(
-      cb: (v: { latitude: number; longitude: number } | null) => void,
-    ): void;
+    getLocation(cb: (v: { latitude: number; longitude: number } | null) => void): void;
   };
   ready(): void;
   expand(): void;
@@ -48,17 +46,10 @@ type NativeApp = {
   offEvent?(event: string, handler: () => void): void;
   isVersionAtLeast?(v: string): boolean;
 };
-export const nativeApp = (): NativeApp | undefined =>
-  (window as any).Telegram?.WebApp;
-export const embedded = () =>
-  window.parent !== window &&
-  new URLSearchParams(location.search).has("emulator");
+export const nativeApp = (): NativeApp | undefined => (window as any).Telegram?.WebApp;
+export const embedded = () => window.parent !== window && new URLSearchParams(location.search).has("emulator");
 export function host(type: string, value?: unknown) {
-  if (embedded())
-    window.parent.postMessage(
-      { channel: "fleet-miniapp-v1", type, value },
-      location.origin,
-    );
+  if (embedded()) window.parent.postMessage({ channel: "fleet-miniapp-v1", type, value }, location.origin);
 }
 export function setupSdk() {
   const tg = nativeApp();
@@ -68,32 +59,20 @@ export function setupSdk() {
     r.dataset.tgTheme = browserTheme || tg?.colorScheme || "light";
     const p = tg?.themeParams || {};
     for (const [k, v] of Object.entries(p))
-      if (/^#[0-9a-f]{6}$/i.test(v))
-        r.style.setProperty("--tg-" + k.replaceAll("_", "-"), v);
-    r.style.setProperty(
-      "--tg-safe-top",
-      (tg?.safeAreaInset?.top || 0) +
-        (tg?.contentSafeAreaInset?.top || 0) +
-        "px",
-    );
+      if (/^#[0-9a-f]{6}$/i.test(v)) r.style.setProperty("--tg-" + k.replaceAll("_", "-"), v);
+    r.style.setProperty("--tg-safe-top", (tg?.safeAreaInset?.top || 0) + (tg?.contentSafeAreaInset?.top || 0) + "px");
     r.style.setProperty(
       "--tg-safe-bottom",
-      (tg?.safeAreaInset?.bottom || 0) +
-        (tg?.contentSafeAreaInset?.bottom || 0) +
-        "px",
+      (tg?.safeAreaInset?.bottom || 0) + (tg?.contentSafeAreaInset?.bottom || 0) + "px",
     );
-    if (tg?.viewportStableHeight)
-      r.style.setProperty("--tg-height", tg.viewportStableHeight + "px");
+    if (tg?.viewportStableHeight) r.style.setProperty("--tg-height", tg.viewportStableHeight + "px");
   };
   tg?.ready();
   tg?.expand();
   apply();
-  [
-    "themeChanged",
-    "viewportChanged",
-    "safeAreaChanged",
-    "contentSafeAreaChanged",
-  ].forEach((e) => tg?.onEvent?.(e, apply));
+  ["themeChanged", "viewportChanged", "safeAreaChanged", "contentSafeAreaChanged"].forEach((e) =>
+    tg?.onEvent?.(e, apply),
+  );
   const receive = (event: MessageEvent) => {
     if (
       embedded() &&
@@ -111,20 +90,13 @@ export function setupSdk() {
   host("ready");
   return () => {
     window.removeEventListener("message", receive);
-    [
-      "themeChanged",
-      "viewportChanged",
-      "safeAreaChanged",
-      "contentSafeAreaChanged",
-    ].forEach((e) => tg?.offEvent?.(e, apply));
+    ["themeChanged", "viewportChanged", "safeAreaChanged", "contentSafeAreaChanged"].forEach((e) =>
+      tg?.offEvent?.(e, apply),
+    );
   };
 }
 /** Native confirmation when supported; the browser renders its own accessible confirmation. */
-export function confirmAction(
-  text: string,
-  confirmed: () => void,
-  browserFallback: () => void,
-) {
+export function confirmAction(text: string, confirmed: () => void, browserFallback: () => void) {
   const tg = nativeApp();
   if (tg?.initData && tg.showConfirm && tg.isVersionAtLeast?.("6.2"))
     tg.showConfirm(text, (ok) => {
@@ -199,25 +171,15 @@ export async function getLocation(): Promise<string> {
         tg.LocationManager!.getLocation((v) =>
           v
             ? resolve(`${v.latitude.toFixed(6)}, ${v.longitude.toFixed(6)}`)
-            : reject(
-                new Error("Местоположение не получено. Укажите адрес вручную."),
-              ),
+            : reject(new Error("Местоположение не получено. Укажите адрес вручную.")),
         ),
       );
     });
   return new Promise((resolve, reject) =>
     navigator.geolocation
       ? navigator.geolocation.getCurrentPosition(
-          (p) =>
-            resolve(
-              `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`,
-            ),
-          () =>
-            reject(
-              new Error(
-                "Укажите адрес вручную — доступ к местоположению не получен.",
-              ),
-            ),
+          (p) => resolve(`${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`),
+          () => reject(new Error("Укажите адрес вручную — доступ к местоположению не получен.")),
           { timeout: 10000 },
         )
       : reject(new Error("Укажите адрес вручную.")),

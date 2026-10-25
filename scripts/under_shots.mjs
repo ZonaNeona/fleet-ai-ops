@@ -26,7 +26,11 @@ if (only.includes("fab")) {
   await p.locator(".k-top").getByRole("button", { name: "Продукт" }).click();
   await p.waitForTimeout(1500);
   await shot("fab-product");
-  await p.getByRole("button", { name: /тёмн.*тем|Тёмная|темн/i }).first().click().catch(() => {});
+  await p
+    .getByRole("button", { name: /тёмн.*тем|Тёмная|темн/i })
+    .first()
+    .click()
+    .catch(() => {});
   await p.waitForTimeout(800);
   await shot("fab-product-dark");
   await p.setViewportSize({ width: 390, height: 844 });

@@ -1,11 +1,13 @@
-import os, uuid
-from datetime import datetime, timezone
+import os
+import uuid
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
+
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, String, DateTime, Integer, Numeric, ForeignKey, UniqueConstraint, Index
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, create_engine
 from sqlalchemy.dialects.postgresql import JSONB, TSTZRANGE, ExcludeConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 load_dotenv(os.getenv("FLEET_ENV", "/etc/fleet.env"))
 # Общий ключ LLM для демо-сервисов (доступ по ACL); если файла нет или он недоступен — работает OpenRouter
@@ -28,7 +30,10 @@ def uid():
 
 # A request never waits for a row lock forever, and a forgotten open transaction does not hold locks for long.
 engine = create_engine(
-    os.environ["DATABASE_URL"], pool_size=4, max_overflow=2, pool_pre_ping=True,
+    os.environ["DATABASE_URL"],
+    pool_size=4,
+    max_overflow=2,
+    pool_pre_ping=True,
     connect_args={"options": "-c lock_timeout=15000 -c idle_in_transaction_session_timeout=300000"},
 )
 Session = sessionmaker(engine, expire_on_commit=False)
@@ -125,9 +130,7 @@ class Receipt(Base):
 class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=uid)
-    space: Mapped[str | None] = mapped_column(
-        ForeignKey("spaces.id", ondelete="CASCADE"), nullable=True, index=True
-    )
+    space: Mapped[str | None] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), nullable=True, index=True)
     kind: Mapped[str] = mapped_column(String(32))
     state: Mapped[str] = mapped_column(String(20), default="pending")
     attempts: Mapped[int] = mapped_column(Integer, default=0)
@@ -140,9 +143,7 @@ class Job(Base):
 class Usage(Base):
     __tablename__ = "usage"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=uid)
-    space: Mapped[str | None] = mapped_column(
-        ForeignKey("spaces.id", ondelete="SET NULL"), nullable=True, index=True
-    )
+    space: Mapped[str | None] = mapped_column(ForeignKey("spaces.id", ondelete="SET NULL"), nullable=True, index=True)
     model: Mapped[str] = mapped_column(String(100))
     cost: Mapped[object] = mapped_column(Numeric(10, 6))
     tokens: Mapped[int] = mapped_column(Integer, default=0)

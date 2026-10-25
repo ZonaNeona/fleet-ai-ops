@@ -38,8 +38,15 @@ class State(TypedDict, total=False):
 
 def _step(d, node, status, ms=None, note=""):
     steps = [x for x in d.get("steps", []) if x["node"] != node]
-    steps.append({"node": node, "label": LABELS.get(node, "Отклонено"), "status": status,
-                  "ms": round(ms) if ms is not None else None, "note": note})
+    steps.append(
+        {
+            "node": node,
+            "label": LABELS.get(node, "Отклонено"),
+            "status": status,
+            "ms": round(ms) if ms is not None else None,
+            "note": note,
+        }
+    )
     d["steps"] = sorted(steps, key=lambda x: ORDER.index(x["node"]) if x["node"] in ORDER else 99)
 
 
@@ -65,8 +72,16 @@ def node_read(state: State) -> State:
                 note = f"{how}: {len(text)} символов"
             else:
                 kind, values, confidence, summary, meta = inbox.by_model(doc.space, images)
-                d.update(engine="model", read_note=how, kind=kind, values=values, confidence=confidence,
-                         summary=summary, model=meta["model"], cost=meta["cost"])
+                d.update(
+                    engine="model",
+                    read_note=how,
+                    kind=kind,
+                    values=values,
+                    confidence=confidence,
+                    summary=summary,
+                    model=meta["model"],
+                    cost=meta["cost"],
+                )
                 note = f"{how} → {meta['model'].split('/')[-1]}, ${float(meta['cost']):.4f}"
             _step(d, "read", "done", (time.perf_counter() - started) * 1000, note)
         except Exception as exc:
@@ -90,8 +105,13 @@ def node_classify(state: State) -> State:
         values = d.get("values") or {}
         found = sum(1 for k, _ in inbox.FIELDS[d["kind"]] if values.get(k))
         how = "по ответу модели" if d.get("engine") == "model" else "правила"
-        _step(d, "classify", "done", (time.perf_counter() - started) * 1000,
-              f"{inbox.KINDS[d['kind']]} · {how}: {found} полей, уверенность {d.get('confidence', 0):.2f}")
+        _step(
+            d,
+            "classify",
+            "done",
+            (time.perf_counter() - started) * 1000,
+            f"{inbox.KINDS[d['kind']]} · {how}: {found} полей, уверенность {d.get('confidence', 0):.2f}",
+        )
         _save(s, doc, d)
     return {}
 
@@ -147,8 +167,12 @@ def node_post(state: State) -> State:
         try:
             what = inbox.post_document(s, doc, by_person)
             d = {**doc.data, "links": doc.data.get("links", {})}
-            d.update(status="posted", posted_at=now().isoformat(), result=what,
-                     decision="Подтверждено человеком" if by_person else "Проведено автоматически: все проверки пройдены")
+            d.update(
+                status="posted",
+                posted_at=now().isoformat(),
+                result=what,
+                decision="Подтверждено человеком" if by_person else "Проведено автоматически: все проверки пройдены",
+            )
             if by_person:
                 _step(d, "review", "done", None, "подтверждено")
             _step(d, "post", "done", (time.perf_counter() - started) * 1000, what)
@@ -175,8 +199,14 @@ def node_reject(state: State) -> State:
 
 def build(checkpointer=None):
     g = StateGraph(State)
-    for name, fn in [("read", node_read), ("classify", node_classify), ("validate", node_validate),
-                     ("review", node_review), ("post", node_post), ("reject", node_reject)]:
+    for name, fn in [
+        ("read", node_read),
+        ("classify", node_classify),
+        ("validate", node_validate),
+        ("review", node_review),
+        ("post", node_post),
+        ("reject", node_reject),
+    ]:
         g.add_node(name, fn)
     g.add_edge(START, "read")
     g.add_conditional_edges("read", after_read)
@@ -192,8 +222,9 @@ def connect():
     dsn = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://")
     with psycopg.connect(dsn, autocommit=True) as c:
         c.execute("CREATE SCHEMA IF NOT EXISTS langgraph")
-    conn = psycopg.connect(dsn, autocommit=True, prepare_threshold=0, row_factory=dict_row,
-                           options="-c search_path=langgraph")
+    conn = psycopg.connect(
+        dsn, autocommit=True, prepare_threshold=0, row_factory=dict_row, options="-c search_path=langgraph"
+    )
     saver = PostgresSaver(conn)
     saver.setup()
     return conn, saver

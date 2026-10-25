@@ -93,13 +93,7 @@ export function ActionDialog({
   }
   if (a === "contract.create") {
     add("vehicle", "Автомобиль", "select", x?.id || vehicles[0]?.value, vehicles);
-    add(
-      "client",
-      "Клиент",
-      "select",
-      data.session.principals[data.session.role] || clients[0]?.value,
-      clients,
-    );
+    add("client", "Клиент", "select", data.session.principals[data.session.role] || clients[0]?.value, clients);
     add("start", "Дата начала", "date", data.today);
     add("end", "Дата окончания", "date", new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
     add(
@@ -227,8 +221,7 @@ export function ActionDialog({
     try {
       const payload: Record<string, any> = { ...(x ? { id: x.id, version: x.version } : {}), ...values };
       for (const f of fields) {
-        if (f.type === "number")
-          payload[f.key] = amount(values[f.key], f.label);
+        if (f.type === "number") payload[f.key] = amount(values[f.key], f.label);
         if (f.type === "checkbox") payload[f.key] = !!values[f.key];
       }
       if (a === "client.documents")
@@ -332,20 +325,13 @@ export function ActionDialog({
             {["vehicle.inspect", "ticket.create", "contract.return"].includes(a) && (
               <label className="upload">
                 Фотографии · {photos.length} прикреплено
-                <input
-                  type="file"
-                  multiple
-                  accept="image/png,image/jpeg"
-                  onChange={(e) => upload(e.target.files)}
-                />
+                <input type="file" multiple accept="image/png,image/jpeg" onChange={(e) => upload(e.target.files)} />
               </label>
             )}
             {!fields.length && (
               <div className="confirmation">
                 <Check size={24} />
-                <p>
-                  Подтвердите действие. Результат сохранится в истории и станет доступен участникам процесса.
-                </p>
+                <p>Подтвердите действие. Результат сохранится в истории и станет доступен участникам процесса.</p>
               </div>
             )}
             {error && (
@@ -370,7 +356,11 @@ export function ActionDialog({
 
 /** Неотрицательное число из поля формы (сервер проверяет повторно). */
 function amount(v: unknown, label: string) {
-  const n = Number(String(v ?? "").replace(/\s/g, "").replace(",", "."));
+  const n = Number(
+    String(v ?? "")
+      .replace(/\s/g, "")
+      .replace(",", "."),
+  );
   if (!Number.isFinite(n) || n < 0) throw new Error(`«${label}»: укажите неотрицательное число`);
   return n;
 }

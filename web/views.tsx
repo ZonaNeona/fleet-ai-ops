@@ -48,20 +48,7 @@ import {
   Gift,
   TriangleAlert,
 } from "lucide-react";
-import {
-  api,
-  Data,
-  Row,
-  dirs,
-  statuses,
-  kinds,
-  rub,
-  num,
-  dt,
-  getLabel,
-  availableActions,
-  financialRoles,
-} from "./lib";
+import { api, Data, Row, dirs, statuses, kinds, rub, num, dt, getLabel, availableActions, financialRoles } from "./lib";
 import { Badge, Table, Card, CarPhoto, Empty, Loading } from "./ui";
 // Leaflet (~45 КБ gzip) нужен только карте площадок — грузим его отдельно
 const BranchMap = lazy(() => import("./branchmap").then((m) => ({ default: m.BranchMap })));
@@ -78,27 +65,18 @@ function filtered(rows: Row[], p: Props) {
     (r) =>
       (!p.direction ||
         r.direction === p.direction ||
-        p.data.vehicle.find((v) => v.id === r.vehicle)?.direction ===
-          p.direction) &&
-      (!p.branch ||
-        r.branch === p.branch ||
-        p.data.vehicle.find((v) => v.id === r.vehicle)?.branch === p.branch) &&
+        p.data.vehicle.find((v) => v.id === r.vehicle)?.direction === p.direction) &&
+      (!p.branch || r.branch === p.branch || p.data.vehicle.find((v) => v.id === r.vehicle)?.branch === p.branch) &&
       (!p.search ||
         JSON.stringify(r).toLowerCase().includes(p.search.toLowerCase()) ||
-        getLabel(p.data, r.client)
-          .toLowerCase()
-          .includes(p.search.toLowerCase()) ||
-        getLabel(p.data, r.vehicle)
-          .toLowerCase()
-          .includes(p.search.toLowerCase())),
+        getLabel(p.data, r.client).toLowerCase().includes(p.search.toLowerCase()) ||
+        getLabel(p.data, r.vehicle).toLowerCase().includes(p.search.toLowerCase())),
   );
 }
 export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
   const r = p.report;
   if (!r) return <Loading />;
-  const tickets = filtered(p.data.ticket, p).filter(
-    (t) => t.status !== "closed",
-  );
+  const tickets = filtered(p.data.ticket, p).filter((t) => t.status !== "closed");
   const chart = r.daily.map((d: any) => ({
     ...d,
     revenue: Number(d.revenue),
@@ -113,12 +91,7 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
           note="По договорам за выбранный период"
           icon={<Wallet />}
         />
-        <KPI
-          label="Результат парка"
-          value={rub(r.profit)}
-          note="После прямых и общих расходов"
-          icon={<TrendingUp />}
-        />
+        <KPI label="Результат парка" value={rub(r.profit)} note="После прямых и общих расходов" icon={<TrendingUp />} />
         <KPI
           label="Загрузка сейчас"
           value={`${r.utilization}%`}
@@ -156,20 +129,11 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
           </div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%" minHeight={225}>
-              <AreaChart
-                data={chart}
-                margin={{ top: 15, right: 8, bottom: 0, left: 0 }}
-              >
+              <AreaChart data={chart} margin={{ top: 15, right: 8, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="0%"
-                      style={{ stopColor: "var(--chart-1)", stopOpacity: 0.4 }}
-                    />
-                    <stop
-                      offset="95%"
-                      style={{ stopColor: "var(--chart-1)", stopOpacity: 0.02 }}
-                    />
+                    <stop offset="0%" style={{ stopColor: "var(--chart-1)", stopOpacity: 0.4 }} />
+                    <stop offset="95%" style={{ stopColor: "var(--chart-1)", stopOpacity: 0.02 }} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 5" vertical={false} />
@@ -228,11 +192,7 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
             </span>
           </div>
           <div className="focus-photos">
-            {[
-              "/cars/exeed-lx-sm.webp",
-              "/cars/moskvich-3-sm.webp",
-              "/cars/haval-f7-sm.webp",
-            ].map((src) => (
+            {["/cars/exeed-lx-sm.webp", "/cars/moskvich-3-sm.webp", "/cars/haval-f7-sm.webp"].map((src) => (
               <img key={src} src={src} alt="" loading="lazy" />
             ))}
           </div>
@@ -262,8 +222,7 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
         <div>
           <span className="eyebrow">ОПЕРАЦИОННЫЙ КОНТРОЛЬ</span>
           <h2>
-            Требует вашего внимания{" "}
-            <span className="count-bubble">{tickets.length}</span>
+            Требует вашего внимания <span className="count-bubble">{tickets.length}</span>
           </h2>
         </div>
         <button className="text-button" onClick={() => p.go("service")}>
@@ -272,17 +231,9 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
       </div>
       <div className="attention-grid">
         {tickets.slice(0, 3).map((t, i) => (
-          <button
-            className="attention-card"
-            key={t.id}
-            onClick={() => p.open(t)}
-          >
+          <button className="attention-card" key={t.id} onClick={() => p.open(t)}>
             <div className="attention-header">
-              <span
-                className={
-                  "task-icon " + (t.priority === "urgent" ? "red" : "")
-                }
-              >
+              <span className={"task-icon " + (t.priority === "urgent" ? "red" : "")}>
                 <Wrench size={17} />
               </span>
               <Badge value={t.status} />
@@ -310,9 +261,7 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
                   ? "Срок реакции истёк"
                   : `До ${new Date(t.due).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`}
               </span>
-              <strong>
-                {Number(t.estimate) ? rub(t.estimate) : "Нужен осмотр"}
-              </strong>
+              <strong>{Number(t.estimate) ? rub(t.estimate) : "Нужен осмотр"}</strong>
             </div>
           </button>
         ))}
@@ -355,13 +304,7 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
                 accessorKey: "result",
                 header: "Результат",
                 cell: ({ getValue }: any) => (
-                  <strong
-                    className={
-                      Number(getValue()) >= 0 ? "positive" : "negative"
-                    }
-                  >
-                    {rub(getValue())}
-                  </strong>
+                  <strong className={Number(getValue()) >= 0 ? "positive" : "negative"}>{rub(getValue())}</strong>
                 ),
               },
             ]}
@@ -380,15 +323,12 @@ export function Dashboard(p: Props & { report: any; go: (s: string) => void }) {
             <MapPin size={18} />
           </div>
           <Suspense fallback={<div className="branch-leaflet" />}>
-          <BranchMap
-            branches={p.data.branches}
-            counts={Object.fromEntries(
-              p.data.branches.map((b) => [
-                b.id,
-                p.data.vehicle.filter((v) => v.branch === b.id).length,
-              ]),
-            )}
-          />
+            <BranchMap
+              branches={p.data.branches}
+              counts={Object.fromEntries(
+                p.data.branches.map((b) => [b.id, p.data.vehicle.filter((v) => v.branch === b.id).length]),
+              )}
+            />
           </Suspense>
           {p.data.branches.map((b) => (
             <div className="branch-row" key={b.id}>
@@ -426,11 +366,7 @@ function KPI({
       </div>
       <strong>{value}</strong>
       <small>
-        {warning ? (
-          <span className="tiny-dot orange" />
-        ) : (
-          <span className="tiny-dot" />
-        )}
+        {warning ? <span className="tiny-dot orange" /> : <span className="tiny-dot" />}
         {note}
       </small>
     </Card>
@@ -440,9 +376,7 @@ export function Fleet(p: Props) {
   const [mode, setMode] = useState("table");
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState(p.data.today);
-  const [to, setTo] = useState(
-    new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-  );
+  const [to, setTo] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [freeOnly, setFreeOnly] = useState(false);
   const availability = useQuery({
     queryKey: ["availability", from, to, p.data.session.role],
@@ -452,10 +386,7 @@ export function Fleet(p: Props) {
   const rows = filtered(p.data.vehicle, p).filter(
     (v) =>
       (!status || v.status === status) &&
-      (!freeOnly ||
-        availability.data?.items.some(
-          (a: any) => a.id === v.id && a.available,
-        )),
+      (!freeOnly || availability.data?.items.some((a: any) => a.id === v.id && a.available)),
   );
   return (
     <>
@@ -466,37 +397,19 @@ export function Fleet(p: Props) {
         </div>
         <label>
           С
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label>
           По
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
         <label className="check">
-          <input
-            type="checkbox"
-            checked={freeOnly}
-            onChange={(e) => setFreeOnly(e.target.checked)}
-          />
+          <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} />
           Только свободные
         </label>
-        <strong>
-          {availability.data?.items.filter((a: any) => a.available).length ??
-            "—"}{" "}
-          доступны
-        </strong>
+        <strong>{availability.data?.items.filter((a: any) => a.available).length ?? "—"} доступны</strong>
       </div>
-      {availability.error && (
-        <div className="error">{availability.error.message}</div>
-      )}
+      {availability.error && <div className="error">{availability.error.message}</div>}
       <div className="list-toolbar">
         <div className="tabs">
           {[
@@ -505,28 +418,16 @@ export function Fleet(p: Props) {
             ["repair", "Ремонт"],
             ["inspection", "Осмотр"],
           ].map(([id, label]) => (
-            <button
-              className={status === id ? "active" : ""}
-              key={id}
-              onClick={() => setStatus(id)}
-            >
+            <button className={status === id ? "active" : ""} key={id} onClick={() => setStatus(id)}>
               {label}
             </button>
           ))}
         </div>
         <div className="view-toggle">
-          <button
-            aria-label="Таблица"
-            className={mode === "table" ? "selected" : ""}
-            onClick={() => setMode("table")}
-          >
+          <button aria-label="Таблица" className={mode === "table" ? "selected" : ""} onClick={() => setMode("table")}>
             <List size={16} />
           </button>
-          <button
-            aria-label="Карточки"
-            className={mode === "cards" ? "selected" : ""}
-            onClick={() => setMode("cards")}
-          >
+          <button aria-label="Карточки" className={mode === "cards" ? "selected" : ""} onClick={() => setMode("cards")}>
             <Grid2X2 size={16} />
           </button>
         </div>
@@ -554,15 +455,12 @@ export function Fleet(p: Props) {
               {
                 accessorKey: "direction",
                 header: "Направление",
-                cell: ({ getValue }) => (
-                  <span className="subtle-chip">{dirs[getValue()]}</span>
-                ),
+                cell: ({ getValue }) => <span className="subtle-chip">{dirs[getValue()]}</span>,
               },
               {
                 accessorKey: "branch",
                 header: "Площадка",
-                cell: ({ getValue }) =>
-                  p.data.branches.find((b) => b.id === getValue())?.name,
+                cell: ({ getValue }) => p.data.branches.find((b) => b.id === getValue())?.name,
               },
               {
                 accessorKey: "status",
@@ -586,11 +484,7 @@ export function Fleet(p: Props) {
       ) : (
         <div className="vehicle-grid">
           {rows.slice(0, 60).map((v) => (
-            <button
-              className="vehicle-card card"
-              key={v.id}
-              onClick={() => p.open(v)}
-            >
+            <button className="vehicle-card card" key={v.id} onClick={() => p.open(v)}>
               <div className="vehicle-card-head">
                 <Badge value={v.status} />
                 <span>{v.code}</span>
@@ -623,11 +517,7 @@ export function People(p: Props) {
           ["owners", "Владельцы автомобилей"],
           ["referrals", "Реферальная программа"],
         ].map(([id, label]) => (
-          <button
-            className={tab === id ? "active" : ""}
-            key={id}
-            onClick={() => setTab(id)}
-          >
+          <button className={tab === id ? "active" : ""} key={id} onClick={() => setTab(id)}>
             {label}
           </button>
         ))}
@@ -635,20 +525,14 @@ export function People(p: Props) {
       <Card>
         {tab === "clients" ? (
           <Table
-            rows={p.data.client.filter(
-              (c) =>
-                !p.search ||
-                c.name.toLowerCase().includes(p.search.toLowerCase()),
-            )}
+            rows={p.data.client.filter((c) => !p.search || c.name.toLowerCase().includes(p.search.toLowerCase()))}
             columns={[
               {
                 accessorKey: "name",
                 header: "Участник",
                 cell: ({ row }) => (
                   <div className="person-cell">
-                    <div className="avatar">
-                      {row.original.name.slice(0, 2).toUpperCase()}
-                    </div>
+                    <div className="avatar">{row.original.name.slice(0, 2).toUpperCase()}</div>
                     <div className="cell-title">
                       <strong>{row.original.name}</strong>
                       <small>{row.original.code}</small>
@@ -659,8 +543,7 @@ export function People(p: Props) {
               {
                 accessorKey: "type",
                 header: "Тип",
-                cell: ({ getValue }) =>
-                  getValue() === "company" ? "Организация" : "Физическое лицо",
+                cell: ({ getValue }) => (getValue() === "company" ? "Организация" : "Физическое лицо"),
               },
               { accessorKey: "phone", header: "Телефон" },
               {
@@ -671,8 +554,7 @@ export function People(p: Props) {
               {
                 accessorKey: "documents",
                 header: "Документы",
-                cell: ({ getValue }) =>
-                  `${getValue()?.length || 0} в комплекте`,
+                cell: ({ getValue }) => `${getValue()?.length || 0} в комплекте`,
               },
             ]}
             onSelect={p.open}
@@ -700,9 +582,7 @@ export function People(p: Props) {
                 {
                   id: "cars",
                   header: "Автомобилей",
-                  cell: ({ row }) =>
-                    p.data.vehicle.filter((v) => v.investor === row.original.id)
-                      .length,
+                  cell: ({ row }) => p.data.vehicle.filter((v) => v.investor === row.original.id).length,
                 },
               ]}
               onSelect={p.open}
@@ -712,10 +592,7 @@ export function People(p: Props) {
           <>
             <div className="card-head">
               <h2>Приглашения и бонусы</h2>
-              <button
-                className="button secondary"
-                onClick={() => p.act("referral.create", "Новое приглашение")}
-              >
+              <button className="button secondary" onClick={() => p.act("referral.create", "Новое приглашение")}>
                 <Plus size={15} />
                 Приглашение
               </button>
@@ -764,20 +641,14 @@ export function Contracts(p: Props) {
           ["confirmed", "К выдаче"],
           ["completed", "Завершённые"],
         ].map(([id, label]) => (
-          <button
-            className={status === id ? "active" : ""}
-            key={id}
-            onClick={() => setStatus(id)}
-          >
+          <button className={status === id ? "active" : ""} key={id} onClick={() => setStatus(id)}>
             {label}
           </button>
         ))}
       </div>
       <Card>
         <Table
-          rows={filtered(p.data.contract, p).filter(
-            (c) => !status || c.status === status,
-          )}
+          rows={filtered(p.data.contract, p).filter((c) => !status || c.status === status)}
           columns={[
             {
               accessorKey: "code",
@@ -802,8 +673,7 @@ export function Contracts(p: Props) {
             {
               accessorKey: "end",
               header: "Период",
-              cell: ({ row }) =>
-                `${dt(row.original.start)} — ${dt(row.original.end)}`,
+              cell: ({ row }) => `${dt(row.original.start)} — ${dt(row.original.end)}`,
             },
             {
               accessorKey: "rate",
@@ -827,9 +697,7 @@ export function Service(p: Props) {
   const rows = filtered(p.data.ticket, p)
     .filter((t) => only !== "overdue" || new Date(t.due) < new Date())
     .filter((t) => only !== "open" || t.status !== "closed")
-    .filter(
-      (t) => only !== "scheduled" || (t.scheduled_at && t.status !== "closed"),
-    );
+    .filter((t) => only !== "scheduled" || (t.scheduled_at && t.status !== "closed"));
   return (
     <>
       <div className="list-toolbar">
@@ -840,11 +708,7 @@ export function Service(p: Props) {
             ["overdue", "Просрочено"],
             ["scheduled", "Запись в сервис"],
           ].map(([id, label]) => (
-            <button
-              className={only === id ? "active" : ""}
-              key={id}
-              onClick={() => setOnly(id)}
-            >
+            <button className={only === id ? "active" : ""} key={id} onClick={() => setOnly(id)}>
               {label}
             </button>
           ))}
@@ -868,11 +732,7 @@ export function Service(p: Props) {
             {rows
               .filter((t) => t.status === status)
               .map((t) => (
-                <button
-                  className="kanban-card"
-                  key={t.id}
-                  onClick={() => p.open(t)}
-                >
+                <button className="kanban-card" key={t.id} onClick={() => p.open(t)}>
                   <div className="kanban-card-top">
                     <small>{t.code}</small>
                     <Badge value={t.priority} />
@@ -905,9 +765,7 @@ export function Service(p: Props) {
                   </div>
                 </button>
               ))}
-            {!rows.some((t) => t.status === status) && (
-              <div className="kanban-empty">Пока нет заявок</div>
-            )}
+            {!rows.some((t) => t.status === status) && <div className="kanban-empty">Пока нет заявок</div>}
           </div>
         ))}
       </div>
@@ -921,22 +779,8 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
   const [offset, setOffset] = useState(0);
   const canWrite = ["owner", "admin", "finance"].includes(p.data.session.role);
   const ledger = useQuery({
-    queryKey: [
-      "ledger",
-      p.data.session.role,
-      offset,
-      p.report?.start,
-      p.report?.end,
-    ],
-    queryFn: () =>
-      api(
-        "/ledger?offset=" +
-          offset +
-          "&start=" +
-          p.report.start +
-          "&end=" +
-          p.report.end,
-      ),
+    queryKey: ["ledger", p.data.session.role, offset, p.report?.start, p.report?.end],
+    queryFn: () => api("/ledger?offset=" + offset + "&start=" + p.report.start + "&end=" + p.report.end),
     enabled: !!p.report,
   });
   async function upload(f?: File) {
@@ -970,19 +814,8 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
             note="Арендные поступления за период"
             icon={<ArrowDownLeft />}
           />
-          <KPI
-            label="Задолженность"
-            value={rub(r.debt)}
-            note="Неоплаченные начисления"
-            icon={<Clock3 />}
-            warning
-          />
-          <KPI
-            label="Залоги за период"
-            value={rub(r.deposits)}
-            note="Отдельно от выручки"
-            icon={<ShieldCheck />}
-          />
+          <KPI label="Задолженность" value={rub(r.debt)} note="Неоплаченные начисления" icon={<Clock3 />} warning />
+          <KPI label="Залоги за период" value={rub(r.deposits)} note="Отдельно от выручки" icon={<ShieldCheck />} />
         </div>
       )}
       <div className="list-toolbar">
@@ -992,34 +825,19 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
             ["imports", "Сверка выписок"],
             ["owners", "Расчёты с владельцами"],
           ]
-            .filter(
-              ([id]) =>
-                canWrite ||
-                id === "ledger" ||
-                (id === "owners" && p.data.session.role === "investor"),
-            )
+            .filter(([id]) => canWrite || id === "ledger" || (id === "owners" && p.data.session.role === "investor"))
             .map(([id, label]) => (
-              <button
-                className={tab === id ? "active" : ""}
-                key={id}
-                onClick={() => setTab(id)}
-              >
+              <button className={tab === id ? "active" : ""} key={id} onClick={() => setTab(id)}>
                 {label}
               </button>
             ))}
         </div>
         {canWrite && (
           <div className="inline-buttons">
-            <button
-              className="button secondary"
-              onClick={() => p.act("period.close", "Закрыть месяц")}
-            >
+            <button className="button secondary" onClick={() => p.act("period.close", "Закрыть месяц")}>
               Закрыть месяц
             </button>
-            <button
-              className="button primary"
-              onClick={() => p.act("payment.create", "Зачислить оплату")}
-            >
+            <button className="button primary" onClick={() => p.act("payment.create", "Зачислить оплату")}>
               <Plus size={15} />
               Платёж
             </button>
@@ -1030,11 +848,7 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
         <Card>
           <Table
             rows={(ledger.data?.rows || []).filter(
-              (e: any) =>
-                !p.search ||
-                JSON.stringify(e)
-                  .toLowerCase()
-                  .includes(p.search.toLowerCase()),
+              (e: any) => !p.search || JSON.stringify(e).toLowerCase().includes(p.search.toLowerCase()),
             )}
             columns={[
               {
@@ -1046,9 +860,7 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
                 accessorKey: "kind",
                 header: "Операция",
                 cell: ({ getValue }) => (
-                  <span className={"ledger-type " + getValue()}>
-                    {kinds[getValue()] || getValue()}
-                  </span>
+                  <span className={"ledger-type " + getValue()}>{kinds[getValue()] || getValue()}</span>
                 ),
               },
               { accessorKey: "reason", header: "Основание" },
@@ -1061,11 +873,7 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
                 accessorKey: "amount",
                 header: "Сумма",
                 cell: ({ row }) => (
-                  <strong
-                    className={
-                      row.original.kind === "payment" ? "positive" : ""
-                    }
-                  >
+                  <strong className={row.original.kind === "payment" ? "positive" : ""}>
                     {rub(row.original.amount)}
                   </strong>
                 ),
@@ -1077,13 +885,7 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
                   canWrite ? (
                     <button
                       className="text-button"
-                      onClick={() =>
-                        p.act(
-                          "entry.reverse",
-                          "Сторнировать операцию",
-                          row.original,
-                        )
-                      }
+                      onClick={() => p.act("entry.reverse", "Сторнировать операцию", row.original)}
                     >
                       Сторно
                     </button>
@@ -1170,10 +972,7 @@ export function Finance(p: Props & { report: any; done: (m: string) => void }) {
           <div className="card-head">
             <h2>Месячные отчёты владельцев</h2>
             {canWrite && (
-              <button
-                className="button primary"
-                onClick={() => p.act("owner.statement", "Сформировать отчёт")}
-              >
+              <button className="button primary" onClick={() => p.act("owner.statement", "Сформировать отчёт")}>
                 <Plus size={16} />
                 Новый отчёт
               </button>
@@ -1219,18 +1018,8 @@ export function Analytics(p: Props & { report: any }) {
   return (
     <>
       <div className="kpi-grid three">
-        <KPI
-          label="Начисленная выручка"
-          value={rub(r.revenue)}
-          note="В выбранном периоде"
-          icon={<Wallet />}
-        />
-        <KPI
-          label="Прямые расходы"
-          value={rub(r.expenses)}
-          note="Связаны с автомобилями"
-          icon={<Wrench />}
-        />
+        <KPI label="Начисленная выручка" value={rub(r.revenue)} note="В выбранном периоде" icon={<Wallet />} />
+        <KPI label="Прямые расходы" value={rub(r.expenses)} note="Связаны с автомобилями" icon={<Wrench />} />
         <KPI
           label="Результат после общих расходов"
           value={rub(r.profit)}
@@ -1256,35 +1045,12 @@ export function Analytics(p: Props & { report: any }) {
               }))}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="name"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tickFormatter={(v) => rub(v, true)}
-                width={70}
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-              />
+              <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis tickFormatter={(v) => rub(v, true)} width={70} fontSize={10} tickLine={false} axisLine={false} />
               <Tooltip formatter={(v: any) => rub(v)} />
               <Legend />
-              <Bar
-                className="bar-1"
-                dataKey="revenue"
-                name="Выручка"
-                fill="#f5c400"
-                radius={[5, 5, 0, 0]}
-              />
-              <Bar
-                className="bar-2"
-                dataKey="result"
-                name="Результат"
-                fill="#2aa7f0"
-                radius={[5, 5, 0, 0]}
-              />
+              <Bar className="bar-1" dataKey="revenue" name="Выручка" fill="#f5c400" radius={[5, 5, 0, 0]} />
+              <Bar className="bar-2" dataKey="result" name="Результат" fill="#2aa7f0" radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -1304,27 +1070,17 @@ export function Analytics(p: Props & { report: any }) {
                   {value}%
                 </strong>
               </span>
-              <input
-                type="range"
-                min="-30"
-                max="30"
-                value={value}
-                onChange={(e) => set(Number(e.target.value))}
-              />
+              <input type="range" min="-30" max="30" value={value} onChange={(e) => set(Number(e.target.value))} />
             </label>
           ))}
           <div className="scenario-result">
             <small>Результат при заданных допущениях</small>
             <strong>{rub(forecast)}</strong>
-            <span
-              className={forecast >= Number(r.profit) ? "positive" : "negative"}
-            >
+            <span className={forecast >= Number(r.profit) ? "positive" : "negative"}>
               {rub(forecast - Number(r.profit))} к фактическому
             </span>
           </div>
-          <small className="muted">
-            Сценарий не изменяет договоры и проведённые операции.
-          </small>
+          <small className="muted">Сценарий не изменяет договоры и проведённые операции.</small>
         </Card>
       </div>
       <Card>
@@ -1334,9 +1090,7 @@ export function Analytics(p: Props & { report: any }) {
         </div>
         <Table
           rows={r.rows.filter(
-            (v: any) =>
-              !p.search ||
-              JSON.stringify(v).toLowerCase().includes(p.search.toLowerCase()),
+            (v: any) => !p.search || JSON.stringify(v).toLowerCase().includes(p.search.toLowerCase()),
           )}
           columns={[
             {
@@ -1373,11 +1127,7 @@ export function Analytics(p: Props & { report: any }) {
               accessorKey: "result",
               header: "Результат",
               cell: ({ getValue }) => (
-                <strong
-                  className={Number(getValue()) >= 0 ? "positive" : "negative"}
-                >
-                  {rub(getValue())}
-                </strong>
+                <strong className={Number(getValue()) >= 0 ? "positive" : "negative"}>{rub(getValue())}</strong>
               ),
             },
           ]}
@@ -1389,17 +1139,9 @@ export function Analytics(p: Props & { report: any }) {
       </Card>
       <div className="notice">
         Прогноз упущенной выручки за дни ремонта:{" "}
-        <strong>
-          {rub(
-            r.rows.reduce(
-              (sum: number, v: any) =>
-                sum + Number(v.lost_revenue_estimate || 0),
-              0,
-            ),
-          )}
-        </strong>
-        . Текущая базовая ставка × зафиксированные дни простоя; это оценка
-        потенциала, она не входит в фактический результат.
+        <strong>{rub(r.rows.reduce((sum: number, v: any) => sum + Number(v.lost_revenue_estimate || 0), 0))}</strong>.
+        Текущая базовая ставка × зафиксированные дни простоя; это оценка потенциала, она не входит в фактический
+        результат.
       </div>
       <div className="methodology">
         <ShieldCheck size={18} />
@@ -1420,9 +1162,7 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
         {[
           {
             name: "Telegram",
-            status: p.data.telegram_username
-              ? "Подключён"
-              : "Ожидается отдельный бот",
+            status: p.data.telegram_username ? "Подключён" : "Ожидается отдельный бот",
             mode: "Реальный канал",
             icon: <Send />,
           },
@@ -1456,35 +1196,23 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
       <Card>
         <div className="card-head">
           <div>
-            <span className="eyebrow">
-              ПОДТВЕРЖДЁННЫЕ СВЕДЕНИЯ И УЧЕБНЫЕ ПРАВИЛА
-            </span>
+            <span className="eyebrow">ПОДТВЕРЖДЁННЫЕ СВЕДЕНИЯ И УЧЕБНЫЕ ПРАВИЛА</span>
             <h2>Источники бизнес-логики</h2>
           </div>
         </div>
         <div className="sources">
           {p.data.sources.map((s, i) => (
             <div key={i}>
-              <div className="source-number">
-                {String(i + 1).padStart(2, "0")}
-              </div>
+              <div className="source-number">{String(i + 1).padStart(2, "0")}</div>
               <div>
                 <h3>{s.title}</h3>
                 <p>{s.text}</p>
                 <small>
-                  Версия {s.version} ·{" "}
-                  {s.url
-                    ? "Публичная информация компании"
-                    : "Демонстрационное допущение"}
+                  Версия {s.version} · {s.url ? "Публичная информация компании" : "Демонстрационное допущение"}
                 </small>
               </div>
               {s.url && (
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={"Открыть " + s.title}
-                >
+                <a href={s.url} target="_blank" rel="noreferrer" aria-label={"Открыть " + s.title}>
                   <ExternalLink size={18} />
                 </a>
               )}
@@ -1495,10 +1223,7 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
       <Card>
         <div className="card-head">
           <h2>Тарифы и версии</h2>
-          <button
-            className="button secondary"
-            onClick={() => p.act("tariff.create", "Новая версия тарифа")}
-          >
+          <button className="button secondary" onClick={() => p.act("tariff.create", "Новая версия тарифа")}>
             <Plus size={16} />
             Добавить
           </button>
@@ -1532,67 +1257,41 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
           <p>
             Сумма запросов этой сессии:{" "}
             <strong>
-              $
-              {settings.data?.usage
-                .reduce((a: number, u: any) => a + Number(u.cost), 0)
-                .toFixed(4) || "0.0000"}
+              ${settings.data?.usage.reduce((a: number, u: any) => a + Number(u.cost), 0).toFixed(4) || "0.0000"}
             </strong>
           </p>
-          <p>
-            Общий лимит приложения: $0.50 в сутки МСК. Расходы остальных
-            приложений не входят.
-          </p>
+          <p>Общий лимит приложения: $0.50 в сутки МСК. Расходы остальных приложений не входят.</p>
           {settings.data?.quality?.models?.length ? (
             <div className="quality-list">
               <small>
-                Прогон {settings.data.quality.suite} ·{" "}
-                {dt(settings.data.quality.tested_at)}
+                Прогон {settings.data.quality.suite} · {dt(settings.data.quality.tested_at)}
               </small>
               {settings.data.quality.models.map((m: any) => (
                 <div key={m.model} className="quality-row">
                   <strong>
                     {m.model}
-                    {m.model === settings.data.quality.selected && (
-                      <span className="subtle-chip">основная</span>
-                    )}
+                    {m.model === settings.data.quality.selected && <span className="subtle-chip">основная</span>}
                   </strong>
                   <span>
-                    {m.passed} из {m.cases} · точность{" "}
-                    {Math.round(m.accuracy * 100)}% · медиана{" "}
-                    {(m.median_ms / 1000).toFixed(1)} с · прогон $
-                    {Number(m.cost).toFixed(3)}
+                    {m.passed} из {m.cases} · точность {Math.round(m.accuracy * 100)}% · медиана{" "}
+                    {(m.median_ms / 1000).toFixed(1)} с · прогон ${Number(m.cost).toFixed(3)}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="muted">
-              Отчёт проверки качества появится после измерений.
-            </p>
+            <p className="muted">Отчёт проверки качества появится после измерений.</p>
           )}
-          <a
-            className="text-button"
-            href="/api/docs"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="text-button" href="/api/docs" target="_blank" rel="noreferrer">
             Документация API <ArrowUpRight size={16} />
           </a>
         </Card>
         <Card className="settings-card">
           <h2>Ваше пространство</h2>
-          <p>
-            Учебные данные изолированы от других посетителей. Сессия доступна 24
-            часа после последнего действия.
-          </p>
-          <p>
-            Закрытые месяцы: {settings.data?.closed_months.join(", ") || "нет"}
-          </p>
+          <p>Учебные данные изолированы от других посетителей. Сессия доступна 24 часа после последнего действия.</p>
+          <p>Закрытые месяцы: {settings.data?.closed_months.join(", ") || "нет"}</p>
           <div className="inline-buttons">
-            <button
-              className="button secondary"
-              onClick={() => p.act("period.reopen", "Переоткрыть месяц")}
-            >
+            <button className="button secondary" onClick={() => p.act("period.reopen", "Переоткрыть месяц")}>
               Переоткрыть месяц
             </button>
             <button className="button secondary" onClick={() => setReset(true)}>
@@ -1604,10 +1303,7 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
             <div className="error">
               Будут удалены только данные вашей демосессии.
               <div className="inline-buttons">
-                <button
-                  className="button secondary"
-                  onClick={() => setReset(false)}
-                >
+                <button className="button secondary" onClick={() => setReset(false)}>
                   Отмена
                 </button>
                 <button
@@ -1637,16 +1333,12 @@ export function SettingsPage(p: Props & { done: (s: string) => void }) {
 export function MobileHome(p: Props & { report: any; onTelegram: () => void }) {
   const role = p.data.session.role;
   const contracts = p.data.contract.filter((c) => c.status === "active");
-  const vehicle =
-    p.data.vehicle.find((v) => v.id === contracts[0]?.vehicle) ||
-    p.data.vehicle[0];
+  const vehicle = p.data.vehicle.find((v) => v.id === contracts[0]?.vehicle) || p.data.vehicle[0];
   return (
     <>
       <div className="mobile-home-grid">
         <section className="mobile-car">
-          <span className="eyebrow">
-            {role === "investor" ? "АВТОМОБИЛИ В УПРАВЛЕНИИ" : "ВАШ АВТОМОБИЛЬ"}
-          </span>
+          <span className="eyebrow">{role === "investor" ? "АВТОМОБИЛИ В УПРАВЛЕНИИ" : "ВАШ АВТОМОБИЛЬ"}</span>
           <h2>{vehicle?.model || "Выберите автомобиль"}</h2>
           <p>
             {vehicle?.code} · {vehicle?.year}
@@ -1660,11 +1352,7 @@ export function MobileHome(p: Props & { report: any; onTelegram: () => void }) {
         </section>
         <Card className="mobile-balance">
           <span className="eyebrow">РАСЧЁТЫ</span>
-          <h2>
-            {role === "investor"
-              ? "Экономика ваших автомобилей"
-              : "Прозрачный баланс"}
-          </h2>
+          <h2>{role === "investor" ? "Экономика ваших автомобилей" : "Прозрачный баланс"}</h2>
           <div className="balance-row">
             <span>Начислено за период</span>
             <strong>{rub(p.report?.revenue)}</strong>
@@ -1684,9 +1372,7 @@ export function MobileHome(p: Props & { report: any; onTelegram: () => void }) {
         </Card>
       </div>
       <div className="quick-actions">
-        <button
-          onClick={() => p.act("ticket.create", "Создать обращение", vehicle)}
-        >
+        <button onClick={() => p.act("ticket.create", "Создать обращение", vehicle)}>
           <Wrench />
           <strong>Нужна помощь</strong>
           <span>Ремонт, ТО, вопрос</span>
@@ -1696,9 +1382,7 @@ export function MobileHome(p: Props & { report: any; onTelegram: () => void }) {
           <strong>Мой договор</strong>
           <span>График и начисления</span>
         </button>
-        <button
-          onClick={() => p.act("contract.create", "Подобрать автомобиль")}
-        >
+        <button onClick={() => p.act("contract.create", "Подобрать автомобиль")}>
           <CarFront />
           <strong>Выбрать автомобиль</strong>
           <span>Аренда и выкуп</span>
@@ -1706,9 +1390,7 @@ export function MobileHome(p: Props & { report: any; onTelegram: () => void }) {
       </div>
       <Card>
         <div className="card-head">
-          <h2>
-            {role === "investor" ? "Сметы на согласование" : "Мои обращения"}
-          </h2>
+          <h2>{role === "investor" ? "Сметы на согласование" : "Мои обращения"}</h2>
         </div>
         <Table
           rows={p.data.ticket}
@@ -1806,21 +1488,12 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
     substitution_for: "Подмена по договору",
   };
   const fmt = (k: string, v: any) =>
-    [
-      "rate",
-      "deposit",
-      "final_payment",
-      "estimate",
-      "actual",
-      "amount",
-      "close_quote",
-    ].includes(k)
+    ["rate", "deposit", "final_payment", "estimate", "actual", "amount", "close_quote"].includes(k)
       ? rub(v)
       : ["vehicle", "client", "investor", "substitution_for"].includes(k)
         ? getLabel(p.data, v)
         : k === "scheduled_at"
-          ? new Date(v).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) +
-            " МСК"
+          ? new Date(v).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) + " МСК"
           : k === "branch"
             ? p.data.branches.find((b) => b.id === v)?.name
             : k === "direction"
@@ -1869,40 +1542,25 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
           </Dialog.Description>
           {x.status && <Badge value={x.status} />}
           <div className="tabs standalone">
-            <button
-              className={tab === "overview" ? "active" : ""}
-              onClick={() => setTab("overview")}
-            >
+            <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>
               Обзор
             </button>
             {x.calendar && (
-              <button
-                className={tab === "calendar" ? "active" : ""}
-                onClick={() => setTab("calendar")}
-              >
+              <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>
                 Начисления
               </button>
             )}
             {x.allocation && (
-              <button
-                className={tab === "allocation" ? "active" : ""}
-                onClick={() => setTab("allocation")}
-              >
+              <button className={tab === "allocation" ? "active" : ""} onClick={() => setTab("allocation")}>
                 Погашение
               </button>
             )}
             {x.ledger && (
-              <button
-                className={tab === "finance" ? "active" : ""}
-                onClick={() => setTab("finance")}
-              >
+              <button className={tab === "finance" ? "active" : ""} onClick={() => setTab("finance")}>
                 Операции
               </button>
             )}
-            <button
-              className={tab === "history" ? "active" : ""}
-              onClick={() => setTab("history")}
-            >
+            <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")}>
               История
             </button>
           </div>
@@ -1934,16 +1592,23 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
                   ))}
                 </div>
               )}
-                {x.document_files?.length > 0 && <div className="document-chips">{x.document_files.map((doc: any) => <a key={doc.file} href={`/api/v1/files/${doc.file}`} target="_blank" rel="noreferrer"><FileText size={14} />{doc.type === "passport" ? "Паспорт" : "Водительское удостоверение"} · {doc.name}</a>)}</div>}
-                {x.refund_status === "pending" && <p className="muted">Запрос возврата залога: {rub(x.refund_requested)} · ожидает финансиста</p>}
+              {x.document_files?.length > 0 && (
+                <div className="document-chips">
+                  {x.document_files.map((doc: any) => (
+                    <a key={doc.file} href={`/api/v1/files/${doc.file}`} target="_blank" rel="noreferrer">
+                      <FileText size={14} />
+                      {doc.type === "passport" ? "Паспорт" : "Водительское удостоверение"} · {doc.name}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {x.refund_status === "pending" && (
+                <p className="muted">Запрос возврата залога: {rub(x.refund_requested)} · ожидает финансиста</p>
+              )}
               {x.photos?.length > 0 && (
                 <div className="document-chips">
                   {x.photos.map((id: string, i: number) => (
-                    <a
-                      href={"/api/v1/files/" + id}
-                      key={id}
-                      className="button secondary small"
-                    >
+                    <a href={"/api/v1/files/" + id} key={id} className="button secondary small">
                       Фото {i + 1}
                       <Download size={13} />
                     </a>
@@ -1951,38 +1616,24 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
                 </div>
               )}
               {x.holiday_request?.length > 0 && (
-                <div className="notice">
-                  Запрошены каникулы: {x.holiday_request.join(", ")}
-                </div>
+                <div className="notice">Запрошены каникулы: {x.holiday_request.join(", ")}</div>
               )}
-              {x.schedule_request && (
-                <div className="notice">
-                  Запрошен график: {x.schedule_request}
-                </div>
-              )}
+              {x.schedule_request && <div className="notice">Запрошен график: {x.schedule_request}</div>}
               {x.terms_approved === false && (
-                <div className="notice">
-                  Предложение выкупа ожидает утверждения финансистом
-                </div>
+                <div className="notice">Предложение выкупа ожидает утверждения финансистом</div>
               )}
               {x.substitute_contract && (
                 <button
                   className="button secondary"
                   onClick={() => {
-                    const c = p.data.contract.find(
-                      (v) => v.id === x.substitute_contract,
-                    );
+                    const c = p.data.contract.find((v) => v.id === x.substitute_contract);
                     if (c) p.open(c);
                   }}
                 >
                   Открыть договор подмены
                 </button>
               )}
-              {x.close_requested && (
-                <div className="notice">
-                  Клиент запросил расчёт досрочного выкупа
-                </div>
-              )}
+              {x.close_requested && <div className="notice">Клиент запросил расчёт досрочного выкупа</div>}
               {x.contracts?.length > 0 && (
                 <div className="related">
                   <h3>Связанные договоры</h3>
@@ -2023,21 +1674,17 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
               {x.kind === "import" && (
                 <div className="import-preview">
                   <h3>Строки выписки</h3>
-                  {(x.unmatched?.length ? x.unmatched : x.rows || []).map(
-                    (r: any, i: number) => (
-                      <div key={i}>
-                        <strong>
-                          {r.reference} · {rub(r.amount)}
-                        </strong>
-                        <span>
-                          {r.contract} · {r.date}
-                        </span>
-                        {r.error && (
-                          <small className="negative">{r.error}</small>
-                        )}
-                      </div>
-                    ),
-                  )}
+                  {(x.unmatched?.length ? x.unmatched : x.rows || []).map((r: any, i: number) => (
+                    <div key={i}>
+                      <strong>
+                        {r.reference} · {rub(r.amount)}
+                      </strong>
+                      <span>
+                        {r.contract} · {r.date}
+                      </span>
+                      {r.error && <small className="negative">{r.error}</small>}
+                    </div>
+                  ))}
                 </div>
               )}
             </>
@@ -2063,9 +1710,7 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
                     <br />
                     {e.reason}
                   </small>
-                  <strong className={e.kind === "payment" ? "positive" : ""}>
-                    {rub(e.amount)}
-                  </strong>
+                  <strong className={e.kind === "payment" ? "positive" : ""}>{rub(e.amount)}</strong>
                 </div>
               ))}
             </div>
@@ -2103,42 +1748,24 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
                   </div>
                 ))
               ) : (
-                <Empty title="Изменений пока нет">
-                  Выполните действие — оно появится в истории.
-                </Empty>
+                <Empty title="Изменений пока нет">Выполните действие — оно появится в истории.</Empty>
               )}
             </div>
           )}
           <div className="drawer-actions">
             {actions.map((a) => (
-              <button
-                key={a.id}
-                className="button primary"
-                onClick={() => p.act(a.id, a.label, x)}
-              >
+              <button key={a.id} className="button primary" onClick={() => p.act(a.id, a.label, x)}>
                 {a.label}
                 <ArrowUpRight size={15} />
               </button>
             ))}
-            {[
-              "contract",
-              "statement",
-              "ticket",
-              "vehicle",
-              "inspection",
-            ].includes(x.kind) && (
+            {["contract", "statement", "ticket", "vehicle", "inspection"].includes(x.kind) && (
               <div className="inline-buttons">
-                <a
-                  className="button secondary"
-                  href={"/api/v1/documents/" + x.id + "?format=pdf"}
-                >
+                <a className="button secondary" href={"/api/v1/documents/" + x.id + "?format=pdf"}>
                   <Download size={15} />
                   PDF
                 </a>
-                <a
-                  className="button secondary"
-                  href={"/api/v1/documents/" + x.id + "?format=xlsx"}
-                >
+                <a className="button secondary" href={"/api/v1/documents/" + x.id + "?format=xlsx"}>
                   <Download size={15} />
                   Excel
                 </a>
@@ -2215,10 +1842,7 @@ export function AIPanel({
     queryKey: ["ai", job],
     queryFn: () => api("/jobs/" + job),
     enabled: !!job,
-    refetchInterval: (query) =>
-      ["done", "failed"].includes((query.state.data as any)?.state)
-        ? false
-        : 1500,
+    refetchInterval: (query) => (["done", "failed"].includes((query.state.data as any)?.state) ? false : 1500),
   });
   async function send() {
     setPending(true);
@@ -2250,8 +1874,7 @@ export function AIPanel({
       setPending(false);
     }
   }
-  const busy =
-    pending || (!!job && !["done", "failed"].includes(result.data?.state));
+  const busy = pending || (!!job && !["done", "failed"].includes(result.data?.state));
   return (
     <Dialog.Root open onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal container={container ?? undefined}>
@@ -2264,16 +1887,12 @@ export function AIPanel({
                 <Sparkles size={22} /> Помощник парка
               </Dialog.Title>
             </div>
-            <Dialog.Close
-              className="icon-button"
-              aria-label="Закрыть помощника"
-            >
+            <Dialog.Close className="icon-button" aria-label="Закрыть помощника">
               <X />
             </Dialog.Close>
           </div>
           <Dialog.Description className="muted">
-            Объясняет цифры, находит правила и готовит черновики. Финансовые
-            решения подтверждает сотрудник.
+            Объясняет цифры, находит правила и готовит черновики. Финансовые решения подтверждает сотрудник.
           </Dialog.Description>
           <details className="ai-guard">
             <summary>
@@ -2284,31 +1903,26 @@ export function AIPanel({
               </span>
             </summary>
             <p>
-              Права роли применяются на уровне данных: инструменты агента
-              возвращают только объекты, доступные роли, а запись идёт через
-              черновик с подтверждением. Но сам текст ответа LLM в демо не
-              проходит защитные прослойки, поэтому в формулировках могут
-              оказаться сведения, лишние для этой роли.
+              Права роли применяются на уровне данных: инструменты агента возвращают только объекты, доступные роли, а
+              запись идёт через черновик с подтверждением. Но сам текст ответа LLM в демо не проходит защитные
+              прослойки, поэтому в формулировках могут оказаться сведения, лишние для этой роли.
             </p>
             <p>В промышленной версии между моделью и пользователем стоят:</p>
             <ul>
               <li>
-                <b>Input / output guardrails</b> — модерация запроса и ответа,
-                защита от prompt injection и jailbreak
+                <b>Input / output guardrails</b> — модерация запроса и ответа, защита от prompt injection и jailbreak
               </li>
               <li>
-                <b>Policy enforcement</b> — проверка ответа по политике
-                раскрытия для роли (что можно сообщать клиенту, водителю,
-                сотруднику)
+                <b>Policy enforcement</b> — проверка ответа по политике раскрытия для роли (что можно сообщать клиенту,
+                водителю, сотруднику)
               </li>
               <li>
-                <b>PII redaction / DLP</b> — маскирование персональных и
-                коммерческих данных (152-ФЗ) до отправки в модель и в ответе
+                <b>PII redaction / DLP</b> — маскирование персональных и коммерческих данных (152-ФЗ) до отправки в
+                модель и в ответе
               </li>
               <li>
-                <b>Output validation</b> — проверка структуры и фактов ответа
-                по данным инструментов (LLM-as-judge / правила), аудит
-                отклонённых ответов
+                <b>Output validation</b> — проверка структуры и фактов ответа по данным инструментов (LLM-as-judge /
+                правила), аудит отклонённых ответов
               </li>
             </ul>
           </details>
@@ -2320,32 +1934,25 @@ export function AIPanel({
               ["finance", "Экономика"],
               ["document", "Документ"],
             ].map(([id, label]) => (
-              <button
-                className={mode === id ? "selected" : ""}
-                onClick={() => setMode(id)}
-                key={id}
-              >
+              <button className={mode === id ? "selected" : ""} onClick={() => setMode(id)} key={id}>
                 {label}
               </button>
             ))}
           </div>
           {target && (
             <div className="notice">
-              Контекст: {target.code} ·{" "}
-              {target.model || target.title || "Выбранная запись"}
+              Контекст: {target.code} · {target.model || target.title || "Выбранная запись"}
             </div>
           )}
           <div className="ai-suggestions">
-            {[
-              "Какие документы нужны водителю?",
-              "Кто оплачивает ремонт?",
-              "Как рассчитывается выплата владельцу?",
-            ].map((t) => (
-              <button onClick={() => setPrompt(t)} key={t}>
-                {t}
-                <ArrowUpRight size={13} />
-              </button>
-            ))}
+            {["Какие документы нужны водителю?", "Кто оплачивает ремонт?", "Как рассчитывается выплата владельцу?"].map(
+              (t) => (
+                <button onClick={() => setPrompt(t)} key={t}>
+                  {t}
+                  <ArrowUpRight size={13} />
+                </button>
+              ),
+            )}
           </div>
           <label className="ai-input">
             Ваш вопрос
@@ -2360,30 +1967,16 @@ export function AIPanel({
             <label className="upload">
               <Upload size={16} />
               {file ? "Документ прикреплён" : "Прикрепить PDF или изображение"}
-              <input
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => upload(e.target.files?.[0])}
-              />
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => upload(e.target.files?.[0])} />
             </label>
           )}
-          <button
-            className="button primary"
-            disabled={busy || prompt.length < 2}
-            onClick={send}
-          >
-            {busy ? (
-              <LoaderCircle className="spin" size={16} />
-            ) : (
-              <Send size={16} />
-            )}{" "}
+          <button className="button primary" disabled={busy || prompt.length < 2} onClick={send}>
+            {busy ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}{" "}
             {busy ? "Анализируем…" : "Отправить"}
           </button>
           {error && <div className="error">{error}</div>}
           {result.error && <div className="error">{result.error.message}</div>}
-          {result.data?.state === "failed" && (
-            <div className="error">{result.data.result.error}</div>
-          )}
+          {result.data?.state === "failed" && <div className="error">{result.data.result.error}</div>}
           {result.data?.state === "done" && (
             <div className="ai-result">
               <div className="ai-result-title">
@@ -2392,27 +1985,23 @@ export function AIPanel({
               </div>
               <AnswerText text={result.data.result.answer} />
               <Drafts drafts={result.data.result.drafts || []} />
-              {result.data.result.fields &&
-                Object.keys(result.data.result.fields).length > 0 && (
-                  <dl className="facts">
-                    {Object.entries(result.data.result.fields).map(([k, v]) => (
-                      <div key={k}>
-                        <dt>{FIELD_LABELS[k] || k}</dt>
-                        <dd>
-                          {Array.isArray(v)
-                            ? v.join(", ") || "—"
-                            : typeof v === "object" && v
-                              ? JSON.stringify(v)
-                              : statuses[String(v)] ||
-                                String(v ?? "Не указано")}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              {result.data.result.sources?.length > 0 && (
-                <div className="ai-sources-title">Источники</div>
+              {result.data.result.fields && Object.keys(result.data.result.fields).length > 0 && (
+                <dl className="facts">
+                  {Object.entries(result.data.result.fields).map(([k, v]) => (
+                    <div key={k}>
+                      <dt>{FIELD_LABELS[k] || k}</dt>
+                      <dd>
+                        {Array.isArray(v)
+                          ? v.join(", ") || "—"
+                          : typeof v === "object" && v
+                            ? JSON.stringify(v)
+                            : statuses[String(v)] || String(v ?? "Не указано")}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
               )}
+              {result.data.result.sources?.length > 0 && <div className="ai-sources-title">Источники</div>}
               {result.data.result.sources?.map((s: any, i: number) => (
                 <div className="ai-source" key={i}>
                   <span className="ai-source-num">{i + 1}</span>
@@ -2433,16 +2022,16 @@ export function AIPanel({
                 </div>
               ))}
               <div className="ai-meta">
-                {result.data.result.model} · {result.data.result.tokens} токенов
-                · ${Number(result.data.result.cost).toFixed(5)}
+                {result.data.result.model} · {result.data.result.tokens} токенов · $
+                {Number(result.data.result.cost).toFixed(5)}
               </div>
             </div>
           )}
           <div className="ai-footnote">
             <ShieldCheck size={16} />
             <span>
-              Данные ограничены ролью на уровне инструментов. Текст ответа в
-              демо не фильтруется — см. «guardrails-слой» выше.
+              Данные ограничены ролью на уровне инструментов. Текст ответа в демо не фильтруется — см. «guardrails-слой»
+              выше.
             </span>
           </div>
         </Dialog.Content>

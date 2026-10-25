@@ -50,9 +50,15 @@ def parse(raw: bytes):
             parts.append((part.get_filename() or "вложение" + ext, ext, data))
     body = msg.get_body(preferencelist=("plain",))
     text = body.get_content().strip() if body else ""
-    return {"from": sender[1] or sender[0], "name": sender[0], "subject": str(msg.get("subject", ""))[:200],
-            "date": sent, "to": [a for _, a in email.utils.getaddresses(msg.get_all("to", []) + msg.get_all("cc", []))],
-            "parts": parts[:MAX_PARTS], "text": text[:18000]}
+    return {
+        "from": sender[1] or sender[0],
+        "name": sender[0],
+        "subject": str(msg.get("subject", ""))[:200],
+        "date": sent,
+        "to": [a for _, a in email.utils.getaddresses(msg.get_all("to", []) + msg.get_all("cc", []))],
+        "parts": parts[:MAX_PARTS],
+        "text": text[:18000],
+    }
 
 
 def ingest(s, sp, raw: bytes, source="mail"):
@@ -62,17 +68,29 @@ def ingest(s, sp, raw: bytes, source="mail"):
     from .db import Item
     from .inbox import create, enqueue
 
-    pending = s.scalar(select(func.count()).select_from(Item).where(
-        Item.space == sp.id, Item.kind == "inbox", Item.data["status"].astext.in_(["new", "reading", "checking"]),
-        Item.data["seed"].astext.is_distinct_from("true")))
+    pending = s.scalar(
+        select(func.count())
+        .select_from(Item)
+        .where(
+            Item.space == sp.id,
+            Item.kind == "inbox",
+            Item.data["status"].astext.in_(["new", "reading", "checking"]),
+            Item.data["seed"].astext.is_distinct_from("true"),
+        )
+    )
     if pending >= 3:
         fail("Дождитесь обработки предыдущих документов", 429)
     letter = parse(raw)
     origin = {"from": letter["from"], "subject": letter["subject"], "date": letter["date"]}
     docs = []
     for name, ext, data in letter["parts"]:
-        f = add(s, sp.id, "file", "F-" + uid()[:8], {"name": name[:120], "ext": ".jpg" if ext == ".jpeg" else ext,
-                                                     "size": len(data), "creator_role": "mail"})
+        f = add(
+            s,
+            sp.id,
+            "file",
+            "F-" + uid()[:8],
+            {"name": name[:120], "ext": ".jpg" if ext == ".jpeg" else ext, "size": len(data), "creator_role": "mail"},
+        )
         (FILES / sp.id).mkdir(parents=True, exist_ok=True)
         (FILES / sp.id / (f.id + f.data["ext"])).write_bytes(data)
         docs.append(create(s, sp.id, source, file=f.id, name=name))
@@ -95,13 +113,17 @@ def sample_letter(s, sp) -> bytes:
     from .inbox import sample
 
     text, _, _ = sample(s, sp, "invoice")
-    pdf = HTML(string="<pre style='font:13px DejaVu Sans,sans-serif'>" + text.replace("<", "&lt;") + "</pre>").write_pdf()
+    pdf = HTML(
+        string="<pre style='font:13px DejaVu Sans,sans-serif'>" + text.replace("<", "&lt;") + "</pre>"
+    ).write_pdf()
     msg = EmailMessage()
     msg["From"] = "СТО «Мотор-Сервис» <sto@example.org>"
     msg["To"] = "docs@fleet.example"
     msg["Subject"] = "Счёт за ремонт по заявке"
     msg["Date"] = email.utils.format_datetime(now())
-    msg.set_content("Добрый день!\n\nВо вложении счёт за выполненные работы. Акт подпишем при выдаче машины.\n\nУчебное письмо стенда.")
+    msg.set_content(
+        "Добрый день!\n\nВо вложении счёт за выполненные работы. Акт подпишем при выдаче машины.\n\nУчебное письмо стенда."
+    )
     msg.add_attachment(pdf, maintype="application", subtype="pdf", filename="Счёт СТО.pdf")
     return bytes(msg)
 

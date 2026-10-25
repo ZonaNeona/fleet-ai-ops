@@ -24,10 +24,10 @@ function markdown(md) {
       close();
       out.push(`<h2>${inline(line.replace(/^#+ /, ""))}</h2>`);
     } else if (/^\d+\. /.test(line)) {
-      if (list !== "ol") close(), out.push("<ol>"), (list = "ol");
+      if (list !== "ol") (close(), out.push("<ol>"), (list = "ol"));
       out.push(`<li>${inline(line.replace(/^\d+\. /, ""))}</li>`);
     } else if (/^[*-] /.test(line)) {
-      if (list !== "ul") close(), out.push("<ul>"), (list = "ul");
+      if (list !== "ul") (close(), out.push("<ul>"), (list = "ul"));
       out.push(`<li>${inline(line.slice(2))}</li>`);
     } else if (line.trim()) {
       close();
@@ -92,22 +92,22 @@ const result = await build({
   logLevel: "info",
 });
 const template = await readFile("index.html", "utf8");
-const js = Object.entries(result.metafile.outputs).find(([path, info]) => path.endsWith(".js") && info.entryPoint?.replaceAll("\\", "/") === "web/main.tsx");
+const js = Object.entries(result.metafile.outputs).find(
+  ([path, info]) => path.endsWith(".js") && info.entryPoint?.replaceAll("\\", "/") === "web/main.tsx",
+);
 if (!js) throw new Error("No application bundle");
 await writeFile(
   "dist/index.html",
-  template
-    .replace("/web/main.tsx", "/" + js[0].replace("dist/", ""))
-    .replace(
+  template.replace("/web/main.tsx", "/" + js[0].replace("dist/", "")).replace(
+    "</head>",
+    `<link rel="stylesheet" href="/${js[1].cssBundle.replace("dist/", "")}">` +
+      // общие чанки точки входа — сразу, параллельно с ней
+      js[1].imports
+        .filter((i) => i.kind === "import-statement")
+        .map((i) => `<link rel="modulepreload" href="/${i.path.replace("dist/", "")}">`)
+        .join("") +
       "</head>",
-      `<link rel="stylesheet" href="/${js[1].cssBundle.replace("dist/", "")}">` +
-        // общие чанки точки входа — сразу, параллельно с ней
-        js[1].imports
-          .filter((i) => i.kind === "import-statement")
-          .map((i) => `<link rel="modulepreload" href="/${i.path.replace("dist/", "")}">`)
-          .join("") +
-        "</head>",
-    ),
+  ),
 );
 const assets = [
   "/",

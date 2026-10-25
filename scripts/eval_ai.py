@@ -1,13 +1,18 @@
 """Reproducible 60-case evaluation; all provider calls use the application budget."""
 
-import json, time, statistics, re
-import httpx
+import json
+import re
+import statistics
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from concurrent.futures import ThreadPoolExecutor
-from app.db import db, Space, System, now
+
+import httpx
+
+from app.ai import candidates, run
+from app.db import Space, System, db, now
 from app.seed import create_space
-from app.ai import run, candidates
 
 cases = []
 for n in range(6):
@@ -20,7 +25,7 @@ for n in range(6):
         cases.append(
             {
                 "mode": "ticket",
-                "prompt": prompt + f" Обращение №{n+1}.",
+                "prompt": prompt + f" Обращение №{n + 1}.",
                 "expected": priority,
                 "kind": "priority",
             }
@@ -35,7 +40,7 @@ for n in range(3):
         cases.append(
             {
                 "mode": "knowledge",
-                "prompt": prompt + f" Объясни клиенту, вариант {n+1}.",
+                "prompt": prompt + f" Объясни клиенту, вариант {n + 1}.",
                 "expected": word,
                 "kind": "source",
             }
@@ -45,7 +50,7 @@ for n in range(12):
     cases.append(
         {
             "mode": "document",
-            "prompt": f"Извлеки поля из учебного документа: Счёт № DEMO-{n+1} от 2026-10-07. Поставщик ООО Учебный сервис. Итого {amount} рублей.",
+            "prompt": f"Извлеки поля из учебного документа: Счёт № DEMO-{n + 1} от 2026-10-07. Поставщик ООО Учебный сервис. Итого {amount} рублей.",
             "expected": str(amount),
             "kind": "amount",
         }
@@ -54,7 +59,7 @@ for n in range(6):
     cases.append(
         {
             "mode": "finance",
-            "prompt": f"Назови начисленную выручку за период отчёта и объясни разницу с поступлениями. Вариант {n+1}.",
+            "prompt": f"Назови начисленную выручку за период отчёта и объясни разницу с поступлениями. Вариант {n + 1}.",
             "expected": None,
             "kind": "finance",
         }
@@ -85,9 +90,7 @@ def check(case, result):
     if case["kind"] == "amount":
         return str(case["expected"]) in str(fields.get("amount")) and bool(fields.get("number"))
     if case["kind"] == "finance":
-        return any(w in answer for w in ["начисл", "выручк"]) and any(
-            w in answer for w in ["поступл", "оплат"]
-        )
+        return any(w in answer for w in ["начисл", "выручк"]) and any(w in answer for w in ["поступл", "оплат"])
     return any(
         w in answer
         for w in [
@@ -191,9 +194,7 @@ def main():
         "tested_at": now().isoformat(),
         "suite": "60 cases v1",
         "models": summary,
-        "selected": next(
-            (x["model"] for x in summary if x["accuracy"] >= 0.9 and x["critical_refusals"]), None
-        ),
+        "selected": next((x["model"] for x in summary if x["accuracy"] >= 0.9 and x["critical_refusals"]), None),
     }
     with db() as s:
         quality = s.get(System, "quality")

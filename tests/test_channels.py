@@ -56,13 +56,17 @@ def test_training_portal_behaves_like_a_portal(client):  # noqa: F811
     page = c.get("/gov").text
     cid = re.search(r'name="captcha_id" value="(\w+)"', page).group(1)
     code = re.search(r'data-test-code="(\d+)"', page).group(1)
-    wrong = c.post("/gov/search", data={"plates": "ДЕМО 0002", "captcha": "0", "captcha_id": cid}, follow_redirects=False)
+    wrong = c.post(
+        "/gov/search", data={"plates": "ДЕМО 0002", "captcha": "0", "captcha_id": cid}, follow_redirects=False
+    )
     assert wrong.headers["location"] == "/gov?error=captcha"
     page = c.get("/gov").text  # a code works once: a new one
     cid = re.search(r'name="captcha_id" value="(\w+)"', page).group(1)
     code = re.search(r'data-test-code="(\d+)"', page).group(1)
     plates = [f"ДЕМО {i:04d}" for i in range(1, 25)] + ["<script>alert(1)</script> 0002"]
-    found = c.post("/gov/search", data={"plates": "\n".join(plates), "captcha": code, "captcha_id": cid}, follow_redirects=False)
+    found = c.post(
+        "/gov/search", data={"plates": "\n".join(plates), "captcha": code, "captcha_id": cid}, follow_redirects=False
+    )
     url = found.headers["location"]
     first = c.get(url)
     assert first.status_code == 200 and "DEMO-FINE-TP-0002" in first.text
@@ -85,16 +89,31 @@ def test_robot_reconciles_and_loads(client):  # noqa: F811
     with db() as s:
         # what n8n delivered: TP-0002 with the same amount, TP-0011 with another, TP-0026 the portal no longer shows
         for code, amount in (("TP-0002", "500.00"), ("TP-0011", "500.00"), ("TP-0026", "500.00")):
-            add(s, sid, "source_record", "fines:" + code, {
-                "source": "fines", "values": {"vehicle_code": code, "fine": amount, "external_id": "DEMO-FINE-" + code}})
+            add(
+                s,
+                sid,
+                "source_record",
+                "fines:" + code,
+                {
+                    "source": "fines",
+                    "values": {"vehicle_code": code, "fine": amount, "external_id": "DEMO-FINE-" + code},
+                },
+            )
         s.flush()
         rec = robot.reconcile(s, sid, rows)
     states = {r["resolution"]: r["state"] for r in rec}
     assert states["DEMO-FINE-TP-0002"] == "ok" and states["DEMO-FINE-TP-0011"] == "amount"
     assert states["DEMO-FINE-TP-0026"] == "ledger-only"
     # A run whose portal-only fines are loaded into the ledger as the records n8n writes.
-    extra = {"resolution": "18810177000000000001", "plate": "ДЕМО 0001", "amount": 1500, "date": "2026-10-20",
-             "discount_until": "2026-11-09", "state": "portal-only", "note": ""}
+    extra = {
+        "resolution": "18810177000000000001",
+        "plate": "ДЕМО 0001",
+        "amount": 1500,
+        "date": "2026-10-20",
+        "discount_until": "2026-11-09",
+        "state": "portal-only",
+        "note": "",
+    }
     with db() as s:
         run = add(s, sid, "robot_run", "ROBOT-T", {"status": "done", "reconciliation": [extra]})
         s.flush()
@@ -109,29 +128,54 @@ def test_robot_reconciles_and_loads(client):  # noqa: F811
 
 def test_vk_and_max_on_the_bot_core(client, monkeypatch):  # noqa: F811
     c, _ = client
-    vk = channels.from_vk({"type": "message_event", "event_id": "e1",
-                           "object": {"user_id": 7, "peer_id": 7, "event_id": "x", "payload": {"cmd": "role:driver"}}})
+    vk = channels.from_vk(
+        {
+            "type": "message_event",
+            "event_id": "e1",
+            "object": {"user_id": 7, "peer_id": 7, "event_id": "x", "payload": {"cmd": "role:driver"}},
+        }
+    )
     assert vk["callback_query"]["data"] == "role:driver" and vk["callback_query"]["from"]["id"] == "vk:7"
-    mx = channels.from_max({"update_type": "message_created", "timestamp": 1,
-                            "message": {"sender": {"user_id": 9}, "recipient": {"chat_id": 9}, "body": {"text": "/start", "mid": "m1"}}})
+    mx = channels.from_max(
+        {
+            "update_type": "message_created",
+            "timestamp": 1,
+            "message": {"sender": {"user_id": 9}, "recipient": {"chat_id": 9}, "body": {"text": "/start", "mid": "m1"}},
+        }
+    )
     assert mx["message"]["text"] == "/start" and mx["message"]["chat"]["id"] == "max:9"
     from app.telegram import kb
 
     m = {"text": "<b>Привет</b> &amp; добро", "kb": kb([("Водитель", "role:driver"), ("Кабинет", "app")])}
     body = channels.vk_payload(7, m)
-    assert body["message"] == "Привет & добро" and '"type": "callback"' in body["keyboard"] and "open_link" in body["keyboard"]
-    assert channels.max_payload(9, m)["attachments"][0]["payload"]["buttons"][0][0] == {"type": "callback", "text": "Водитель", "payload": "role:driver"}
+    assert (
+        body["message"] == "Привет & добро"
+        and '"type": "callback"' in body["keyboard"]
+        and "open_link" in body["keyboard"]
+    )
+    assert channels.max_payload(9, m)["attachments"][0]["payload"]["buttons"][0][0] == {
+        "type": "callback",
+        "text": "Водитель",
+        "payload": "role:driver",
+    }
     assert c.post("/api/v1/vk/callback", json={"type": "confirmation"}).status_code == 404  # not configured
     monkeypatch.setenv("VK_TOKEN", "t")
     monkeypatch.setenv("VK_SECRET", "s")
     monkeypatch.setenv("VK_CONFIRMATION", "abc123")
     assert c.post("/api/v1/vk/callback", json={"type": "confirmation"}).text == "abc123"
-    event = {"type": "message_new", "event_id": "ev-test-1", "secret": "s", "object": {"message": {"from_id": 7, "peer_id": 7, "text": "/start"}}}
+    event = {
+        "type": "message_new",
+        "event_id": "ev-test-1",
+        "secret": "s",
+        "object": {"message": {"from_id": 7, "peer_id": 7, "text": "/start"}},
+    }
     assert c.post("/api/v1/vk/callback", json={**event, "secret": "wrong"}).status_code == 403
     assert c.post("/api/v1/vk/callback", json=event).text == "ok"
     assert c.post("/api/v1/vk/callback", json=event).text == "ok"  # VK retries: the second is not queued
     with db() as s:
-        jobs = s.scalars(select(Job).where(Job.kind == "channel", Job.data["update"]["update_id"].astext == "vk-ev-test-1")).all()
+        jobs = s.scalars(
+            select(Job).where(Job.kind == "channel", Job.data["update"]["update_id"].astext == "vk-ev-test-1")
+        ).all()
         assert len(jobs) == 1
 
 

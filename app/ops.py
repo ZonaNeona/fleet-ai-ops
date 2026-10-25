@@ -41,7 +41,9 @@ def redis():
     if _state["client"] is None:
         import redis as lib
 
-        _state["client"] = lib.Redis.from_url(url, socket_timeout=0.3, socket_connect_timeout=0.3, decode_responses=True)
+        _state["client"] = lib.Redis.from_url(
+            url, socket_timeout=0.3, socket_connect_timeout=0.3, decode_responses=True
+        )
     return _state["client"]
 
 
@@ -223,8 +225,13 @@ class Waiter:
 
 REGISTRY = CollectorRegistry()
 REQUESTS = Counter("fleet_http_requests_total", "HTTP requests", ["method", "route", "status"], registry=REGISTRY)
-LATENCY = Histogram("fleet_http_request_seconds", "HTTP request latency", ["method", "route"], registry=REGISTRY,
-                    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10))
+LATENCY = Histogram(
+    "fleet_http_request_seconds",
+    "HTTP request latency",
+    ["method", "route"],
+    registry=REGISTRY,
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
+)
 LIMITED = Counter("fleet_rate_limited_total", "Requests refused by a rate limit", ["name"], registry=REGISTRY)
 
 
@@ -252,13 +259,18 @@ def gauges():
 class _Business:
     def collect(self):
         g = gauges()
-        yield GaugeMetricFamily("fleet_worker_heartbeat_age_seconds", "Seconds since the worker's heartbeat",
-                                value=g["worker_heartbeat_age_seconds"])
+        yield GaugeMetricFamily(
+            "fleet_worker_heartbeat_age_seconds",
+            "Seconds since the worker's heartbeat",
+            value=g["worker_heartbeat_age_seconds"],
+        )
         jobs = GaugeMetricFamily("fleet_jobs", "Jobs in the PostgreSQL queue by state", labels=["state"])
         for state, n in g["jobs"].items():
             jobs.add_metric([state], n)
         yield jobs
-        yield GaugeMetricFamily("fleet_jobs_failed_today", "Jobs that ran out of attempts today", value=g["jobs_failed_today"])
+        yield GaugeMetricFamily(
+            "fleet_jobs_failed_today", "Jobs that ran out of attempts today", value=g["jobs_failed_today"]
+        )
         yield GaugeMetricFamily("fleet_queue_wait_seconds", "Age of the oldest due job", value=g["queue_wait_seconds"])
         yield GaugeMetricFamily("fleet_ai_spend_usd_today", "Model spend today, USD", value=g["ai_spend_usd_today"])
         yield GaugeMetricFamily("fleet_ai_calls_today", "Model calls today", value=g["ai_calls_today"])
@@ -284,7 +296,9 @@ def record(request: Request, status: int, seconds: float):
     LATENCY.labels(request.method, route).observe(seconds)
     RECENT.append((request.method + " " + route, round(seconds * 1000, 1), status, time.time()))
     if status >= 500:
-        ERRORS.append({"route": request.method + " " + route, "status": status, "at": now().isoformat(timespec="seconds")})
+        ERRORS.append(
+            {"route": request.method + " " + route, "status": status, "at": now().isoformat(timespec="seconds")}
+        )
 
 
 def summary():
@@ -295,8 +309,15 @@ def summary():
     routes = []
     for route, xs in rows.items():
         ms = sorted(x[0] for x in xs)
-        routes.append({"route": route, "count": len(xs), "p50": ms[len(ms) // 2], "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))],
-                       "errors": sum(1 for x in xs if x[1] >= 500)})
+        routes.append(
+            {
+                "route": route,
+                "count": len(xs),
+                "p50": ms[len(ms) // 2],
+                "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))],
+                "errors": sum(1 for x in xs if x[1] >= 500),
+            }
+        )
     routes.sort(key=lambda r: -r["count"])
     info = {"enabled": bool(os.getenv("REDIS_URL")), "ok": False}
     r = redis()
@@ -305,15 +326,28 @@ def summary():
             t = time.perf_counter()
             r.ping()
             mem = r.info("memory")
-            info.update(ok=True, ping_ms=round((time.perf_counter() - t) * 1000, 2), used_mb=round(mem["used_memory"] / 1048576, 1),
-                        keys=r.dbsize())
+            info.update(
+                ok=True,
+                ping_ms=round((time.perf_counter() - t) * 1000, 2),
+                used_mb=round(mem["used_memory"] / 1048576, 1),
+                keys=r.dbsize(),
+            )
         except Exception:
             _down()
     from .hermes import health
 
-    return {"routes": routes[:15], "requests": len(RECENT), "errors": list(ERRORS)[-10:], "redis": info, "stats": dict(STATS),
-            "sentry": bool(os.getenv("SENTRY_DSN")), "queue": gauges(), "hermes": health(),
-            "documents_llm": "local" if os.getenv("PII_LOCAL") == "1" else "cloud", "ollama": bool(os.getenv("OLLAMA_URL"))}
+    return {
+        "routes": routes[:15],
+        "requests": len(RECENT),
+        "errors": list(ERRORS)[-10:],
+        "redis": info,
+        "stats": dict(STATS),
+        "sentry": bool(os.getenv("SENTRY_DSN")),
+        "queue": gauges(),
+        "hermes": health(),
+        "documents_llm": "local" if os.getenv("PII_LOCAL") == "1" else "cloud",
+        "ollama": bool(os.getenv("OLLAMA_URL")),
+    }
 
 
 def init_sentry():
@@ -322,6 +356,10 @@ def init_sentry():
         return False
     import sentry_sdk
 
-    sentry_sdk.init(dsn=dsn, traces_sample_rate=float(os.getenv("SENTRY_TRACES", "0.05")), send_default_pii=False,
-                    environment=os.getenv("SENTRY_ENV", "demo"))
+    sentry_sdk.init(
+        dsn=dsn,
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES", "0.05")),
+        send_default_pii=False,
+        environment=os.getenv("SENTRY_ENV", "demo"),
+    )
     return True

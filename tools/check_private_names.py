@@ -1,31 +1,48 @@
 """Fail if any tracked file mentions a former client or a private host.
 
-The stand grew out of code written for real projects. This guard keeps their names, hosts and
-proxy ids out of the public repository. Terms are stored encoded so the check does not trip on itself.
-Matching ignores case, spaces and punctuation, so "Acme-Corp", "acme_corp" and "ACMECORP" are the same term.
+The stand grew out of code written for real projects. This guard keeps their names, hosts and proxy ids out of the
+public repository. The terms themselves are not stored: only their length, a hash of their first three characters (a
+cheap filter) and a hash of the whole term. Matching ignores case, spaces and punctuation, so "Acme-Corp", "acme_corp"
+and "ACMECORP" are the same term.
 """
 
-import base64
+import hashlib
 import re
 import subprocess
 import sys
 
-_ENCODED = [
-    "a2NhcHlsb3A=",
-    "0LrQsNC/0LjQu9C+0L8=",
-    "YnVsY2VwYW5hYw==",
-    "cmFjcmFjZXRpbGU=",
-    "Y2hqbW10ZmViY2plZHRqdWhwcXo=",
-    "dnpmbnh1",
-    "cmFjZXRpbGU=",
-    "eXRpY3JhYw==",
-    "YnVsY2VwYW5hYw==",
-    "bjhubmlrb29s",
-    "cmVsdXJp",
+TERMS = [
+    (10, "9f584196", "c72089bae65e4a5825c97bb4"),
+    (7, "2b2961a4", "746ee43baa8444dccce55db7"),
+    (8, "27037fcc", "f89f17f1797c55146a5560cb"),
+    (11, "27037fcc", "32084c3e9cefa308d151be01"),
+    (6, "095cac40", "c1f49c89aa6bfbe368f7b139"),
+    (9, "15f3b852", "bfcba7959bf36d2d42baad3f"),
+    (8, "ae1cd330", "c07d1cfcef37eeadaabaaeca"),
+    (6, "19788b99", "2b04fad95d730b7587c4315f"),
+    (20, "c0d0984a", "190be7ec19db192ea70decf7"),
+    (7, "21ab0e77", "392069d89757a1f66014971a"),
 ]
-TERMS = [base64.b64decode(t).decode()[::-1] for t in _ENCODED]
-SKIP_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".woff", ".woff2", ".mp3", ".ogg", ".pdf", ".sqlite3")
+SKIP_SUFFIXES = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".mp3",
+    ".ogg",
+    ".pdf",
+    ".sqlite3",
+)
 NORMALIZE = re.compile(r"[^0-9a-zа-яё]+")
+PREFIXES = {prefix: [(length, whole) for length, p, whole in TERMS if p == prefix] for _, prefix, _ in TERMS}
+
+
+def digest(value: str, size: int) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()[:size]
 
 
 def files() -> list[str]:
@@ -33,22 +50,35 @@ def files() -> list[str]:
     return [f for f in out.stdout.splitlines() if f and not f.lower().endswith(SKIP_SUFFIXES)]
 
 
+def mentions(text: str) -> bool:
+    flat = NORMALIZE.sub("", text.lower())
+    seen: set[str] = set()
+    for i in range(len(flat) - 2):
+        head = flat[i : i + 3]
+        if head in seen:
+            continue
+        candidates = PREFIXES.get(digest(head, 8))
+        if candidates is None:
+            seen.add(head)  # a three-letter start no term has: skip it everywhere
+            continue
+        if any(digest(flat[i : i + length], 24) == whole for length, whole in candidates):
+            return True
+    return False
+
+
 def main() -> int:
     found = []
     for path in files():
         try:
             with open(path, encoding="utf-8") as fh:
-                text = NORMALIZE.sub("", fh.read().lower())
-        except (UnicodeDecodeError, FileNotFoundError):
+                text = fh.read()
+        except (UnicodeDecodeError, FileNotFoundError, IsADirectoryError):
             continue
-        hits = [i for i, term in enumerate(TERMS) if term in text]
-        if hits:
-            found.append(f"{path}: term #{', #'.join(str(i) for i in hits)}")
-    if found:
-        print("Private names found:\n" + "\n".join(found))
-        return 1
-    print(f"ok: {len(TERMS)} private terms, no matches")
-    return 0
+        if mentions(text):
+            found.append(path)
+    for path in found:
+        print(f"private term in {path}")
+    return 1 if found else 0
 
 
 if __name__ == "__main__":

@@ -1,9 +1,17 @@
-import time, json
+"""Report timing on a 4,000-car fleet; adds the «scale» block to reports/load.json made by load_check.py.
+
+Run on the host after load_check.py; the large space is removed at the end.
+"""
+
+import json
+import time
 from pathlib import Path
+
 from sqlalchemy import text
-from app.db import db, Space, now
-from app.seed import create_space
+
+from app.db import Space, db, now
 from app.reports import report
+from app.seed import create_space
 
 with db() as s:
     sp = create_space(s, count=4000)

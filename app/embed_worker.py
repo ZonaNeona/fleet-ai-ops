@@ -1,6 +1,9 @@
 """Bounded local inference subprocess, releases ONNX memory on exit."""
 
-import json, os, sys
+import json
+import os
+import sys
+
 from fastembed import TextEmbedding
 
 data = json.load(sys.stdin)

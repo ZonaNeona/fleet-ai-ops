@@ -133,8 +133,7 @@ export function availableActions(x: Row, role: string): { id: string; label: str
       else add("contract.confirm", "Подтвердить договор", ["manager"]);
     }
     if (x.status === "confirmed") add("contract.issue", "Выдать автомобиль", ["manager"]);
-    if (["draft", "confirmed"].includes(x.status))
-      add("contract.cancel", "Отменить бронь", ["manager", "client"]);
+    if (["draft", "confirmed"].includes(x.status)) add("contract.cancel", "Отменить бронь", ["manager", "client"]);
     if (["active", "confirmed"].includes(x.status)) add("contract.extend", "Продлить аренду", ["manager"]);
     if (x.status === "active") {
       add("payment.create", "Зачислить оплату", ["finance"]);
@@ -170,8 +169,7 @@ export function availableActions(x: Row, role: string): { id: string; label: str
     if (x.status === "draft") add("owner.approve", "Утвердить отчёт", ["finance"]);
     if (x.status === "approved") add("owner.pay", "Зарегистрировать выплату", ["finance"]);
   }
-  if (x.kind === "referral" && x.status === "pending")
-    add("referral.approve", "Начислить бонус", ["finance"]);
+  if (x.kind === "referral" && x.status === "pending") add("referral.approve", "Начислить бонус", ["finance"]);
   if (x.kind === "import") {
     if (x.status === "preview") add("import.commit", "Провести выписку", ["finance"]);
     if (x.status === "review") add("import.resolve", "Сопоставить платёж", ["finance"]);

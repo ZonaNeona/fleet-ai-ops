@@ -100,8 +100,7 @@ export function InboxPage({
   const inbox = useQuery({
     queryKey: ["inbox"],
     queryFn: () => api<Inbox>("/inbox"),
-    refetchInterval: (query) =>
-      query.state.data?.rows.some((r) => BUSY.includes(r.status)) ? 1500 : false,
+    refetchInterval: (query) => (query.state.data?.rows.some((r) => BUSY.includes(r.status)) ? 1500 : false),
   });
   const rows = useMemo(() => {
     const all = inbox.data?.rows || [];
@@ -174,7 +173,12 @@ export function InboxPage({
   };
 
   if (inbox.error) return <div className="error">{(inbox.error as Error).message}</div>;
-  if (!inbox.data) return <div className="ib-loading"><LoaderCircle className="spin" /> Загружаем входящие…</div>;
+  if (!inbox.data)
+    return (
+      <div className="ib-loading">
+        <LoaderCircle className="spin" /> Загружаем входящие…
+      </div>
+    );
   const counts = {
     hold: inbox.data.rows.filter((r) => ["review", "mismatch"].includes(r.status)).length,
     posted: inbox.data.rows.filter((r) => r.status === "posted").length,
@@ -184,9 +188,8 @@ export function InboxPage({
     <div className="ib">
       <div className="ib-intro">
         <div>
-          <b>Водители и подрядчики присылают фото и PDF</b> — постановления ГИБДД, счета СТО, права кандидатов.
-          Система распознаёт документ, сверяет его с учётом и проводит сама, если всё сошлось. Остальное — на
-          решение человеку.
+          <b>Водители и подрядчики присылают фото и PDF</b> — постановления ГИБДД, счета СТО, права кандидатов. Система
+          распознаёт документ, сверяет его с учётом и проводит сама, если всё сошлось. Остальное — на решение человеку.
         </div>
         <button className="button ghost" onClick={() => underGraph(doc?.id || "")}>
           <Workflow size={16} /> Граф под капотом
@@ -222,10 +225,20 @@ export function InboxPage({
           <button className="button secondary" disabled={!!busy} onClick={() => send("license", { sample: "license" })}>
             <IdCard size={16} /> ВУ кандидата
           </button>
-          <button className="button secondary" disabled={!!busy} onClick={() => letter()} title="Письмо СТО со счётом в PDF — проходит тот же граф">
+          <button
+            className="button secondary"
+            disabled={!!busy}
+            onClick={() => letter()}
+            title="Письмо СТО со счётом в PDF — проходит тот же граф"
+          >
             {busy === "mail" ? <LoaderCircle size={16} className="spin" /> : <Mail size={16} />} Письмо от СТО
           </button>
-          <button className="button secondary" disabled={!!busy} onClick={() => eml.current?.click()} title="Файл письма .eml из любого почтового клиента">
+          <button
+            className="button secondary"
+            disabled={!!busy}
+            onClick={() => eml.current?.click()}
+            title="Файл письма .eml из любого почтового клиента"
+          >
             <Mail size={16} /> Письмо .eml
           </button>
           <input
@@ -264,7 +277,11 @@ export function InboxPage({
             const [label, tone] = STATUS[r.status] || [r.status, "wait"];
             const [Src] = SOURCE[r.source] || SOURCE.web;
             return (
-              <button key={r.id} className={"ib-row" + (doc?.id === r.id ? " active" : "")} onClick={() => setPicked(r.id)}>
+              <button
+                key={r.id}
+                className={"ib-row" + (doc?.id === r.id ? " active" : "")}
+                onClick={() => setPicked(r.id)}
+              >
                 <span className="ib-row-icon">
                   <Icon size={18} />
                 </span>
@@ -294,10 +311,19 @@ export function InboxPage({
               <div>
                 <small>
                   {doc.code} · {(SOURCE[doc.source] || SOURCE.web)[1]} ·{" "}
-                  {new Date(doc.created).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {new Date(doc.created).toLocaleString("ru-RU", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </small>
                 <h2>{doc.kind ? inbox.data.kinds[doc.kind] : doc.name || "Документ"}</h2>
-                {doc.mail && <p className="muted">Письмо от {doc.mail.from || "—"} · «{doc.mail.subject || "без темы"}»</p>}
+                {doc.mail && (
+                  <p className="muted">
+                    Письмо от {doc.mail.from || "—"} · «{doc.mail.subject || "без темы"}»
+                  </p>
+                )}
                 {doc.summary && <p className="muted">Модель: «{doc.summary}»</p>}
               </div>
               <span className={"ib-pill big " + (STATUS[doc.status] || ["", "wait"])[1]}>
@@ -310,7 +336,15 @@ export function InboxPage({
                 const s = doc.steps.find((x) => x.node === node);
                 const st = s?.status || (doc.status === "rejected" && node === "post" ? "skipped" : "todo");
                 const Icon =
-                  st === "done" ? CircleCheck : st === "error" ? CircleAlert : st === "active" ? CircleDashed : st === "skipped" ? X : CircleDashed;
+                  st === "done"
+                    ? CircleCheck
+                    : st === "error"
+                      ? CircleAlert
+                      : st === "active"
+                        ? CircleDashed
+                        : st === "skipped"
+                          ? X
+                          : CircleDashed;
                 return (
                   <li key={node} className={st}>
                     <Icon size={16} />
@@ -346,7 +380,12 @@ export function InboxPage({
             {(doc.result || doc.decision) && !["review", "mismatch"].includes(doc.status) && (
               <div className={"ib-result " + (STATUS[doc.status] || ["", ""])[1]}>
                 {doc.decision}
-                {doc.result && <> · <b>{doc.result}</b></>}
+                {doc.result && (
+                  <>
+                    {" "}
+                    · <b>{doc.result}</b>
+                  </>
+                )}
               </div>
             )}
 
@@ -407,7 +446,11 @@ export function InboxPage({
               <h3>Оригинал</h3>
               {doc.file ? (
                 <a href={`/api/v1/files/${doc.file}`} target="_blank" rel="noopener">
-                  <img src={`/api/v1/files/${doc.file}`} alt="Оригинал документа" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+                  <img
+                    src={`/api/v1/files/${doc.file}`}
+                    alt="Оригинал документа"
+                    onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                  />
                   Открыть файл
                 </a>
               ) : (

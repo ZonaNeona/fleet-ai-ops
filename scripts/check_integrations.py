@@ -1,12 +1,22 @@
-import json, time
+"""Live check of the four n8n integrations on the deployed stand: start each one and wait for its result
+(1С runs twice: the repeat must not duplicate records).
+
+Run on the host: PYTHONPATH=. .venv/bin/python scripts/check_integrations.py → reports/integrations.json
+Uses its own visitor session; the space is removed at the end.
+"""
+
+import json
+import time
+
 import httpx
-from sqlalchemy import select, func
-from app.db import db, Space, Item
+from sqlalchemy import func, select
+
+from app.db import URL, Item, Space, db
 
 out = []
 sid = None
 try:
-    with httpx.Client(base_url="https://fleet.shvarev-demo.ru", timeout=40) as c:
+    with httpx.Client(base_url=URL, timeout=40) as c:
         r = c.post("/api/v1/session", json={})
         r.raise_for_status()
         sid = c.get("/api/v1/session").json()["id"]
@@ -22,9 +32,7 @@ try:
                 time.sleep(1)
             with db() as s:
                 count = s.scalar(
-                    select(func.count())
-                    .select_from(Item)
-                    .where(Item.space == sid, Item.kind == "source_record")
+                    select(func.count()).select_from(Item).where(Item.space == sid, Item.kind == "source_record")
                 )
             result = {
                 "source": source,
@@ -33,8 +41,7 @@ try:
                 "rows": run["data"].get("rows"),
                 "diffs": run["data"].get("diffs"),
                 "nodes": [
-                    {"name": t["node"], "status": t["status"], "ms": t["ms"]}
-                    for t in run["data"].get("trace", [])
+                    {"name": t["node"], "status": t["status"], "ms": t["ms"]} for t in run["data"].get("trace", [])
                 ],
                 "records_total": count,
                 "error": run["data"].get("error"),

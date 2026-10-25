@@ -22,13 +22,7 @@ import { Row, statuses } from "./lib";
 export function Badge({ value }: { value: string }) {
   return <span className={"badge " + value}>{statuses[value] || value}</span>;
 }
-export function Empty({
-  title = "Здесь пока ничего нет",
-  children,
-}: {
-  title?: string;
-  children?: ReactNode;
-}) {
+export function Empty({ title = "Здесь пока ничего нет", children }: { title?: string; children?: ReactNode }) {
   return (
     <div className="empty">
       <Inbox size={32} />
@@ -167,11 +161,25 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 }
 // Фото модели: из данных автомобиля (image/thumb), иначе — по названию модели (сессии, созданные до обновления парка)
 const MODEL_PHOTO: [RegExp, string][] = [
-  [/rapid/i, "skoda-rapid"], [/polo/i, "vw-polo"], [/москвич/i, "moskvich-3"], [/emgrand/i, "geely-emgrand"],
-  [/tiggo/i, "chery-tiggo-4"], [/belgee/i, "belgee-x50"], [/jolion/i, "haval-jolion"], [/haval/i, "haval-f7"],
-  [/sonata/i, "hyundai-sonata"], [/exeed/i, "exeed-lx"], [/preface/i, "geely-preface"], [/hongqi/i, "hongqi-h5"],
-  [/mercedes/i, "mercedes-e"], [/bmw/i, "bmw-xm"], [/zeekr/i, "zeekr-9x"], [/largus/i, "lada-largus"],
-  [/atlant/i, "sollers-atlant"], [/argo/i, "sollers-argo"], [/газель|gazel/i, "gazelle-next"],
+  [/rapid/i, "skoda-rapid"],
+  [/polo/i, "vw-polo"],
+  [/москвич/i, "moskvich-3"],
+  [/emgrand/i, "geely-emgrand"],
+  [/tiggo/i, "chery-tiggo-4"],
+  [/belgee/i, "belgee-x50"],
+  [/jolion/i, "haval-jolion"],
+  [/haval/i, "haval-f7"],
+  [/sonata/i, "hyundai-sonata"],
+  [/exeed/i, "exeed-lx"],
+  [/preface/i, "geely-preface"],
+  [/hongqi/i, "hongqi-h5"],
+  [/mercedes/i, "mercedes-e"],
+  [/bmw/i, "bmw-xm"],
+  [/zeekr/i, "zeekr-9x"],
+  [/largus/i, "lada-largus"],
+  [/atlant/i, "sollers-atlant"],
+  [/argo/i, "sollers-argo"],
+  [/газель|gazel/i, "gazelle-next"],
 ];
 export function carPhoto(v: Record<string, any> | undefined, small = false) {
   if (v?.image?.endsWith(".webp")) return small ? v.thumb || v.image : v.image;
@@ -200,7 +208,9 @@ export function ThemeToggle() {
   const flip = () => {
     const next = theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#0a0c0f" : "#f4f5f7");
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", next === "dark" ? "#0a0c0f" : "#f4f5f7");
     try {
       localStorage.setItem("ec-theme", next);
     } catch {

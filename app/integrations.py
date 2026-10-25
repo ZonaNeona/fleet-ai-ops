@@ -1,16 +1,22 @@
 """Signed synthetic sources; real n8n execution and transactional reconciliation."""
 
-import os, json, hmac, hashlib, time
-from decimal import Decimal
+import hashlib
+import hmac
+import json
+import os
+import time
 from datetime import timedelta
+from decimal import Decimal
 from types import SimpleNamespace
+
 import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import text, select, func
-from .db import db, Space, Item, Entry, Job, now, uid
-from .domain import fail, audit
+from sqlalchemy import func, select, text
+
+from .db import Entry, Item, Job, Space, db, now, uid
+from .domain import audit, fail
 from .seed import add
 
 load_dotenv(os.getenv("FLEET_INTEGRATIONS_ENV", "/etc/fleet-integrations.env"))
@@ -61,11 +67,7 @@ def verify_context(ctx):
 
 
 def get_sync(s, id):
-    return (
-        s.execute(text("SELECT * FROM source_sync WHERE id=:id"), {"id": id})
-        .mappings()
-        .first()
-    )
+    return s.execute(text("SELECT * FROM source_sync WHERE id=:id"), {"id": id}).mappings().first()
 
 
 def save_sync(s, id, **fields):
@@ -78,9 +80,7 @@ def save_sync(s, id, **fields):
         sets.append(k + "=" + ("CAST(:data AS jsonb)" if k == "data" else ":" + k))
         if k == "data":
             params[k] = json.dumps(v, ensure_ascii=False)
-    s.execute(
-        text("UPDATE source_sync SET " + ",".join(sets) + " WHERE id=:id"), params
-    )
+    s.execute(text("UPDATE source_sync SET " + ",".join(sets) + " WHERE id=:id"), params)
 
 
 def enqueue(s, sp, source, schedule=False):
@@ -100,9 +100,7 @@ def enqueue(s, sp, source, schedule=False):
             "id": run,
             "space": sp.id,
             "source": source,
-            "data": json.dumps(
-                {"mode": "synthetic", "trigger": "schedule" if schedule else "manual"}
-            ),
+            "data": json.dumps({"mode": "synthetic", "trigger": "schedule" if schedule else "manual"}),
         },
     )
     s.add(
@@ -132,9 +130,7 @@ def launch(body: RunInput, request: Request):
         if body.source not in SOURCES:
             fail("Неизвестный источник")
         recent = s.execute(
-            text(
-                "SELECT count(*) FROM source_sync WHERE space=:space AND started>now()-interval '1 minute'"
-            ),
+            text("SELECT count(*) FROM source_sync WHERE space=:space AND started>now()-interval '1 minute'"),
             {"space": sp.id},
         ).scalar()
         if recent >= 8:
@@ -142,9 +138,7 @@ def launch(body: RunInput, request: Request):
         ctx = enqueue(s, sp, body.source)
         sp.data = {
             **sp.data,
-            "integration_sources": sorted(
-                set(sp.data.get("integration_sources", [])) | {body.source}
-            ),
+            "integration_sources": sorted(set(sp.data.get("integration_sources", [])) | {body.source}),
         }
         return {"id": ctx["run"], "state": "queued"}
 
@@ -165,10 +159,7 @@ def schedule(source: str, request: Request):
         s.execute(text("SELECT pg_advisory_xact_lock(814633)"))
         runs = []
         for sp in s.scalars(
-            select(Space)
-            .where(Space.touched > now() - timedelta(hours=24))
-            .order_by(Space.touched.desc())
-            .limit(100)
+            select(Space).where(Space.touched > now() - timedelta(hours=24)).order_by(Space.touched.desc()).limit(100)
         ):
             if source not in sp.data.get("integration_sources", []):
                 continue
@@ -192,9 +183,7 @@ def snapshot(s, sp):
         .where(Entry.space == sp.id, Entry.kind.in_(["charge", "payment"]))
         .group_by(Entry.vehicle, Entry.kind)
     ):
-        money.setdefault(vehicle, {})["charges" if kind == "charge" else "payments"] = (
-            str(total)
-        )
+        money.setdefault(vehicle, {})["charges" if kind == "charge" else "payments"] = str(total)
     return [
         {
             "vehicle_code": v.code,
@@ -205,11 +194,7 @@ def snapshot(s, sp):
             "charges": money.get(v.id, {}).get("charges", "0.00"),
             "payments": money.get(v.id, {}).get("payments", "0.00"),
         }
-        for v in s.scalars(
-            select(Item)
-            .where(Item.space == sp.id, Item.kind == "vehicle")
-            .order_by(Item.code)
-        )
+        for v in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle").order_by(Item.code))
     ]
 
 
@@ -233,9 +218,7 @@ async def mock(source: str, request: Request):
                 item = {
                     "vehicle_code": r["vehicle_code"],
                     "mileage": str(int(r["mileage"]) + (120 if i in (2, 8) else 0)),
-                    "charges": str(
-                        Decimal(r["charges"]) + (Decimal(2300) if i == 12 else 0)
-                    ),
+                    "charges": str(Decimal(r["charges"]) + (Decimal(2300) if i == 12 else 0)),
                 }
                 raw.append(
                     {
@@ -250,9 +233,7 @@ async def mock(source: str, request: Request):
                     continue
                 item = {
                     "vehicle_code": r["vehicle_code"],
-                    "payments": str(
-                        Decimal(r["payments"]) + (Decimal(900) if i == 4 else 0)
-                    ),
+                    "payments": str(Decimal(r["payments"]) + (Decimal(900) if i == 4 else 0)),
                 }
                 raw.append({"car_id": item["vehicle_code"], "income": item["payments"]})
             elif source == "telematics":
@@ -260,9 +241,7 @@ async def mock(source: str, request: Request):
                     "vehicle_code": r["vehicle_code"],
                     "mileage": str(int(r["mileage"]) + (175 if i in (5, 18) else 0)),
                 }
-                raw.append(
-                    {"vehicle": item["vehicle_code"], "odometer": item["mileage"]}
-                )
+                raw.append({"vehicle": item["vehicle_code"], "odometer": item["mileage"]})
             else:
                 if i not in (1, 3, 10, 25):  # 1 — машина демо-водителя: штраф виден в боте
                     continue
@@ -282,11 +261,7 @@ async def mock(source: str, request: Request):
         payload = {"context": ctx, "rows": normal}
         return {
             "value": raw,
-            "@odata.context": (
-                "$metadata#Catalog_ТС+AccumulationRegister_Начисления"
-                if source == "1c"
-                else None
-            ),
+            "@odata.context": ("$metadata#Catalog_ТС+AccumulationRegister_Начисления" if source == "1c" else None),
             "context": ctx,
             "signature": sign(payload),
             "mode": "synthetic",
@@ -304,14 +279,10 @@ class Ingest(BaseModel):
 def ingest(body: Ingest):
     ctx = body.context
     verify_context(ctx)
-    if not hmac.compare_digest(
-        body.signature, sign({"context": ctx, "rows": body.rows})
-    ):
+    if not hmac.compare_digest(body.signature, sign({"context": ctx, "rows": body.rows})):
         fail("Пакет изменён: подпись не совпадает", 403)
     with db() as s:
-        s.execute(
-            text("SELECT pg_advisory_xact_lock(hashtext(:sp))"), {"sp": ctx["space"]}
-        )
+        s.execute(text("SELECT pg_advisory_xact_lock(hashtext(:sp))"), {"sp": ctx["space"]})
         sync = get_sync(s, ctx["run"])
         if not sync or sync["space"] != ctx["space"] or sync["source"] != ctx["source"]:
             fail("Запуск не найден", 404)
@@ -332,11 +303,7 @@ def ingest(body: Ingest):
             if not current:
                 fail("Неизвестный автомобиль в пакете")
             code = ctx["source"] + ":" + row["vehicle_code"]
-            record = s.scalar(
-                select(Item).where(
-                    Item.space == sp.id, Item.kind == "source_record", Item.code == code
-                )
-            )
+            record = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "source_record", Item.code == code))
             data = {
                 "source": ctx["source"],
                 "vehicle": current["vehicle"],
@@ -347,9 +314,12 @@ def ingest(body: Ingest):
             if ctx["source"] == "fines":
                 previous = record.data.get("values", {}) if record else {}
                 # Demo policy is stable across syncs; it is not a statement of traffic law.
-                data["values"] = {**row, "discount_percent": 50,
+                data["values"] = {
+                    **row,
+                    "discount_percent": 50,
                     "discount_until": previous.get("discount_until") or (now() + timedelta(days=10)).date().isoformat(),
-                    "discount_rule": "Учебное условие: скидка 50% в течение 10 дней"}
+                    "discount_rule": "Учебное условие: скидка 50% в течение 10 дней",
+                }
             if record:
                 record.data = data
                 record.version += 1
@@ -444,12 +414,12 @@ def execute(job):
     if not sync["data"].get("ingested") and job.kind != "integration_trace":
         try:
             with httpx.Client(timeout=45) as c:
-                r = c.post(
-                    f"http://127.0.0.1:5678/webhook/{N8N_PREFIX}-{ctx['source']}", json=ctx
-                )
+                r = c.post(f"http://127.0.0.1:5678/webhook/{N8N_PREFIX}-{ctx['source']}", json=ctx)
                 r.raise_for_status()
         except Exception:
-            error = "n8n не завершил запрос. Исполнение проверяется по журналу; данные не считаются полученными без ingest."
+            error = (
+                "n8n не завершил запрос. Исполнение проверяется по журналу; данные не считаются полученными без ingest."
+            )
     for _ in range(6):
         try:
             execution = read_execution(ctx["run"])
@@ -464,9 +434,7 @@ def execute(job):
             return {"expired": True}
         result = {**sync["data"], "trace": execution.get("trace", [])}
         if not sync["data"].get("ingested"):
-            result["error"] = (
-                error or "Источник не прошёл нормализацию или проверку подписи"
-            )
+            result["error"] = error or "Источник не прошёл нормализацию или проверку подписи"
         save_sync(
             s,
             ctx["run"],
@@ -480,8 +448,9 @@ def execute(job):
 
 @router.get("/api/v1/integrations")
 def listing(request: Request):
-    from .api import auth
     from pathlib import Path
+
+    from .api import auth
 
     with db() as s:
         sp = auth(s, request)
@@ -490,9 +459,7 @@ def listing(request: Request):
         runs = [
             dict(x)
             for x in s.execute(
-                text(
-                    "SELECT * FROM source_sync WHERE space=:sp ORDER BY started DESC LIMIT 40"
-                ),
+                text("SELECT * FROM source_sync WHERE space=:sp ORDER BY started DESC LIMIT 40"),
                 {"sp": sp.id},
             ).mappings()
         ]
@@ -514,20 +481,13 @@ def listing(request: Request):
                     "id": id,
                     "status": last["status"] if last else "pending",
                     "updated": (
-                        last["finished"].isoformat()
-                        if last and last["status"] == "done" and last["finished"]
-                        else None
+                        last["finished"].isoformat() if last and last["status"] == "done" and last["finished"] else None
                     ),
                 }
             )
         workflows = {}
         for id in SOURCES:
-            f = (
-                Path(__file__).parent.parent
-                / "n8n"
-                / "out"
-                / (id + ".json")
-            )
+            f = Path(__file__).parent.parent / "n8n" / "out" / (id + ".json")
             if f.exists():
                 w = json.loads(f.read_text())
                 workflows[id] = {
@@ -541,10 +501,7 @@ def listing(request: Request):
                         for n in w["nodes"]
                     ],
                     "edges": [
-                        [a, e["node"]]
-                        for a, c in w["connections"].items()
-                        for outputs in c["main"]
-                        for e in outputs
+                        [a, e["node"]] for a, c in w["connections"].items() for outputs in c["main"] for e in outputs
                     ],
                 }
         return {

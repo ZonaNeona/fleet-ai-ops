@@ -7,12 +7,22 @@ import { Say, Section } from "./kit";
 type Step = { title: string; status: string; ms: number; shot?: string; url?: string };
 type Rec = { resolution: string; plate: string; amount: number; date?: string; state: string; note: string };
 type Run = {
-  id: string; status: string; created: string; steps: Step[]; reconciliation?: Rec[]; plates?: number;
-  seconds?: number; error?: string | null; loaded?: number;
+  id: string;
+  status: string;
+  created: string;
+  steps: Step[];
+  reconciliation?: Rec[];
+  plates?: number;
+  seconds?: number;
+  error?: string | null;
+  loaded?: number;
 };
 const STATE: Record<string, [string, string]> = {
-  ok: ["сходится", "ok"], amount: ["сумма отличается", "bad"], "portal-only": ["только на портале", "bad"],
-  "ledger-only": ["только в учёте", "warn"], loaded: ["загружено роботом", "ok"],
+  ok: ["сходится", "ok"],
+  amount: ["сумма отличается", "bad"],
+  "portal-only": ["только на портале", "bad"],
+  "ledger-only": ["только в учёте", "warn"],
+  loaded: ["загружено роботом", "ok"],
 };
 
 /* Playwright-робот: учебный портал штрафов → сверка с тем, что привёз n8n → загрузка нового в учёт. */
@@ -83,11 +93,16 @@ export function RobotView() {
         </p>
         <div className="k-mcp-key">
           <button className="k-btn primary" disabled={busy || working || !robot.data?.available} onClick={start}>
-            {working ? <LoaderCircle size={14} className="spin" /> : <Play size={14} />} {working ? "Робот работает…" : "Запустить робота"}
+            {working ? <LoaderCircle size={14} className="spin" /> : <Play size={14} />}{" "}
+            {working ? "Робот работает…" : "Запустить робота"}
           </button>
-          <a className="k-btn" href="/gov" target="_blank" rel="noreferrer"><ExternalLink size={14} /> Учебный портал</a>
+          <a className="k-btn" href="/gov" target="_blank" rel="noreferrer">
+            <ExternalLink size={14} /> Учебный портал
+          </a>
           {run?.status === "done" && fresh > 0 && (
-            <button className="k-btn" disabled={busy} onClick={load}><Download size={14} /> Загрузить в учёт новые · {fresh}</button>
+            <button className="k-btn" disabled={busy} onClick={load}>
+              <Download size={14} /> Загрузить в учёт новые · {fresh}
+            </button>
           )}
         </div>
         {robot.data && !robot.data.available && <p className="k-hint">Playwright на этом сервере не установлен.</p>}
@@ -95,18 +110,35 @@ export function RobotView() {
           <p className="k-hint">
             В учёте пока нет штрафов из n8n — сверке не с чем сравнивать.{" "}
             <button className="k-btn" disabled={syncing} onClick={fetchFines}>
-              {syncing ? <LoaderCircle size={13} className="spin" /> : <RotateCw size={13} />} Сначала забрать штрафы через n8n
+              {syncing ? <LoaderCircle size={13} className="spin" /> : <RotateCw size={13} />} Сначала забрать штрафы
+              через n8n
             </button>
           </p>
         )}
         {run && (
-          <Section title={`Запуск ${new Date(run.created).toLocaleTimeString("ru-RU")} · ${run.plates ?? "…"} ТС${run.seconds ? ` · ${run.seconds} с` : ""}`}>
-            {run.error && <p className="k-hint"><CircleAlert size={13} /> {run.error}</p>}
+          <Section
+            title={`Запуск ${new Date(run.created).toLocaleTimeString("ru-RU")} · ${run.plates ?? "…"} ТС${run.seconds ? ` · ${run.seconds} с` : ""}`}
+          >
+            {run.error && (
+              <p className="k-hint">
+                <CircleAlert size={13} /> {run.error}
+              </p>
+            )}
             <div className="k-robot-shot">{current && <img src={src(current)} alt="Снимок шага робота" />}</div>
             <ol className="k-robot-steps">
               {run.steps.map((s, i) => (
-                <li key={i} className={s.status + (s.shot === current ? " on" : "")} onClick={() => s.shot && setShot(s.shot)}>
-                  {s.status === "retry" ? <RotateCw size={13} /> : s.status === "error" ? <CircleAlert size={13} /> : <CircleCheck size={13} />}
+                <li
+                  key={i}
+                  className={s.status + (s.shot === current ? " on" : "")}
+                  onClick={() => s.shot && setShot(s.shot)}
+                >
+                  {s.status === "retry" ? (
+                    <RotateCw size={13} />
+                  ) : s.status === "error" ? (
+                    <CircleAlert size={13} />
+                  ) : (
+                    <CircleCheck size={13} />
+                  )}
                   <span>{s.title}</span>
                   <small>{(s.ms / 1000).toFixed(1)} с</small>
                 </li>
@@ -123,8 +155,12 @@ export function RobotView() {
             const [label, tone] = STATE[r.state] || [r.state, "warn"];
             return (
               <div key={i} className={tone === "ok" ? "ok" : "bad"}>
-                <b>{r.plate} · {Number(r.amount).toLocaleString("ru-RU")} ₽ · {label}</b>
-                <small>{r.resolution} — {r.note}</small>
+                <b>
+                  {r.plate} · {Number(r.amount).toLocaleString("ru-RU")} ₽ · {label}
+                </b>
+                <small>
+                  {r.resolution} — {r.note}
+                </small>
               </div>
             );
           })}

@@ -59,12 +59,22 @@ def run():
         else:
             rank, ok1 = None, not docs
             ok3 = ok1
-        rows.append({"question": question, "expected": expected, "found": docs[:3], "rank": rank,
-                     "hit1": ok1, "hit3": ok3, "ms": round((time.perf_counter() - t) * 1000)})
+        rows.append(
+            {
+                "question": question,
+                "expected": expected,
+                "found": docs[:3],
+                "rank": rank,
+                "hit1": ok1,
+                "hit3": ok3,
+                "ms": round((time.perf_counter() - t) * 1000),
+            }
+        )
     answerable = [x for x in rows if x["expected"]]
     refusals = [x for x in rows if not x["expected"]]
     report = {
-        "at": now().isoformat(), "cases": len(rows),
+        "at": now().isoformat(),
+        "cases": len(rows),
         "retrieval": {
             "hit_at_1": round(sum(x["hit1"] for x in answerable) / len(answerable), 3),
             "hit_at_3": round(sum(x["hit3"] for x in answerable) / len(answerable), 3),
@@ -72,9 +82,10 @@ def run():
             "refusals": round(sum(x["hit1"] for x in refusals) / len(refusals), 3),
             "ms_avg": round(sum(x["ms"] for x in rows) / len(rows)),
         },
-        "rows": rows, "seconds": round(time.perf_counter() - started, 1),
+        "rows": rows,
+        "seconds": round(time.perf_counter() - started, 1),
         "method": "Эталонный вопрос засчитан, если нужный регламент среди принятых фрагментов (hit@1 — первым, hit@3 — в первой тройке). "
-                  "Вопрос вне базы засчитан, если система ничего не приняла и модель не вызывалась.",
+        "Вопрос вне базы засчитан, если система ничего не приняла и модель не вызывалась.",
     }
     REPORT.parent.mkdir(exist_ok=True)
     REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")

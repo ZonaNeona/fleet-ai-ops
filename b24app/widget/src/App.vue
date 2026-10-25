@@ -41,7 +41,9 @@ async function load() {
 async function task() {
   busy.value = true;
   try {
-    const r = await fetch(`${cfg.api}?action=task&deal=${cfg.deal}&key=${encodeURIComponent(cfg.key)}`, { method: "POST" });
+    const r = await fetch(`${cfg.api}?action=task&deal=${cfg.deal}&key=${encodeURIComponent(cfg.key)}`, {
+      method: "POST",
+    });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error);
     done.value = `Задача №${data.task} поставлена менеджеру`;
@@ -68,39 +70,66 @@ onMounted(load);
     <template v-else>
       <section :class="['verdict', card.verdict.ok ? 'ok' : 'bad']">
         <b>{{ card.verdict.ok ? "Можно работать" : "Есть замечания" }}</b>
-        <ul><li v-for="r in card.verdict.reasons" :key="r">{{ r }}</li></ul>
+        <ul>
+          <li v-for="r in card.verdict.reasons" :key="r">{{ r }}</li>
+        </ul>
       </section>
 
       <section v-if="card.candidate" class="grid">
-        <div><small>Кандидат</small><b>{{ card.candidate.name }}</b></div>
-        <div><small>Стаж</small><b>{{ card.candidate.experience || "—" }} лет</b></div>
+        <div>
+          <small>Кандидат</small><b>{{ card.candidate.name }}</b>
+        </div>
+        <div>
+          <small>Стаж</small><b>{{ card.candidate.experience || "—" }} лет</b>
+        </div>
       </section>
 
       <p v-if="card.note" class="muted">{{ card.note }}</p>
 
       <template v-if="card.contract && card.car && card.money">
         <section class="grid">
-          <div><small>Водитель</small><b>{{ card.driver?.name }}</b><span>{{ card.driver?.phone }}</span></div>
-          <div><small>Договор</small><b>{{ card.contract.code }}</b><span>{{ card.contract.start }} — {{ card.contract.end }}</span></div>
+          <div>
+            <small>Водитель</small><b>{{ card.driver?.name }}</b
+            ><span>{{ card.driver?.phone }}</span>
+          </div>
+          <div>
+            <small>Договор</small><b>{{ card.contract.code }}</b
+            ><span>{{ card.contract.start }} — {{ card.contract.end }}</span>
+          </div>
           <div class="car">
             <img v-if="card.car.image" :src="card.car.image" alt="" />
-            <span><small>Машина</small><b>{{ card.car.model }}</b><span>{{ card.car.plate }} · {{ card.car.code }}</span></span>
+            <span
+              ><small>Машина</small><b>{{ card.car.model }}</b
+              ><span>{{ card.car.plate }} · {{ card.car.code }}</span></span
+            >
           </div>
         </section>
         <section class="grid money">
-          <div><small>Начислено</small><b>{{ rub(card.money.charged) }}</b></div>
-          <div><small>Пришло в учёт</small><b>{{ rub(card.money.paid) }}</b></div>
-          <div :class="{ bad: Number(card.money.debt) > 0 }"><small>Долг</small><b>{{ rub(card.money.debt) }}</b></div>
-          <div :class="{ bad: gap > 0 }"><small>«Оплачено» в CRM</small><b>{{ rub(card.money.crm_paid) }}</b>
-            <span v-if="gap > 0">больше учёта на {{ rub(String(gap)) }}</span></div>
+          <div>
+            <small>Начислено</small><b>{{ rub(card.money.charged) }}</b>
+          </div>
+          <div>
+            <small>Пришло в учёт</small><b>{{ rub(card.money.paid) }}</b>
+          </div>
+          <div :class="{ bad: Number(card.money.debt) > 0 }">
+            <small>Долг</small><b>{{ rub(card.money.debt) }}</b>
+          </div>
+          <div :class="{ bad: gap > 0 }">
+            <small>«Оплачено» в CRM</small><b>{{ rub(card.money.crm_paid) }}</b>
+            <span v-if="gap > 0">больше учёта на {{ rub(String(gap)) }}</span>
+          </div>
         </section>
         <section v-if="card.fines?.length">
           <small>Штрафы по машине</small>
-          <ul><li v-for="f in card.fines" :key="f.number">№ {{ f.number }} · {{ rub(f.amount) }}</li></ul>
+          <ul>
+            <li v-for="f in card.fines" :key="f.number">№ {{ f.number }} · {{ rub(f.amount) }}</li>
+          </ul>
         </section>
         <section v-if="card.documents?.length">
           <small>Документы по машине</small>
-          <ul><li v-for="d in card.documents" :key="d.code">{{ d.code }} · {{ d.kind }} · {{ d.status }}</li></ul>
+          <ul>
+            <li v-for="d in card.documents" :key="d.code">{{ d.code }} · {{ d.kind }} · {{ d.status }}</li>
+          </ul>
         </section>
       </template>
 

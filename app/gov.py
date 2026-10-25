@@ -15,12 +15,12 @@ amount) and a few that only the portal knows — so the robot's reconciliation h
 """
 
 import hashlib
-from html import escape
 import math
 import re
 import secrets
 import time
 from datetime import date, timedelta
+from html import escape
 
 from fastapi import APIRouter, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -31,9 +31,12 @@ from .domain import today
 router = APIRouter()
 PAGE = 10
 N8N = {"TP-0002": 500, "TP-0004": 500, "TP-0011": 1000, "TP-0026": 500}  # TP-0011: n8n says 500, the portal 1000
-ARTICLES = [("12.9 ч.2", "Превышение скорости на 20–40 км/ч", 500), ("12.12 ч.1", "Проезд на запрещающий сигнал", 1000),
-            ("12.16 ч.3", "Движение во встречном направлении по дороге с односторонним движением", 5000),
-            ("12.19 ч.5", "Стоянка в запрещённом месте (Москва)", 3000)]
+ARTICLES = [
+    ("12.9 ч.2", "Превышение скорости на 20–40 км/ч", 500),
+    ("12.12 ч.1", "Проезд на запрещающий сигнал", 1000),
+    ("12.16 ч.3", "Движение во встречном направлении по дороге с односторонним движением", 5000),
+    ("12.19 ч.5", "Стоянка в запрещённом месте (Москва)", 3000),
+]
 
 
 def code_of(plate: str) -> str | None:
@@ -49,12 +52,28 @@ def fines_for(plate: str):
     h = int(hashlib.sha256(plate.encode()).hexdigest(), 16)
     rows = []
     if code in N8N:
-        rows.append({"resolution": "DEMO-FINE-" + code, "plate": plate, "article": ARTICLES[0][0], "what": ARTICLES[0][1],
-                     "date": str(today() - timedelta(days=4)), "amount": N8N[code]})
+        rows.append(
+            {
+                "resolution": "DEMO-FINE-" + code,
+                "plate": plate,
+                "article": ARTICLES[0][0],
+                "what": ARTICLES[0][1],
+                "date": str(today() - timedelta(days=4)),
+                "amount": N8N[code],
+            }
+        )
     if h % 7 == 0:  # only the portal knows about it yet
         article, what, amount = ARTICLES[h % len(ARTICLES)]
-        rows.append({"resolution": "18810177" + str(h)[-12:], "plate": plate, "article": article, "what": what,
-                     "date": str(today() - timedelta(days=1 + h % 9)), "amount": amount})
+        rows.append(
+            {
+                "resolution": "18810177" + str(h)[-12:],
+                "plate": plate,
+                "article": article,
+                "what": what,
+                "date": str(today() - timedelta(days=1 + h % 9)),
+                "amount": amount,
+            }
+        )
     for r in rows:
         r["discount_until"] = str(date.fromisoformat(str(r["date"])) + timedelta(days=20))
     return rows
@@ -79,11 +98,17 @@ table{{width:100%;border-collapse:collapse;font-size:14px}} th,td{{text-align:le
 def captcha_svg(code: str, seed: int) -> str:
     glyphs = "".join(
         f'<text x="{14 + i * 26}" y="{34 + (seed >> i) % 7}" transform="rotate({((seed >> (i * 2)) % 21) - 10} {20 + i * 26} 28)">{d}</text>'
-        for i, d in enumerate(code))
-    lines = "".join(f'<line x1="0" y1="{(seed >> k) % 48}" x2="150" y2="{(seed >> (k + 3)) % 48}" stroke="#8aa" />' for k in range(4))
-    return (f'<svg width="150" height="48" viewBox="0 0 150 48" role="img" aria-label="Код с картинки">'
-            f'<rect width="150" height="48" fill="#f3f5f8"/>{lines}'
-            f'<g font-family="Courier New" font-size="28" font-weight="700" fill="#33475b">{glyphs}</g></svg>')
+        for i, d in enumerate(code)
+    )
+    lines = "".join(
+        f'<line x1="0" y1="{(seed >> k) % 48}" x2="150" y2="{(seed >> (k + 3)) % 48}" stroke="#8aa" />'
+        for k in range(4)
+    )
+    return (
+        f'<svg width="150" height="48" viewBox="0 0 150 48" role="img" aria-label="Код с картинки">'
+        f'<rect width="150" height="48" fill="#f3f5f8"/>{lines}'
+        f'<g font-family="Courier New" font-size="28" font-weight="700" fill="#33475b">{glyphs}</g></svg>'
+    )
 
 
 @router.get("/gov", response_class=HTMLResponse)
@@ -92,8 +117,13 @@ def form(error: str = ""):
     with db() as s:
         s.add(System(key="govcap:" + cid, data={"code": code, "at": time.time()}))
     svg = captcha_svg(code, int(cid, 16))
-    err = f'<p class="err">{ {"captcha": "Неверный код с картинки", "plates": "Укажите от 1 до 200 госномеров"}.get(error, "") }</p>' if error else ""
-    return screen(f"""<div class="box"><h1>Проверка штрафов по списку ТС</h1>
+    err = (
+        f'<p class="err">{ {"captcha": "Неверный код с картинки", "plates": "Укажите от 1 до 200 госномеров"}.get(error, "") }</p>'
+        if error
+        else ""
+    )
+    return screen(
+        f"""<div class="box"><h1>Проверка штрафов по списку ТС</h1>
 <p class="note">Для юридических лиц и автопарков: до 200 госномеров за раз. Данные учебные.</p>{err}
 <form method="post" action="/gov/search">
 <label for="plates">Госномера, по одному в строке</label><textarea id="plates" name="plates" rows="6" placeholder="ДЕМО 0002"></textarea>
@@ -103,7 +133,8 @@ def form(error: str = ""):
 <button type="submit">Найти штрафы</button></form></div>
 <p class="note">Капча-заглушка учебного стенда: её код доступен автотестам через атрибут <code>data-test-code</code>, как на тестовых
 контурах. На настоящем портале капчу проходит человек или используется договорной API — робот капчи не решает.</p>""",
-                "Проверка штрафов")
+        "Проверка штрафов",
+    )
 
 
 @router.post("/gov/search")
@@ -132,31 +163,41 @@ def results(sid: str, page: int = 1):
             return screen('<div class="box"><h1>Поиск устарел</h1><a href="/gov">Новый поиск</a></div>', "Устарел", 404)
         data = dict(row.data)
         if time.time() - data.get("last", 0) < 0.3:
-            return screen('<div class="box"><h1>Слишком частые запросы</h1><p>Повторите через секунду.</p></div>', "429", 429)
+            return screen(
+                '<div class="box"><h1>Слишком частые запросы</h1><p>Повторите через секунду.</p></div>', "429", 429
+            )
         data["last"] = time.time()
         if n == 2 and 2 not in data["seen"]:  # the portal is under load the first time page 2 is asked
             data["seen"] = data["seen"] + [2]
             row.data = data
-            return screen('<div class="box"><h1>Сервис временно недоступен</h1><p>Повторите запрос позже.</p></div>', "503", 503)
+            return screen(
+                '<div class="box"><h1>Сервис временно недоступен</h1><p>Повторите запрос позже.</p></div>', "503", 503
+            )
         row.data = data
     found = [f for p in data["plates"] for f in fines_for(p)]
     pages = max(1, math.ceil(len(data["plates"]) / PAGE))
     n = max(1, min(n, pages))
-    chunk = data["plates"][(n - 1) * PAGE:n * PAGE]
+    chunk = data["plates"][(n - 1) * PAGE : n * PAGE]
     rows = [f for p in chunk for f in fines_for(p)]
     body = "".join(  # the plate is what the visitor typed: escaped like everything else on the page
         f"<tr><td>{escape(str(r['plate']))}</td><td>{r['resolution']}</td><td>{r['date']}</td><td>{r['article']}<br>"
         f"<span class='note'>{r['what']}</span></td><td data-amount='{r['amount']}'>{r['amount']:,} ₽</td>"
         f"<td>{r['discount_until']}</td></tr>".replace(f"{r['amount']:,}", f"{r['amount']:,}".replace(",", " "))
-        for r in rows)
-    nav = (f'<a rel="prev" href="/gov/results/{sid}?page={n - 1}">← Назад</a>' if n > 1 else "") + \
-          f"<span>Страница {n} из {pages}</span>" + \
-          (f'<a rel="next" href="/gov/results/{sid}?page={n + 1}">Следующая →</a>' if n < pages else "")
-    return screen(f"""<div class="box"><h1>Найдено постановлений: {len(found)}</h1>
-<p class="note">Проверено ТС: {len(data['plates'])}. На этой странице — ТС {(n - 1) * PAGE + 1}–{(n - 1) * PAGE + len(chunk)}.</p>
+        for r in rows
+    )
+    nav = (
+        (f'<a rel="prev" href="/gov/results/{sid}?page={n - 1}">← Назад</a>' if n > 1 else "")
+        + f"<span>Страница {n} из {pages}</span>"
+        + (f'<a rel="next" href="/gov/results/{sid}?page={n + 1}">Следующая →</a>' if n < pages else "")
+    )
+    return screen(
+        f"""<div class="box"><h1>Найдено постановлений: {len(found)}</h1>
+<p class="note">Проверено ТС: {len(data["plates"])}. На этой странице — ТС {(n - 1) * PAGE + 1}–{(n - 1) * PAGE + len(chunk)}.</p>
 <table id="fines"><thead><tr><th>ТС</th><th>Постановление</th><th>Дата</th><th>Статья</th><th>Сумма</th><th>Скидка до</th></tr></thead>
 <tbody>{body or '<tr><td colspan="6">На этой странице штрафов нет</td></tr>'}</tbody></table>
-<div class="pager">{nav}</div></div>""", f"Результаты · стр. {n}")
+<div class="pager">{nav}</div></div>""",
+        f"Результаты · стр. {n}",
+    )
 
 
 def sweep(s):

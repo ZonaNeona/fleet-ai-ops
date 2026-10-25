@@ -1,5 +1,103 @@
 /* ───────── Страница «Telegram-бот»: описание ролей + эмулятор в рамке телефона ───────── */
-.phone-mini{position:absolute;inset:30px 0 0;z-index:12;background:#f7f5f1;display:flex;flex-direction:column;overflow:hidden;animation:phone-mini-enter .28s ease-out;border-radius:22px 22px 28px 28px}.phone-mini-bar{display:flex;align-items:center;justify-content:space-between;height:51px;flex-shrink:0;padding:8px 15px;background:#fff;border-bottom:1px solid #e8e5df;color:#252b2e}.phone-mini-bar button{background:none;border:0;padding:6px;color:inherit;display:flex}.phone-mini-bar span{font-size:12px;font-weight:600;text-align:center}.phone-mini-bar small{display:block;font-size:9px;color:#81878b;font-weight:400}.phone-mini iframe{width:100%;flex:1;min-height:0;border:0;background:#f7f5f1}.phone-mini-loading{position:absolute;inset:52px 0 0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#f7f5f1;color:#8c7352;font-size:12px;pointer-events:none}.phone-mini-action{padding:10px 15px 14px;background:#fff;flex-shrink:0;border-top:1px solid #e8e5df}.phone-mini-action button{width:100%;border:0;border-radius:11px;background:#ae8556;color:#fff;min-height:46px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px}.phone-mini-action button:disabled{opacity:.5}@keyframes phone-mini-enter{from{transform:translateY(70%);opacity:0}to{transform:translateY(0);opacity:1}}@media(prefers-reduced-motion:reduce){.phone-mini{animation:none}}
+.phone-mini {
+  position: absolute;
+  inset: 30px 0 0;
+  z-index: 12;
+  background: #f7f5f1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: phone-mini-enter 0.28s ease-out;
+  border-radius: 22px 22px 28px 28px;
+}
+.phone-mini-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 51px;
+  flex-shrink: 0;
+  padding: 8px 15px;
+  background: #fff;
+  border-bottom: 1px solid #e8e5df;
+  color: #252b2e;
+}
+.phone-mini-bar button {
+  background: none;
+  border: 0;
+  padding: 6px;
+  color: inherit;
+  display: flex;
+}
+.phone-mini-bar span {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.phone-mini-bar small {
+  display: block;
+  font-size: 9px;
+  color: #81878b;
+  font-weight: 400;
+}
+.phone-mini iframe {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  background: #f7f5f1;
+}
+.phone-mini-loading {
+  position: absolute;
+  inset: 52px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  background: #f7f5f1;
+  color: #8c7352;
+  font-size: 12px;
+  pointer-events: none;
+}
+.phone-mini-action {
+  padding: 10px 15px 14px;
+  background: #fff;
+  flex-shrink: 0;
+  border-top: 1px solid #e8e5df;
+}
+.phone-mini-action button {
+  width: 100%;
+  border: 0;
+  border-radius: 11px;
+  background: #ae8556;
+  color: #fff;
+  min-height: 46px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+}
+.phone-mini-action button:disabled {
+  opacity: 0.5;
+}
+@keyframes phone-mini-enter {
+  from {
+    transform: translateY(70%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-mini {
+    animation: none;
+  }
+}
 .botpage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
@@ -13,9 +111,7 @@
 }
 .bot-hero {
   padding: 26px 28px;
-  background:
-    radial-gradient(ellipse at 100% 0%, rgba(42, 171, 238, 0.14), transparent 60%),
-    var(--surface);
+  background: radial-gradient(ellipse at 100% 0%, rgba(42, 171, 238, 0.14), transparent 60%), var(--surface);
 }
 .bot-hero h2 {
   font-family: var(--display);
@@ -491,5 +587,12 @@
 }
 
 /* Голосовое в эмуляторе */
-.tg-mic.on { background: #e5484d; animation: tg-rec 1.2s ease-in-out infinite; }
-@keyframes tg-rec { 50% { box-shadow: 0 0 0 6px rgba(229, 72, 77, 0.25); } }
+.tg-mic.on {
+  background: #e5484d;
+  animation: tg-rec 1.2s ease-in-out infinite;
+}
+@keyframes tg-rec {
+  50% {
+    box-shadow: 0 0 0 6px rgba(229, 72, 77, 0.25);
+  }
+}

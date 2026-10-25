@@ -1,10 +1,18 @@
+"""Real vision-model check: a rendered test invoice must come back with the right number and total
+→ reports/vision.json.
+
+Run on the host: PYTHONPATH=. .venv/bin/python scripts/vision_check.py; spends the application AI budget.
+"""
+
 import json
 from pathlib import Path
 from types import SimpleNamespace
+
 from PIL import Image, ImageDraw, ImageFont
-from app.db import db, Space, FILES
-from app.seed import create_space, add
+
 from app.ai import run
+from app.db import FILES, Space, db
+from app.seed import add, create_space
 
 im = Image.new("RGB", (900, 500), "white")
 draw = ImageDraw.Draw(im)
@@ -22,9 +30,7 @@ for i, line in enumerate(
 with db() as s:
     sp = create_space(s, count=1)
     sid = sp.id
-    f = add(
-        s, sid, "file", "VISION-FIXTURE", {"name": "test-invoice.png", "ext": ".png", "creator_role": "owner"}
-    )
+    f = add(s, sid, "file", "VISION-FIXTURE", {"name": "test-invoice.png", "ext": ".png", "creator_role": "owner"})
     folder = FILES / sid
     folder.mkdir(parents=True, exist_ok=True)
     im.save(folder / (f.id + ".png"))

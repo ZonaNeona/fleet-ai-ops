@@ -1,5 +1,12 @@
-import json, resource
-from app.rag import search, catalog
+"""Knowledge-base search on reference questions, including off-topic ones that must find nothing.
+
+Run on the host: PYTHONPATH=. .venv/bin/python scripts/check_rag.py (prints JSON with peak memory).
+"""
+
+import json
+import resource
+
+from app.rag import catalog, search
 
 queries = [
     "Какие документы нужны водителю?",
@@ -16,10 +23,7 @@ for q in queries:
     out.append(
         {
             "query": q,
-            "hits": [
-                {k: c[k] for k in ("id", "title", "cosine", "rrf")}
-                for c in r["chunks"][:3]
-            ],
+            "hits": [{k: c[k] for k in ("id", "title", "cosine", "rrf")} for c in r["chunks"][:3]],
             "accepted": len(r["accepted"]),
         }
     )

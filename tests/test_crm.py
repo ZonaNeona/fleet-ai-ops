@@ -11,9 +11,24 @@ from tests.test_integration import client  # noqa: F401  (fixture)
 
 
 def portal(n):
-    return crm.Emulator({"users": [], "categories": [], "statuses": [], "leads": [], "tasks": [],
-                         "deals": [{"ID": str(i), "TITLE": f"Сделка {i}", "CATEGORY_ID": str(i % 2),
-                                    "DATE_CREATE": "2026-01-01T10:00:00+03:00"} for i in range(1, n + 1)]})
+    return crm.Emulator(
+        {
+            "users": [],
+            "categories": [],
+            "statuses": [],
+            "leads": [],
+            "tasks": [],
+            "deals": [
+                {
+                    "ID": str(i),
+                    "TITLE": f"Сделка {i}",
+                    "CATEGORY_ID": str(i % 2),
+                    "DATE_CREATE": "2026-01-01T10:00:00+03:00",
+                }
+                for i in range(1, n + 1)
+            ],
+        }
+    )
 
 
 def test_emulator_pages_like_a_portal():
@@ -59,7 +74,9 @@ def test_api_and_agent_task_draft(client):  # noqa: F811
     assert r.status_code == 200 and r.json()["mode"] == "emulator"
     pipeline = execute(sid, "owner", "crm_pipeline", {"funnel": "hiring"}, "k1")
     assert pipeline["funnels"][0]["key"] == "hiring"
-    draft = execute(sid, "owner", "crm_task", {"title": "Перезвонить кандидату", "responsible": "hiring"}, "k2")["draft"]
+    draft = execute(sid, "owner", "crm_task", {"title": "Перезвонить кандидату", "responsible": "hiring"}, "k2")[
+        "draft"
+    ]
     assert draft["status"] == "pending"
     with db() as s:
         sp = s.get(Space, sid)

@@ -4,17 +4,37 @@ import { AlertTriangle, ChevronRight, FileSpreadsheet, Sheet, Zap } from "lucide
 import { api, Data, Row } from "./lib";
 import "./signals.css";
 
-type Signal = { rule: string; label: string; title: string; reason: string; action: string; target: string | null; code: string };
+type Signal = {
+  rule: string;
+  label: string;
+  title: string;
+  reason: string;
+  action: string;
+  target: string | null;
+  code: string;
+};
 type Signals = { summary: { rule: string; label: string; count: number }[]; rows: Signal[] };
 // Where a signal without a ledger object leads: the screen that owns it.
 const PAGE: Record<string, string> = { "hiring-stuck": "crm", "crm-paid-gap": "crm", "call-low": "calls" };
 
 /* «Сделать сейчас»: правила над учётом, сервисом, Битрикс24 и звонками — без модели; сигнал исчезает, когда причина устранена. */
-export function SignalsWidget({ data, open, go }: { data: Data; open: (row: Row) => void; go: (page: string) => void }) {
+export function SignalsWidget({
+  data,
+  open,
+  go,
+}: {
+  data: Data;
+  open: (row: Row) => void;
+  go: (page: string) => void;
+}) {
   const q = useQuery({ queryKey: ["signals"], queryFn: () => api<Signals>("/signals"), refetchInterval: 60000 });
   const [rule, setRule] = useState("");
   const owner = ["owner", "admin", "finance"].includes(data.session.role);
-  const exp = useQuery({ queryKey: ["export"], queryFn: () => api<{ sheets: boolean; url: string | null }>("/export"), enabled: owner });
+  const exp = useQuery({
+    queryKey: ["export"],
+    queryFn: () => api<{ sheets: boolean; url: string | null }>("/export"),
+    enabled: owner,
+  });
   const [sent, setSent] = useState("");
   const mirror = async () => {
     setSent("…");
@@ -34,18 +54,30 @@ export function SignalsWidget({ data, open, go }: { data: Data; open: (row: Row)
   return (
     <section className="sg">
       <div className="sg-head">
-        <h2><Zap size={18} /> Сделать сейчас {q.data.rows.length ? <b>{q.data.rows.length}</b> : null}</h2>
+        <h2>
+          <Zap size={18} /> Сделать сейчас {q.data.rows.length ? <b>{q.data.rows.length}</b> : null}
+        </h2>
         {owner && (
           <div className="sg-export">
-            <a className="button ghost" href="/api/v1/export.xlsx"><FileSpreadsheet size={15} /> XLSX: сводка, сигналы, документы</a>
+            <a className="button ghost" href="/api/v1/export.xlsx">
+              <FileSpreadsheet size={15} /> XLSX: сводка, сигналы, документы
+            </a>
             {exp.data?.sheets && (
-              <button className="button ghost" onClick={mirror} disabled={sent === "…"}><Sheet size={15} /> {sent && sent !== "…" ? "Обновлено" : "В Google Таблицу"}</button>
+              <button className="button ghost" onClick={mirror} disabled={sent === "…"}>
+                <Sheet size={15} /> {sent && sent !== "…" ? "Обновлено" : "В Google Таблицу"}
+              </button>
             )}
-            {sent && sent !== "…" && <a href={sent} target="_blank" rel="noreferrer">открыть</a>}
+            {sent && sent !== "…" && (
+              <a href={sent} target="_blank" rel="noreferrer">
+                открыть
+              </a>
+            )}
           </div>
         )}
         <div className="sg-chips">
-          <button className={!rule ? "on" : ""} onClick={() => setRule("")}>Все</button>
+          <button className={!rule ? "on" : ""} onClick={() => setRule("")}>
+            Все
+          </button>
           {q.data.summary.map((x) => (
             <button key={x.rule} className={rule === x.rule ? "on" : ""} onClick={() => setRule(x.rule)}>
               {x.label} · {x.count}
@@ -72,7 +104,9 @@ export function SignalsWidget({ data, open, go }: { data: Data; open: (row: Row)
           );
         })}
       </div>
-      {rows.length > 8 && <p className="muted sg-more">Ещё {rows.length - 8} — спросите помощника «что сделать сейчас».</p>}
+      {rows.length > 8 && (
+        <p className="muted sg-more">Ещё {rows.length - 8} — спросите помощника «что сделать сейчас».</p>
+      )}
     </section>
   );
 }

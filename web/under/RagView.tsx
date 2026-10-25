@@ -30,14 +30,30 @@ const SUGGEST = [
 type Def = { id: string; x: number; y: number; icon: any; color: string; title: string; tech: string };
 const NODES: Def[] = [
   { id: "q", x: 0, y: 140, icon: MessageSquareText, color: "#a78bfa", title: "Вопрос", tech: "user query" },
-  { id: "embedding", x: 185, y: 20, icon: Binary, color: "#c084fc", title: "Смысловой отпечаток", tech: "MiniLM · 384d" },
+  {
+    id: "embedding",
+    x: 185,
+    y: 20,
+    icon: Binary,
+    color: "#c084fc",
+    title: "Смысловой отпечаток",
+    tech: "MiniLM · 384d",
+  },
   { id: "kb", x: 380, y: 140, icon: Database, color: "#60a5fa", title: "База знаний", tech: "kb_chunk · pgvector" },
   { id: "vector", x: 380, y: -60, icon: Radar, color: "#22d3ee", title: "Поиск по смыслу", tech: "HNSW · cosine" },
   { id: "fts", x: 380, y: 340, icon: TextSearch, color: "#38bdf8", title: "Поиск по словам", tech: "GIN · tsvector" },
   { id: "rrf", x: 570, y: 140, icon: Merge, color: "#fbbf24", title: "Слияние и порог", tech: "RRF k=60 · ≥0.38" },
   { id: "prompt", x: 750, y: 140, icon: ScrollText, color: "#f472b6", title: "Контекст", tech: "system + фрагменты" },
   { id: "llm", x: 930, y: 140, icon: Sparkles, color: "#c084fc", title: "Модель", tech: "structured output" },
-  { id: "citations", x: 1110, y: 140, icon: BadgeCheck, color: "#34d399", title: "Проверка ссылок", tech: "citations ⊂ найденным" },
+  {
+    id: "citations",
+    x: 1110,
+    y: 140,
+    icon: BadgeCheck,
+    color: "#34d399",
+    title: "Проверка ссылок",
+    tech: "citations ⊂ найденным",
+  },
   { id: "answer", x: 1290, y: 140, icon: FileCheck2, color: "#34d399", title: "Ответ", tech: "answer + sources" },
 ];
 const EDGES: FEdge[] = [
@@ -54,11 +70,20 @@ const EDGES: FEdge[] = [
   { id: "citations-answer", from: "citations", to: "answer" },
 ];
 /** Ветка guard — только когда она реально сработала, иначе пунктир режет схему */
-const GUARD_EDGE: FEdge = { id: "rrf-answer", from: "rrf", to: "answer", out: "b", in: "b", dashed: true, label: "нет источников" };
+const GUARD_EDGE: FEdge = {
+  id: "rrf-answer",
+  from: "rrf",
+  to: "answer",
+  out: "b",
+  in: "b",
+  dashed: true,
+  label: "нет источников",
+};
 
 const SIMPLE: Record<string, string> = {
   q: "Вопрос своими словами — без ключевых слов и точных формулировок.",
-  embedding: "Вопрос превращается в 384 числа — «смысловой отпечаток». У фраз с похожим смыслом отпечатки похожи, даже если слова разные.",
+  embedding:
+    "Вопрос превращается в 384 числа — «смысловой отпечаток». У фраз с похожим смыслом отпечатки похожи, даже если слова разные.",
   kb: "Регламенты заранее нарезаны на фрагменты, у каждого есть свой отпечаток. Всё хранится в той же базе, что и учёт.",
   vector: "Ищем фрагменты с самым похожим отпечатком — то есть по смыслу.",
   fts: "Параллельно ищем по словам — на случай точных терминов, номеров и названий.",
@@ -71,12 +96,14 @@ const SIMPLE: Record<string, string> = {
 };
 const ENG: Record<string, string> = {
   q: "POST /api/v1/under/rag → job(kind=ai, mode=rag); ответ читается опросом /api/v1/jobs/{id}.",
-  embedding: "fastembed paraphrase-multilingual-MiniLM-L12-v2 (ONNX, CPU) в коротком дочернем процессе; данные не покидают сервер.",
+  embedding:
+    "fastembed paraphrase-multilingual-MiniLM-L12-v2 (ONNX, CPU) в коротком дочернем процессе; данные не покидают сервер.",
   kb: "kb_doc / kb_chunk: чанкинг по заголовкам ~500 символов с перекрытием; embedding vector(384), tsv tsvector; переиндексация идемпотентна по хешу текста.",
   vector: "ORDER BY embedding <=> :vec LIMIT 2k — индекс HNSW, косинусное расстояние.",
   fts: "tsv @@ websearch_to_tsquery('russian', :q), ранжирование ts_rank_cd, индекс GIN.",
   rrf: "Reciprocal Rank Fusion: score = Σ 1/(60 + rank). FTS без семантической близости не считается доказательством: порог cosine ≥ 0.38.",
-  prompt: "Фрагменты и вопрос помечены как недоверенные данные (защита от prompt injection). Ответ — JSON {answer, fields, citations}.",
+  prompt:
+    "Фрагменты и вопрос помечены как недоверенные данные (защита от prompt injection). Ответ — JSON {answer, fields, citations}.",
   llm: "ai.call_chain: qwen3.8-flash → deepseek-flash; откат при 429/5xx/таймауте; стоимость и токены в Usage, дневной бюджет.",
   citations: "citations ⊂ id переданных фрагментов, иначе RuntimeError — ответ не показывается пользователю.",
   answer: "sources = фрагменты, на которые сослалась модель (title, version, url).",
@@ -108,14 +135,24 @@ export function RagView({
     trace.forEach((s, i) => {
       const base = { key: s.step + i, ms: s.ms, step: s, hold: 1150 };
       if (s.step === "embedding") out.push({ ...base, node: "embedding", label: "Эмбеддинг", edges: ["q-embedding"] });
-      else if (s.step === "vector") out.push({ ...base, node: "vector", label: "Вектор", edges: ["embedding-vector", { id: "kb-vector" }] });
+      else if (s.step === "vector")
+        out.push({ ...base, node: "vector", label: "Вектор", edges: ["embedding-vector", { id: "kb-vector" }] });
       else if (s.step === "fts") out.push({ ...base, node: "fts", label: "Слова", edges: ["q-fts", "kb-fts"] });
       else if (s.step === "rrf") out.push({ ...base, node: "rrf", label: "RRF", edges: ["vector-rrf", "fts-rrf"] });
-      else if (s.step === "guard") out.push({ ...base, node: "answer", label: "Нет источников", status: "retry", edges: [{ id: "rrf-answer", error: true }] });
+      else if (s.step === "guard")
+        out.push({
+          ...base,
+          node: "answer",
+          label: "Нет источников",
+          status: "retry",
+          edges: [{ id: "rrf-answer", error: true }],
+        });
       else if (s.step === "prompt") out.push({ ...base, node: "prompt", label: "Контекст", edges: ["rrf-prompt"] });
-      else if (s.step === "fallback") out.push({ ...base, node: "llm", label: "Откат модели", status: "retry", edges: ["prompt-llm"] });
+      else if (s.step === "fallback")
+        out.push({ ...base, node: "llm", label: "Откат модели", status: "retry", edges: ["prompt-llm"] });
       else if (s.step === "llm") out.push({ ...base, node: "llm", label: "Модель", edges: ["prompt-llm"] });
-      else if (s.step === "citations") out.push({ ...base, node: "citations", label: "Ссылки", edges: ["llm-citations"] });
+      else if (s.step === "citations")
+        out.push({ ...base, node: "citations", label: "Ссылки", edges: ["llm-citations"] });
     });
     if (!guard) out.push({ key: "answer", node: "answer", label: "Ответ", edges: ["citations-answer"], hold: 900 });
     return out;
@@ -151,9 +188,9 @@ export function RagView({
       dim: !!r && guard && ["prompt", "llm", "citations"].includes(n.id),
     };
   });
-  const edges = replay.paint(guard ? [...EDGES, GUARD_EDGE] : EDGES).map((e) =>
-    waiting && e.id === "q-embedding" ? { ...e, flow: true } : e,
-  );
+  const edges = replay
+    .paint(guard ? [...EDGES, GUARD_EDGE] : EDGES)
+    .map((e) => (waiting && e.id === "q-embedding" ? { ...e, flow: true } : e));
   const focusId = selected || (replay.playing ? replay.current?.node : null);
   const info = focusId || (replay.done && r ? "answer" : null);
 
@@ -185,7 +222,11 @@ export function RagView({
       <Timeline
         frames={frames}
         replay={replay}
-        empty={job.busy ? "Ждём воркер — трасса появится, как только задание выполнится" : "Задайте вопрос — здесь появится реальная трасса с длительностью каждого шага"}
+        empty={
+          job.busy
+            ? "Ждём воркер — трасса появится, как только задание выполнится"
+            : "Задайте вопрос — здесь появится реальная трасса с длительностью каждого шага"
+        }
       />
     </div>
   );
@@ -203,9 +244,18 @@ function KbIntro({ kb }: { kb: any }) {
         />
       </p>
       <div className="k-metrics">
-        <div><strong>{kb?.documents?.length ?? "—"}</strong><span>документов</span></div>
-        <div><strong>{kb?.vectors ?? "—"}</strong><span>фрагментов</span></div>
-        <div><strong>384</strong><span>измерения</span></div>
+        <div>
+          <strong>{kb?.documents?.length ?? "—"}</strong>
+          <span>документов</span>
+        </div>
+        <div>
+          <strong>{kb?.vectors ?? "—"}</strong>
+          <span>фрагментов</span>
+        </div>
+        <div>
+          <strong>384</strong>
+          <span>измерения</span>
+        </div>
       </div>
       <Section title="Что лежит в базе">
         <div className="k-docs">
@@ -214,14 +264,22 @@ function KbIntro({ kb }: { kb: any }) {
               <FileText size={14} />
               <span>
                 {d.title}
-                <small>{d.chunks} фрагм. · {d.version} · {d.kind === "public" ? "публичный источник" : "учебный регламент"}</small>
+                <small>
+                  {d.chunks} фрагм. · {d.version} · {d.kind === "public" ? "публичный источник" : "учебный регламент"}
+                </small>
               </span>
-              {d.url && <a href={d.url} target="_blank" rel="noreferrer">↗</a>}
+              {d.url && (
+                <a href={d.url} target="_blank" rel="noreferrer">
+                  ↗
+                </a>
+              )}
             </div>
           ))}
         </div>
       </Section>
-      <p className="k-hint">Попробуйте «Как приготовить борщ?» — увидите, как система отказывается отвечать без источников.</p>
+      <p className="k-hint">
+        Попробуйте «Как приготовить борщ?» — увидите, как система отказывается отвечать без источников.
+      </p>
     </>
   );
 }
@@ -249,18 +307,32 @@ function RagStep({ id, r, trace }: { id: string; r: any; trace: any[] }) {
       {r && id === "embedding" && s && (
         <>
           <VectorBars values={s.output?.preview || []} />
-          <Kv items={[["Модель", s.output?.model], ["Размерность", s.output?.dimensions], ["Время", ms(s.ms)]]} />
+          <Kv
+            items={[
+              ["Модель", s.output?.model],
+              ["Размерность", s.output?.dimensions],
+              ["Время", ms(s.ms)],
+            ]}
+          />
         </>
       )}
       {r && (id === "vector" || id === "fts" || id === "rrf") && (
         <>
-          {s && <Kv items={[["Время", ms(s.ms)], ...(Object.entries(s.output || {}).map(([k, v]) => [k, String(v)]) as any)]} />}
+          {s && (
+            <Kv
+              items={[["Время", ms(s.ms)], ...(Object.entries(s.output || {}).map(([k, v]) => [k, String(v)]) as any)]}
+            />
+          )}
           <Section title={id === "rrf" ? "Итоговый рейтинг" : "Найдено"}>
             <div className="k-chunks">
               {chunks
                 .filter((c) => (id === "vector" ? c.vector_rank : id === "fts" ? c.fts_rank : true))
                 .sort((a, b) =>
-                  id === "vector" ? a.vector_rank - b.vector_rank : id === "fts" ? a.fts_rank - b.fts_rank : b.rrf - a.rrf,
+                  id === "vector"
+                    ? a.vector_rank - b.vector_rank
+                    : id === "fts"
+                      ? a.fts_rank - b.fts_rank
+                      : b.rrf - a.rrf,
                 )
                 .map((c) => (
                   <details key={c.id} className={accepted.has(c.id) ? "ok" : ""}>
@@ -275,7 +347,9 @@ function RagStep({ id, r, trace }: { id: string; r: any; trace: any[] }) {
                           : id === "vector"
                             ? `#${c.vector_rank} · cos ${Number(c.cosine).toFixed(3)}`
                             : `#${c.fts_rank}`}
-                        {eng && id === "rrf" && ` · vec #${c.vector_rank ?? "—"} · fts #${c.fts_rank ?? "—"} · cos ${Number(c.cosine).toFixed(3)}`}
+                        {eng &&
+                          id === "rrf" &&
+                          ` · vec #${c.vector_rank ?? "—"} · fts #${c.fts_rank ?? "—"} · cos ${Number(c.cosine).toFixed(3)}`}
                       </small>
                     </summary>
                     <p>{c.text}</p>
@@ -286,32 +360,71 @@ function RagStep({ id, r, trace }: { id: string; r: any; trace: any[] }) {
           </Section>
         </>
       )}
-      {r && id === "prompt" && s && (eng ? <Json value={s.output} /> : <Kv items={[["Фрагментов передано", s.output?.chunk_ids?.length]]} />)}
+      {r &&
+        id === "prompt" &&
+        s &&
+        (eng ? <Json value={s.output} /> : <Kv items={[["Фрагментов передано", s.output?.chunk_ids?.length]]} />)}
       {r && id === "llm" && (
         <>
-          {trace.filter((x) => x.step === "fallback").map((f, i) => (
-            <div className="k-alert warn" key={i}>Модель {f.model} не ответила ({f.output?.reason}) — откат на следующую за {ms(f.ms)}</div>
-          ))}
-          {s && <Kv items={[["Модель", s.model], ["Провайдер", s.output?.provider], ["Токены", s.tokens], ["Стоимость", "$" + Number(s.cost || 0).toFixed(6)], ["Время", ms(s.ms)]]} />}
+          {trace
+            .filter((x) => x.step === "fallback")
+            .map((f, i) => (
+              <div className="k-alert warn" key={i}>
+                Модель {f.model} не ответила ({f.output?.reason}) — откат на следующую за {ms(f.ms)}
+              </div>
+            ))}
+          {s && (
+            <Kv
+              items={[
+                ["Модель", s.model],
+                ["Провайдер", s.output?.provider],
+                ["Токены", s.tokens],
+                ["Стоимость", "$" + Number(s.cost || 0).toFixed(6)],
+                ["Время", ms(s.ms)],
+              ]}
+            />
+          )}
         </>
       )}
       {r && id === "citations" && s && (
         <>
-          <Kv items={[["Ссылки", (s.output?.citations || []).map((n: number) => "ист. " + n).join(", ")], ["Проверка", s.output?.valid ? "пройдена" : "нет"]]} />
+          <Kv
+            items={[
+              ["Ссылки", (s.output?.citations || []).map((n: number) => "ист. " + n).join(", ")],
+              ["Проверка", s.output?.valid ? "пройдена" : "нет"],
+            ]}
+          />
           {eng && <p className="k-hint">{s.output?.scope}</p>}
         </>
       )}
       {r && (id === "answer" || id === "guard") && (
         <>
-          <div className="k-answer"><AnswerText text={r.answer} /></div>
+          <div className="k-answer">
+            <AnswerText text={r.answer} />
+          </div>
           {(r.sources || []).map((src: any, i: number) => (
-            <a className="k-source" key={i} href={src.url || undefined} target={src.url ? "_blank" : undefined} rel="noreferrer">
+            <a
+              className="k-source"
+              key={i}
+              href={src.url || undefined}
+              target={src.url ? "_blank" : undefined}
+              rel="noreferrer"
+            >
               <span>ист. {i + 1}</span>
               {src.title}
-              <small>{src.version} · {src.kind === "public" ? "публичный источник" : "учебный регламент"}</small>
+              <small>
+                {src.version} · {src.kind === "public" ? "публичный источник" : "учебный регламент"}
+              </small>
             </a>
           ))}
-          <Kv items={[["Модель", r.model], ["Токены", r.tokens], ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)], ["Всего", ms(r.ms)]]} />
+          <Kv
+            items={[
+              ["Модель", r.model],
+              ["Токены", r.tokens],
+              ["Стоимость", "$" + Number(r.cost || 0).toFixed(6)],
+              ["Всего", ms(r.ms)],
+            ]}
+          />
         </>
       )}
     </>

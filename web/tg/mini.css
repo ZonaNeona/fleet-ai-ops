@@ -1062,4 +1062,12 @@ body:has(.mini) #root {
 .mini-gallery {
   margin-top: -20px;
 }
-.mini-demo-note { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; padding: 9px 11px; border-radius: 12px; background: rgba(245, 158, 11, .12); color: inherit; }
+.mini-demo-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  color: inherit;
+}

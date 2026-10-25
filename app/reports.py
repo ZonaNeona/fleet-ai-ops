@@ -1,8 +1,10 @@
-from decimal import Decimal
 from datetime import timedelta
-from sqlalchemy import select, func, case, text, tuple_, or_
-from .db import Entry, Booking
-from .domain import visible, allowed_vehicle_ids, money, today, parse_date, day_range
+from decimal import Decimal
+
+from sqlalchemy import case, func, or_, select, text, tuple_
+
+from .db import Booking, Entry
+from .domain import allowed_vehicle_ids, day_range, money, parse_date, today, visible
 
 
 def scope(s, sp):
@@ -100,9 +102,7 @@ def report(s, sp, start=None, end=None, branch=None, direction=None):
     base = scope(s, sp).subquery()
     global_overhead = Decimal(0)
     grouped = (
-        select(
-            base.c.vehicle, base.c.date, base.c.kind, func.sum(base.c.amount), func.grouping(base.c.vehicle)
-        )
+        select(base.c.vehicle, base.c.date, base.c.kind, func.sum(base.c.amount), func.grouping(base.c.vehicle))
         .where(base.c.date >= start, base.c.date <= end, or_(base.c.vehicle.in_(ids), base.c.vehicle == None))
         .group_by(func.grouping_sets(tuple_(base.c.vehicle, base.c.kind), tuple_(base.c.date, base.c.kind)))
     )
@@ -128,9 +128,7 @@ def report(s, sp, start=None, end=None, branch=None, direction=None):
         a = max(parse_date(start), parse_date(d["repair_started"][:10]))
         b = min(parse_date(end), parse_date((d.get("closed_at") or str(today()))[:10]))
         if b >= a:
-            downtime.setdefault(d["vehicle"], set()).update(
-                a + timedelta(days=i) for i in range((b - a).days + 1)
-            )
+            downtime.setdefault(d["vehicle"], set()).update(a + timedelta(days=i) for i in range((b - a).days + 1))
     weights = {v.id: max(0, len(days) - len(downtime.get(v.id, set()))) for v in all_vehicles}
     total_weight = sum(weights.values())
     allocations = {
@@ -155,9 +153,9 @@ def report(s, sp, start=None, end=None, branch=None, direction=None):
         historic.c.vehicle,
         func.sum(case((historic.c.kind == "charge", historic.c.amount), else_=0)).label("charges"),
         func.sum(case((historic.c.kind == "payment", historic.c.amount), else_=0)).label("paid"),
-        func.sum(
-            case(((historic.c.kind == "charge") & (historic.c.amount < 0), historic.c.amount), else_=0)
-        ).label("corrections"),
+        func.sum(case(((historic.c.kind == "charge") & (historic.c.amount < 0), historic.c.amount), else_=0)).label(
+            "corrections"
+        ),
         func.sum(case((positive & (historic.c.date < cutoff30), historic.c.amount), else_=0)).label("old"),
         func.sum(
             case(
@@ -211,8 +209,7 @@ def report(s, sp, start=None, end=None, branch=None, direction=None):
         row["lost_revenue_estimate"] = str(money(rates[row["id"]] * row["downtime_days"]))
     rows.sort(key=lambda x: Decimal(x["result"]), reverse=True)
     active = (
-        set(s.scalars(select(Booking.vehicle).where(Booking.space == sp.id, Booking.state == "active")).all())
-        & ids
+        set(s.scalars(select(Booking.vehicle).where(Booking.space == sp.id, Booking.state == "active")).all()) & ids
     )
     revenue = types.get("charge", Decimal(0))
     expenses = types.get("expense", Decimal(0)) + types.get("bonus", Decimal(0))
@@ -234,8 +231,7 @@ def report(s, sp, start=None, end=None, branch=None, direction=None):
         "deposits": str(types.get("deposit", 0) + types.get("deposit_release", 0)),
         "rows": rows,
         "daily": [
-            {k: str(v) if isinstance(v, Decimal) else v for k, v in row.items()}
-            for _, row in sorted(daily.items())
+            {k: str(v) if isinstance(v, Decimal) else v for k, v in row.items()} for _, row in sorted(daily.items())
         ],
         "methodology": "Начисления и поступления разделены. Прямой результат = начисления − расходы − бонусы. Общие расходы распределяются по доступным автомобиледням группы за вычетом зафиксированного простоя. Фильтры показывают долю выбранных автомобилей. Долг и возраст — на конец периода, погашение FIFO. Залоги и ожидаемое страховое возмещение не являются выручкой.",
     }

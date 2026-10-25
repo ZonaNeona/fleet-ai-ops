@@ -44,12 +44,28 @@ KINDS = {
     "other": "Другой документ",
 }
 FIELDS = {
-    "fine": [("number", "Номер постановления"), ("date", "Дата нарушения"), ("plate", "Госномер"),
-             ("article", "Статья КоАП"), ("amount", "Сумма")],
-    "invoice": [("number", "Номер счёта"), ("date", "Дата"), ("issuer", "Исполнитель"), ("plate", "Госномер"),
-                ("work", "Работы"), ("amount", "Сумма")],
-    "license": [("name", "ФИО"), ("number", "Номер"), ("categories", "Категории"), ("issued", "Выдано"),
-                ("valid_until", "Действует до")],
+    "fine": [
+        ("number", "Номер постановления"),
+        ("date", "Дата нарушения"),
+        ("plate", "Госномер"),
+        ("article", "Статья КоАП"),
+        ("amount", "Сумма"),
+    ],
+    "invoice": [
+        ("number", "Номер счёта"),
+        ("date", "Дата"),
+        ("issuer", "Исполнитель"),
+        ("plate", "Госномер"),
+        ("work", "Работы"),
+        ("amount", "Сумма"),
+    ],
+    "license": [
+        ("name", "ФИО"),
+        ("number", "Номер"),
+        ("categories", "Категории"),
+        ("issued", "Выдано"),
+        ("valid_until", "Действует до"),
+    ],
     "other": [],
 }
 REQUIRED = {
@@ -162,14 +178,22 @@ def by_model(space, images):
     options = chain(vision=True, local=local)
     if not options:
         # No silent fallback to the cloud: a document that must stay inside waits for a person instead.
-        raise RuntimeError("Локальная модель недоступна — документ с ПДн не отправляется в облако" if local
-                           else "Vision-модель не настроена")
+        raise RuntimeError(
+            "Локальная модель недоступна — документ с ПДн не отправляется в облако"
+            if local
+            else "Vision-модель не настроена"
+        )
     provider, model = options[0]
     content = [{"type": "text", "text": "Распознай документ."}] + [
         {"type": "image_url", "image_url": {"url": img}} for img in images
     ]
-    answer, meta = call(space, model, [{"role": "system", "content": VISION_PROMPT},
-                                       {"role": "user", "content": content}], max_tokens=700, provider=provider)
+    answer, meta = call(
+        space,
+        model,
+        [{"role": "system", "content": VISION_PROMPT}, {"role": "user", "content": content}],
+        max_tokens=700,
+        provider=provider,
+    )
     fields = dict(answer.fields or {})
     kind = fields.pop("kind", "other")
     kind = kind if kind in KINDS else "other"
@@ -248,8 +272,9 @@ def vehicle_by_plate(s, sp_id, plate):
 
 
 def contract_on(s, sp_id, vehicle_id, day):
-    for c in s.scalars(select(Item).where(Item.space == sp_id, Item.kind == "contract",
-                                          Item.data["vehicle"].astext == vehicle_id)):
+    for c in s.scalars(
+        select(Item).where(Item.space == sp_id, Item.kind == "contract", Item.data["vehicle"].astext == vehicle_id)
+    ):
         if c.data["start"] <= str(day) < c.data["end"] and c.data.get("status") in ("active", "completed"):
             return c
     return None
@@ -259,8 +284,11 @@ def duplicate(s, doc, key, value):
     if not value:
         return None
     for x in s.scalars(select(Item).where(Item.space == doc.space, Item.kind == "inbox", Item.id != doc.id)):
-        if (x.data.get("kind") == doc.data.get("kind") and x.data.get("status") not in ("rejected", "failed")
-                and (x.data.get("values") or {}).get(key) == value):
+        if (
+            x.data.get("kind") == doc.data.get("kind")
+            and x.data.get("status") not in ("rejected", "failed")
+            and (x.data.get("values") or {}).get(key) == value
+        ):
             return x
     return None
 
@@ -274,13 +302,21 @@ def run_checks(s, doc):
     if kind == "other":
         return [_check("Тип документа", False, "Тип не распознан: нужен человек")], links
     missing = [label for key, label in FIELDS[kind] if key in REQUIRED[kind] and not v.get(key)]
-    checks.append(_check("Обязательные поля", not missing,
-                         "все прочитаны" if not missing else "не прочитано: " + ", ".join(missing)))
+    checks.append(
+        _check(
+            "Обязательные поля", not missing, "все прочитаны" if not missing else "не прочитано: " + ", ".join(missing)
+        )
+    )
     closed = sp.data.get("closed_months", [])
     if kind in ("fine", "invoice"):
         car = vehicle_by_plate(s, doc.space, v.get("plate"))
-        checks.append(_check("Машина в парке", car,
-                             f"{car.code} · {car.data['model']}" if car else f"госномер {v.get('plate') or '—'} не найден в парке"))
+        checks.append(
+            _check(
+                "Машина в парке",
+                car,
+                f"{car.code} · {car.data['model']}" if car else f"госномер {v.get('plate') or '—'} не найден в парке",
+            )
+        )
         if car:
             links["vehicle"] = car.id
         amount = to_money(v.get("amount"))
@@ -291,48 +327,99 @@ def run_checks(s, doc):
                 links["contract"] = c.id
                 person = s.get(Item, c.data["client"])
                 who = person.data["name"] if person else "водитель"
-            checks.append(_check("Водитель на дату нарушения", c,
-                                 f"{c.code} · {who}, {day:%d.%m.%Y}" if c else f"на {day:%d.%m.%Y} машина не была в аренде"))
+            checks.append(
+                _check(
+                    "Водитель на дату нарушения",
+                    c,
+                    f"{c.code} · {who}, {day:%d.%m.%Y}" if c else f"на {day:%d.%m.%Y} машина не была в аренде",
+                )
+            )
             twin = duplicate(s, doc, "number", v.get("number"))
-            from_n8n = s.scalar(select(Item).where(
-                Item.space == doc.space, Item.kind == "source_record",
-                Item.data["values"]["external_id"].astext == str(v.get("number") or "-")))
-            checks.append(_check("Не дубль", not twin and not from_n8n,
-                                 f"уже есть: {twin.code}" if twin else "уже пришло из ГИБДД через n8n" if from_n8n else "такого постановления ещё нет"))
-            checks.append(_check("Сумма штрафа", amount and amount <= 500000,
-                                 rub(amount) if amount else "сумма не прочитана"))
+            from_n8n = s.scalar(
+                select(Item).where(
+                    Item.space == doc.space,
+                    Item.kind == "source_record",
+                    Item.data["values"]["external_id"].astext == str(v.get("number") or "-"),
+                )
+            )
+            checks.append(
+                _check(
+                    "Не дубль",
+                    not twin and not from_n8n,
+                    f"уже есть: {twin.code}"
+                    if twin
+                    else "уже пришло из ГИБДД через n8n"
+                    if from_n8n
+                    else "такого постановления ещё нет",
+                )
+            )
+            checks.append(
+                _check("Сумма штрафа", amount and amount <= 500000, rub(amount) if amount else "сумма не прочитана")
+            )
         else:
             ticket = None
             if car:
-                for t in s.scalars(select(Item).where(Item.space == doc.space, Item.kind == "ticket",
-                                                      Item.data["vehicle"].astext == car.id)):
+                for t in s.scalars(
+                    select(Item).where(
+                        Item.space == doc.space, Item.kind == "ticket", Item.data["vehicle"].astext == car.id
+                    )
+                ):
                     if t.data.get("status") == "repair":
                         ticket = t
             if ticket:
                 links["ticket"] = ticket.id
-            checks.append(_check("Заявка на ремонт", ticket,
-                                 f"{ticket.code} «{ticket.data['title']}» в ремонте" if ticket else "по машине нет ремонта в работе"))
+            checks.append(
+                _check(
+                    "Заявка на ремонт",
+                    ticket,
+                    f"{ticket.code} «{ticket.data['title']}» в ремонте" if ticket else "по машине нет ремонта в работе",
+                )
+            )
             if ticket and amount:
                 estimate = Decimal(ticket.data.get("estimate") or 0)
                 over = amount - estimate
-                checks.append(_check("Сумма в пределах сметы", over <= 0,
-                                     f"{rub(amount)} при смете {rub(estimate)}" if over <= 0
-                                     else f"{rub(amount)} больше сметы {rub(estimate)} на {rub(over)}"))
+                checks.append(
+                    _check(
+                        "Сумма в пределах сметы",
+                        over <= 0,
+                        f"{rub(amount)} при смете {rub(estimate)}"
+                        if over <= 0
+                        else f"{rub(amount)} больше сметы {rub(estimate)} на {rub(over)}",
+                    )
+                )
             twin = duplicate(s, doc, "number", v.get("number"))
             checks.append(_check("Не дубль", not twin, f"уже есть: {twin.code}" if twin else "счёт ещё не проводился"))
-        checks.append(_check("Период открыт", str(day)[:7] not in closed,
-                             f"{day:%m.%Y} открыт" if str(day)[:7] not in closed else f"{day:%m.%Y} закрыт финансистом"))
+        checks.append(
+            _check(
+                "Период открыт",
+                str(day)[:7] not in closed,
+                f"{day:%m.%Y} открыт" if str(day)[:7] not in closed else f"{day:%m.%Y} закрыт финансистом",
+            )
+        )
     if kind == "license":
         until = to_date(v.get("valid_until"))
         issued = to_date(v.get("issued"))
         cats = (v.get("categories") or "").upper().translate(LAT)
-        checks.append(_check("Срок действия", until and until >= today(),
-                             f"до {until:%d.%m.%Y}" if until else "дата не прочитана"))
-        checks.append(_check("Категория B", re.search(r"\bB\b|\bВ\b", cats.replace("B1", "").replace("В1", "")),
-                             cats or "категории не прочитаны"))
+        checks.append(
+            _check(
+                "Срок действия", until and until >= today(), f"до {until:%d.%m.%Y}" if until else "дата не прочитана"
+            )
+        )
+        checks.append(
+            _check(
+                "Категория B",
+                re.search(r"\bB\b|\bВ\b", cats.replace("B1", "").replace("В1", "")),
+                cats or "категории не прочитаны",
+            )
+        )
         years = (today() - issued).days // 365 if issued else None
-        checks.append(_check("Стаж от 3 лет", years is not None and years >= 3,
-                             f"{years} лет" if years is not None else "дата выдачи не прочитана"))
+        checks.append(
+            _check(
+                "Стаж от 3 лет",
+                years is not None and years >= 3,
+                f"{years} лет" if years is not None else "дата выдачи не прочитана",
+            )
+        )
         twin = duplicate(s, doc, "number", v.get("number"))
         checks.append(_check("Не дубль", not twin, f"уже есть: {twin.code}" if twin else "кандидат новый"))
     return checks, links
@@ -370,27 +457,52 @@ def _post(s, doc, by_person, links):
     kind = d["kind"]
     amount = to_money(v.get("amount"))
     if kind == "fine" and amount and links.get("vehicle"):
-        e = post(s, sp, "charge", amount, links["vehicle"], links.get("contract"),
-                 f"Штраф ГИБДД № {v.get('number')} · перевыставлен водителю", key=key,
-                 d=str(to_date(v.get("date")) or today()), inbox=doc.id, fine=v.get("number"))
+        e = post(
+            s,
+            sp,
+            "charge",
+            amount,
+            links["vehicle"],
+            links.get("contract"),
+            f"Штраф ГИБДД № {v.get('number')} · перевыставлен водителю",
+            key=key,
+            d=str(to_date(v.get("date")) or today()),
+            inbox=doc.id,
+            fine=v.get("number"),
+        )
         links["entry"] = e.id
         return f"начисление водителю {rub(amount)}"
     if kind == "invoice" and amount and links.get("vehicle"):
         ticket = s.get(Item, links["ticket"]) if links.get("ticket") else None
         if ticket and ticket.data.get("status") == "repair":
             if amount > Decimal(ticket.data.get("estimate") or 0):
-                update(ticket, estimate=str(amount), estimate_note=f"Увеличена по счёту {doc.code}, подтверждено человеком")
+                update(
+                    ticket, estimate=str(amount), estimate_note=f"Увеличена по счёту {doc.code}, подтверждено человеком"
+                )
             command(s, actor(sp, "service"), "ticket.complete", {"id": ticket.id, "amount": str(amount)}, key)
             return f"ремонт {ticket.code} закрыт, расход {rub(amount)}"
-        e = post(s, sp, "expense", amount, links["vehicle"], None,
-                 f"Счёт СТО № {v.get('number')} · {v.get('issuer') or 'исполнитель не указан'}", key=key,
-                 inbox=doc.id)
+        e = post(
+            s,
+            sp,
+            "expense",
+            amount,
+            links["vehicle"],
+            None,
+            f"Счёт СТО № {v.get('number')} · {v.get('issuer') or 'исполнитель не указан'}",
+            key=key,
+            inbox=doc.id,
+        )
         links["entry"] = e.id
         return f"расход по машине {rub(amount)}"
     if kind == "license" and v.get("name"):
         issued = to_date(v.get("issued"))
-        result = command(s, actor(sp, "manager"), "client.create",
-                         {"name": v["name"][:120], "experience": (today() - issued).days // 365 if issued else 0}, key)
+        result = command(
+            s,
+            actor(sp, "manager"),
+            "client.create",
+            {"name": v["name"][:120], "experience": (today() - issued).days // 365 if issued else 0},
+            key,
+        )
         client = s.get(Item, result["id"]) if isinstance(result, dict) and result.get("id") else None
         if client:
             update(client, documents=["Водительское удостоверение"], status="review", source=doc.code)
@@ -408,10 +520,26 @@ def next_code(s, sp_id):
 
 
 def create(s, sp_id, source, *, text=None, file=None, name="", seed=False):
-    doc = add(s, sp_id, "inbox", next_code(s, sp_id), {
-        "seed": seed, "source": source, "name": name[:120], "text": text, "file": file, "status": "new",
-        "kind": None, "values": {}, "checks": [], "links": {}, "steps": [], "received": now().isoformat(),
-    })
+    doc = add(
+        s,
+        sp_id,
+        "inbox",
+        next_code(s, sp_id),
+        {
+            "seed": seed,
+            "source": source,
+            "name": name[:120],
+            "text": text,
+            "file": file,
+            "status": "new",
+            "kind": None,
+            "values": {},
+            "checks": [],
+            "links": {},
+            "steps": [],
+            "received": now().isoformat(),
+        },
+    )
     s.flush()
     return doc
 
@@ -423,8 +551,14 @@ def enqueue(s, sp_id, ids, decision=None):
 def run_job(job):
     """Worker side: the graph runs in a short subprocess so its libraries never stay in worker memory."""
     args = [sys.executable, "-m", "app.inbox_graph", job.data.get("decision") or "run", *job.data["docs"]]
-    r = subprocess.run(args, capture_output=True, text=True, timeout=240, cwd=Path(__file__).parent.parent,
-                       env={**os.environ, "MALLOC_ARENA_MAX": "2"})
+    r = subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+        timeout=240,
+        cwd=Path(__file__).parent.parent,
+        env={**os.environ, "MALLOC_ARENA_MAX": "2"},
+    )
     if r.returncode:
         raise RuntimeError((r.stderr.strip().splitlines() or ["граф документов завершился с ошибкой"])[-1][:300])
     return {"processed": job.data["docs"], "decision": job.data.get("decision")}
@@ -443,11 +577,15 @@ def viewer(s, request, roles=VIEW):
 def inbox_list(request: Request):
     with db() as s:
         sp = viewer(s, request)
-        rows = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "inbox")
-                         .order_by(Item.created.desc())).all()
+        rows = s.scalars(
+            select(Item).where(Item.space == sp.id, Item.kind == "inbox").order_by(Item.created.desc())
+        ).all()
         used = sum(1 for x in rows if x.data.get("engine") == "model" and x.created > now() - timedelta(days=1))
         return {
-            "rows": [{**serialize(x), "text": (x.data.get("text") or "")[:4000], "created": x.created.isoformat()} for x in rows],
+            "rows": [
+                {**serialize(x), "text": (x.data.get("text") or "")[:4000], "created": x.created.isoformat()}
+                for x in rows
+            ],
             "steps": STEPS,
             "kinds": KINDS,
             "fields": {k: dict(v) for k, v in FIELDS.items()},
@@ -465,16 +603,29 @@ class NewDoc(BaseModel):
 def inbox_create(body: NewDoc, request: Request):
     with db() as s:
         sp = viewer(s, request)
-        pending = s.scalar(select(func.count()).select_from(Item).where(
-            Item.space == sp.id, Item.kind == "inbox", Item.data["status"].astext.in_(["new", "reading", "checking"]),
-            Item.data["seed"].astext.is_distinct_from("true")))
+        pending = s.scalar(
+            select(func.count())
+            .select_from(Item)
+            .where(
+                Item.space == sp.id,
+                Item.kind == "inbox",
+                Item.data["status"].astext.in_(["new", "reading", "checking"]),
+                Item.data["seed"].astext.is_distinct_from("true"),
+            )
+        )
         if pending >= 3:
             fail("Дождитесь обработки предыдущих документов", 429)
         if body.sample:
             text, raw, name = sample(s, sp, body.sample)
             file = None
             if raw:
-                f = add(s, sp.id, "file", "F-" + uid()[:8], {"name": name, "ext": ".jpg", "size": len(raw), "creator_role": sp.role})
+                f = add(
+                    s,
+                    sp.id,
+                    "file",
+                    "F-" + uid()[:8],
+                    {"name": name, "ext": ".jpg", "size": len(raw), "creator_role": sp.role},
+                )
                 (FILES / sp.id).mkdir(parents=True, exist_ok=True)
                 (FILES / sp.id / (f.id + ".jpg")).write_bytes(raw)
                 file = f.id
@@ -487,9 +638,16 @@ def inbox_create(body: NewDoc, request: Request):
         else:
             fail("Прикрепите файл или выберите пример")
         if not doc.data.get("text"):
-            used = s.scalar(select(func.count()).select_from(Item).where(
-                Item.space == sp.id, Item.kind == "inbox", Item.data["engine"].astext == "model",
-                Item.created > now() - timedelta(days=1)))
+            used = s.scalar(
+                select(func.count())
+                .select_from(Item)
+                .where(
+                    Item.space == sp.id,
+                    Item.kind == "inbox",
+                    Item.data["engine"].astext == "model",
+                    Item.created > now() - timedelta(days=1),
+                )
+            )
             if used >= MODEL_DOCS_PER_DAY:
                 fail(f"Лимит распознавания моделью — {MODEL_DOCS_PER_DAY} документов в сутки на демосессию", 429)
         audit(s, sp, f"Входящий документ {doc.code} принят", doc.id)
@@ -523,34 +681,50 @@ def _uin(seed):
 
 def _pick(s, sp_id):
     """A taxi contract running today and a repair in progress — the samples refer to this visitor's fleet."""
-    contracts = s.scalars(select(Item).where(Item.space == sp_id, Item.kind == "contract",
-                                             Item.data["direction"].astext == "taxi",
-                                             Item.data["status"].astext == "active").order_by(Item.code)).all()
-    tickets = s.scalars(select(Item).where(Item.space == sp_id, Item.kind == "ticket",
-                                           Item.data["status"].astext == "repair").order_by(Item.code)).all()
+    contracts = s.scalars(
+        select(Item)
+        .where(
+            Item.space == sp_id,
+            Item.kind == "contract",
+            Item.data["direction"].astext == "taxi",
+            Item.data["status"].astext == "active",
+        )
+        .order_by(Item.code)
+    ).all()
+    tickets = s.scalars(
+        select(Item)
+        .where(Item.space == sp_id, Item.kind == "ticket", Item.data["status"].astext == "repair")
+        .order_by(Item.code)
+    ).all()
     return contracts, tickets
 
 
 def fine_text(s, sp_id, c, number, days_ago=3, amount=1500):
     car = s.get(Item, c.data["vehicle"])
     day = today() - timedelta(days=days_ago)
-    return (f"ГОСАВТОИНСПЕКЦИЯ · учебный образец\nПОСТАНОВЛЕНИЕ № {number}\n"
-            f"по делу об административном правонарушении\nДата нарушения: {day:%d.%m.%Y} 14:32\n"
-            f"Транспортное средство: {car.data['model']}, госномер {car.data['plate']}\n"
-            f"Нарушение: превышение скорости на 25 км/ч, ст. 12.9 ч. 2 КоАП РФ\n"
-            f"Сумма штрафа: {amount} руб.\nСобственник: таксопарк (учебные данные)\n")
+    return (
+        f"ГОСАВТОИНСПЕКЦИЯ · учебный образец\nПОСТАНОВЛЕНИЕ № {number}\n"
+        f"по делу об административном правонарушении\nДата нарушения: {day:%d.%m.%Y} 14:32\n"
+        f"Транспортное средство: {car.data['model']}, госномер {car.data['plate']}\n"
+        f"Нарушение: превышение скорости на 25 км/ч, ст. 12.9 ч. 2 КоАП РФ\n"
+        f"Сумма штрафа: {amount} руб.\nСобственник: таксопарк (учебные данные)\n"
+    )
 
 
 def invoice_text(s, ticket, number, amount):
     car = s.get(Item, ticket.data["vehicle"])
-    return (f"ООО «Автосервис Северный» · учебный образец\nСчёт на оплату № {number} от {today():%d.%m.%Y}\n"
-            f"Заказчик: таксопарк (учебные данные)\nАвтомобиль: {car.data['model']}, госномер {car.data['plate']}\n"
-            f"Работы: {ticket.data['title'].lower()}, запчасти и расходники\nИтого к оплате: {amount} руб.\n")
+    return (
+        f"ООО «Автосервис Северный» · учебный образец\nСчёт на оплату № {number} от {today():%d.%m.%Y}\n"
+        f"Заказчик: таксопарк (учебные данные)\nАвтомобиль: {car.data['model']}, госномер {car.data['plate']}\n"
+        f"Работы: {ticket.data['title'].lower()}, запчасти и расходники\nИтого к оплате: {amount} руб.\n"
+    )
 
 
 def license_text(name, number, issued, until):
-    return (f"ВОДИТЕЛЬСКОЕ УДОСТОВЕРЕНИЕ · учебный образец\nФИО: {name}\nНомер: {number}\n"
-            f"Дата выдачи: {issued:%d.%m.%Y}\nДействительно до: {until:%d.%m.%Y}\nКатегории: B, B1, M\n")
+    return (
+        f"ВОДИТЕЛЬСКОЕ УДОСТОВЕРЕНИЕ · учебный образец\nФИО: {name}\nНомер: {number}\n"
+        f"Дата выдачи: {issued:%d.%m.%Y}\nДействительно до: {until:%d.%m.%Y}\nКатегории: B, B1, M\n"
+    )
 
 
 def seed(s, space):
@@ -560,18 +734,47 @@ def seed(s, space):
         return
     c1 = contracts[0]
     n1 = _uin(space.id + ":1")
-    docs = [create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1), name="Фото постановления из бота", seed=True)]
+    docs = [
+        create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1), name="Фото постановления из бота", seed=True)
+    ]
     if tickets:
         t = tickets[0]
         over = int(Decimal(t.data["estimate"])) + 2500
-        docs.append(create(s, space.id, "web", text=invoice_text(s, t, "СТ-" + str(400 + len(t.code)), over),
-                           name="Счёт СТО.pdf", seed=True))
-    docs.append(create(s, space.id, "bot", text=fine_text(s, space.id, c1, n1, days_ago=3),
-                       name="Повторное фото того же постановления", seed=True))
-    docs.append(create(s, space.id, "web", text=license_text("Кириллов Павел Андреевич", "77 21 483920",
-                                                              today() - timedelta(days=365 * 6),
-                                                              today() + timedelta(days=365 * 4)),
-                       name="ВУ кандидата.jpg", seed=True))
+        docs.append(
+            create(
+                s,
+                space.id,
+                "web",
+                text=invoice_text(s, t, "СТ-" + str(400 + len(t.code)), over),
+                name="Счёт СТО.pdf",
+                seed=True,
+            )
+        )
+    docs.append(
+        create(
+            s,
+            space.id,
+            "bot",
+            text=fine_text(s, space.id, c1, n1, days_ago=3),
+            name="Повторное фото того же постановления",
+            seed=True,
+        )
+    )
+    docs.append(
+        create(
+            s,
+            space.id,
+            "web",
+            text=license_text(
+                "Кириллов Павел Андреевич",
+                "77 21 483920",
+                today() - timedelta(days=365 * 6),
+                today() + timedelta(days=365 * 4),
+            ),
+            name="ВУ кандидата.jpg",
+            seed=True,
+        )
+    )
     enqueue(s, space.id, [d.id for d in docs])
 
 
@@ -586,18 +789,33 @@ def sample(s, sp, kind):
         return None, scan(fine_text(s, sp.id, c, number, days_ago=2, amount=500)), "Скан постановления.jpg"
     if kind == "invoice" and tickets:
         t = tickets[secrets.randbelow(len(tickets))]
-        return invoice_text(s, t, "СТ-" + str(500 + secrets.randbelow(400)), int(Decimal(t.data["estimate"]))), None, "Счёт СТО.pdf"
+        return (
+            invoice_text(s, t, "СТ-" + str(500 + secrets.randbelow(400)), int(Decimal(t.data["estimate"]))),
+            None,
+            "Счёт СТО.pdf",
+        )
     if kind == "license":
-        return license_text("Абрамов Денис Сергеевич", f"99 {secrets.randbelow(90) + 10} {secrets.randbelow(900000) + 100000}",
-                            today() - timedelta(days=365 * 2), today() + timedelta(days=365 * 8)), None, "ВУ кандидата.jpg"
+        return (
+            license_text(
+                "Абрамов Денис Сергеевич",
+                f"99 {secrets.randbelow(90) + 10} {secrets.randbelow(900000) + 100000}",
+                today() - timedelta(days=365 * 2),
+                today() + timedelta(days=365 * 8),
+            ),
+            None,
+            "ВУ кандидата.jpg",
+        )
     fail("Неизвестный пример")
 
 
 def _font(size):
     from PIL import ImageFont
 
-    for path in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "C:/Windows/Fonts/arial.ttf",
-                 "/System/Library/Fonts/Supplemental/Arial.ttf"):
+    for path in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    ):
         if os.path.exists(path):
             return ImageFont.truetype(path, size)
     return ImageFont.load_default()

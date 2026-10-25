@@ -12,7 +12,11 @@ export function McpView() {
   const [probe, setProbe] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const url = key ? `${location.origin}/api/mcp?key=${key}` : `${location.origin}/api/mcp?key=…`;
-  const desktop = JSON.stringify({ mcpServers: { "fleet-demo": { command: "npx", args: ["-y", "mcp-remote", url] } } }, null, 2);
+  const desktop = JSON.stringify(
+    { mcpServers: { "fleet-demo": { command: "npx", args: ["-y", "mcp-remote", url] } } },
+    null,
+    2,
+  );
   const cursor = JSON.stringify({ mcpServers: { "fleet-demo": { url } } }, null, 2);
 
   const create = async () => {
@@ -54,7 +58,9 @@ export function McpView() {
           {key ? (
             <>
               <code>{url}</code>
-              <button className="k-btn" onClick={() => copy(url)}><Copy size={14} /> Копировать</button>
+              <button className="k-btn" onClick={() => copy(url)}>
+                <Copy size={14} /> Копировать
+              </button>
             </>
           ) : (
             <button className="k-btn primary" disabled={busy} onClick={create}>
@@ -65,12 +71,17 @@ export function McpView() {
 
         <Section title="Claude Desktop — claude_desktop_config.json">
           <pre className="k-pre">{desktop}</pre>
-          <button className="k-btn" onClick={() => copy(desktop)}><Copy size={14} /> Копировать</button>
+          <button className="k-btn" onClick={() => copy(desktop)}>
+            <Copy size={14} /> Копировать
+          </button>
         </Section>
         <Section title="Cursor и клиенты с HTTP-транспортом — mcp.json">
           <pre className="k-pre">{cursor}</pre>
         </Section>
-        <p className="k-hint">Попробуйте спросить ассистента: «Какие три машины дают самый низкий результат?» или «Где зависли кандидаты в найме?»</p>
+        <p className="k-hint">
+          Попробуйте спросить ассистента: «Какие три машины дают самый низкий результат?» или «Где зависли кандидаты в
+          найме?»
+        </p>
       </div>
 
       <aside className="k-inspector">
@@ -78,7 +89,9 @@ export function McpView() {
         <div className="k-checks">
           {(tools.data?.tools || []).map((t: any) => (
             <div key={t.name} className="ok">
-              <b><Plug size={12} /> {t.name}</b>
+              <b>
+                <Plug size={12} /> {t.name}
+              </b>
               <small>{t.description}</small>
               {eng && <small>параметры: {Object.keys(t.inputSchema?.properties || {}).join(", ") || "нет"}</small>}
             </div>
@@ -86,13 +99,27 @@ export function McpView() {
         </div>
         <Section title="Проверить сервер прямо отсюда">
           <div className="k-mcp-probe">
-            <button className="k-btn" disabled={!key || busy} onClick={() => call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "console", version: "1" } })}>
+            <button
+              className="k-btn"
+              disabled={!key || busy}
+              onClick={() =>
+                call("initialize", {
+                  protocolVersion: "2025-06-18",
+                  capabilities: {},
+                  clientInfo: { name: "console", version: "1" },
+                })
+              }
+            >
               <Play size={13} /> initialize
             </button>
             <button className="k-btn" disabled={!key || busy} onClick={() => call("tools/list")}>
               <Play size={13} /> tools/list
             </button>
-            <button className="k-btn" disabled={!key || busy} onClick={() => call("tools/call", { name: "vehicle_economics", arguments: { worst: 3 } })}>
+            <button
+              className="k-btn"
+              disabled={!key || busy}
+              onClick={() => call("tools/call", { name: "vehicle_economics", arguments: { worst: 3 } })}
+            >
               <Play size={13} /> tools/call
             </button>
           </div>

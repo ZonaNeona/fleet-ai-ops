@@ -2,15 +2,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Search, X, ArrowUpRight } from "lucide-react";
 import { Data, Row, getLabel } from "./lib";
-export function GlobalSearch({
-  data,
-  open,
-  onClose,
-}: {
-  data: Data;
-  open: (r: Row) => void;
-  onClose: () => void;
-}) {
+export function GlobalSearch({ data, open, onClose }: { data: Data; open: (r: Row) => void; onClose: () => void }) {
   const [value, setValue] = useState("");
   const kinds = ["vehicle", "client", "contract", "ticket", "statement"] as const;
   const labels: Record<string, string> = {

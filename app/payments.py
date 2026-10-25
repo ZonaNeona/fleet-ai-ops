@@ -55,9 +55,18 @@ class YooKassa:
             raise ProviderError("ЮKassa недоступна или отклонила запрос") from None
 
     def create(self, amount, description, metadata, return_url, idem):
-        return self._send("POST", "payments", {
-            "amount": amount_of(amount), "capture": True, "description": description[:128], "metadata": metadata,
-            "confirmation": {"type": "redirect", "return_url": return_url}}, idem)
+        return self._send(
+            "POST",
+            "payments",
+            {
+                "amount": amount_of(amount),
+                "capture": True,
+                "description": description[:128],
+                "metadata": metadata,
+                "confirmation": {"type": "redirect", "return_url": return_url},
+            },
+            idem,
+        )
 
     def payment(self, pid):
         return self._send("GET", "payments/" + pid)
@@ -95,10 +104,21 @@ class Emulator:
         if seen:  # the same Idempotence-Key returns the same object, as the API does for 24 hours
             return self._row(seen.data["id"]).data
         pid = str(uuid.uuid4())
-        obj = {"id": pid, "status": "pending", "paid": False, "amount": amount_of(amount), "description": description,
-               "metadata": metadata, "created_at": now().isoformat(), "test": True,
-               "confirmation": {"type": "redirect", "return_url": return_url,
-                                "confirmation_url": f"{URL}/api/pay/yookassa/checkout/{pid}"}}
+        obj = {
+            "id": pid,
+            "status": "pending",
+            "paid": False,
+            "amount": amount_of(amount),
+            "description": description,
+            "metadata": metadata,
+            "created_at": now().isoformat(),
+            "test": True,
+            "confirmation": {
+                "type": "redirect",
+                "return_url": return_url,
+                "confirmation_url": f"{URL}/api/pay/yookassa/checkout/{pid}",
+            },
+        }
         self._save("idem:" + idem, {"id": pid, "at": now().isoformat()})
         return self._save(pid, obj)
 
@@ -111,8 +131,14 @@ class Emulator:
     def settle(self, pid, paid):
         obj = dict(self.payment(pid))
         if obj["status"] == "pending":
-            obj.update(status="succeeded" if paid else "canceled", paid=paid, captured_at=now().isoformat(),
-                       payment_method={"type": "bank_card", "card": {"last4": "4477", "card_type": "MasterCard"}} if paid else None)
+            obj.update(
+                status="succeeded" if paid else "canceled",
+                paid=paid,
+                captured_at=now().isoformat(),
+                payment_method={"type": "bank_card", "card": {"last4": "4477", "card_type": "MasterCard"}}
+                if paid
+                else None,
+            )
             self._save(pid, obj)
         return obj
 
@@ -124,7 +150,13 @@ class Emulator:
         if obj["status"] != "succeeded":
             raise ProviderError("Возврат возможен только по успешному платежу")
         rid = str(uuid.uuid4())
-        refund = {"id": rid, "payment_id": pid, "status": "succeeded", "amount": amount_of(amount), "created_at": now().isoformat()}
+        refund = {
+            "id": rid,
+            "payment_id": pid,
+            "status": "succeeded",
+            "amount": amount_of(amount),
+            "created_at": now().isoformat(),
+        }
         self._save("idem:" + idem, {"id": rid, "at": now().isoformat()})
         return self._save(rid, refund)
 
@@ -152,7 +184,11 @@ def mine(s, sp, pid):
 
 
 def safe_back(back):
-    return back if isinstance(back, str) and back.startswith("/") and not back.startswith("//") and len(back) < 300 else "/?tg=1#tg/profile"
+    return (
+        back
+        if isinstance(back, str) and back.startswith("/") and not back.startswith("//") and len(back) < 300
+        else "/?tg=1#tg/profile"
+    )
 
 
 # ---------------------------------------------------------------- checkout from the Mini App
@@ -174,16 +210,29 @@ def checkout(pid: str, request: Request, body: dict = Body(default={})):
             fail("Сумма изменилась. Получите новый расчёт.", 409)
         yk = provider(s)
         try:
-            obj = yk.create(x.data["amount"], x.data["label"], {"payment": x.id, "space": sp.id},
-                            URL + safe_back(body.get("back")), idem="fleet-" + x.id)
+            obj = yk.create(
+                x.data["amount"],
+                x.data["label"],
+                {"payment": x.id, "space": sp.id},
+                URL + safe_back(body.get("back")),
+                idem="fleet-" + x.id,
+            )
         except ProviderError as e:
             fail(str(e), 502)
         link = s.get(System, "pay:yookassa:" + obj["id"])
         if not link:
-            s.add(System(key="pay:yookassa:" + obj["id"], data={"space": sp.id, "payment": x.id, "at": now().isoformat()}))
+            s.add(
+                System(key="pay:yookassa:" + obj["id"], data={"space": sp.id, "payment": x.id, "at": now().isoformat()})
+            )
         update(x, provider={"name": "yookassa", "mode": yk.mode, "id": obj["id"]})
-        trail(x, "Создан платёж в ЮKassa", request="POST /v3/payments", idempotence_key="fleet-" + x.id,
-              status=obj["status"], mode=yk.mode)
+        trail(
+            x,
+            "Создан платёж в ЮKassa",
+            request="POST /v3/payments",
+            idempotence_key="fleet-" + x.id,
+            status=obj["status"],
+            mode=yk.mode,
+        )
         return {"confirmation_url": obj["confirmation"]["confirmation_url"], "mode": yk.mode, "provider_id": obj["id"]}
 
 
@@ -214,8 +263,11 @@ def checkout_page(pid: str):
         if obj["status"] != "pending":
             return RedirectResponse(obj["confirmation"]["return_url"], 303)
         value = Decimal(obj["amount"]["value"])
-        return HTMLResponse(CHECKOUT.format(description=html.escape(obj["description"]),
-                                           amount=f"{value:,.2f}".replace(",", " ").replace(".", ",")))
+        return HTMLResponse(
+            CHECKOUT.format(
+                description=html.escape(obj["description"]), amount=f"{value:,.2f}".replace(",", " ").replace(".", ",")
+            )
+        )
 
 
 @router.post("/api/pay/yookassa/checkout/{pid}")
@@ -270,8 +322,18 @@ def notify(body):
         if fresh["status"] != "succeeded":
             trail(x, heard, result="ждём")
             return {"ok": True, "status": fresh["status"]}
-        return {"ok": True, **settle(s, sp, x, "yookassa:" + pid, fresh["amount"]["value"],
-                                    (fresh.get("metadata") or {}).get("payment"), heard)}
+        return {
+            "ok": True,
+            **settle(
+                s,
+                sp,
+                x,
+                "yookassa:" + pid,
+                fresh["amount"]["value"],
+                (fresh.get("metadata") or {}).get("payment"),
+                heard,
+            ),
+        }
 
 
 def settle(s, sp, x, key, value, meta_id, heard):
@@ -281,9 +343,19 @@ def settle(s, sp, x, key, value, meta_id, heard):
     if x.data["status"] == "paid" or s.scalar(select(Entry.id).where(Entry.space == sp.id, Entry.key == key)):
         trail(x, heard, result="повтор — в учёт не проводим второй раз")
         return {"status": "duplicate"}
-    post(s, sp, x.data["entry_kind"], money(value), x.data.get("vehicle"), x.data.get("contract"),
-         x.data["label"].replace("Учебная оплата", "Оплата"), key=key, receipt=x.id, purpose=x.data["purpose"],
-         provider=key.split(":")[0])
+    post(
+        s,
+        sp,
+        x.data["entry_kind"],
+        money(value),
+        x.data.get("vehicle"),
+        x.data.get("contract"),
+        x.data["label"].replace("Учебная оплата", "Оплата"),
+        key=key,
+        receipt=x.id,
+        purpose=x.data["purpose"],
+        provider=key.split(":")[0],
+    )
     update(x, status="paid", paid_at=now().isoformat())
     trail(x, heard, result=f"проведено в учёт, ключ {key}")
     audit(s, sp, "Онлайн-оплата проведена в учёт", x.id, amount=x.data["amount"])
@@ -298,8 +370,19 @@ def refunded(s, sp, x, fresh, heard):
     if s.scalar(select(Entry.id).where(Entry.space == sp.id, Entry.key == key)):
         trail(x, heard, result="повтор возврата — пропущен")
         return {"status": "duplicate"}
-    post(s, sp, x.data["entry_kind"], -money(fresh["amount"]["value"]), x.data.get("vehicle"), x.data.get("contract"),
-         "Возврат онлайн-оплаты", key=key, receipt=x.id, purpose=x.data["purpose"], provider="yookassa")
+    post(
+        s,
+        sp,
+        x.data["entry_kind"],
+        -money(fresh["amount"]["value"]),
+        x.data.get("vehicle"),
+        x.data.get("contract"),
+        "Возврат онлайн-оплаты",
+        key=key,
+        receipt=x.id,
+        purpose=x.data["purpose"],
+        provider="yookassa",
+    )
     update(x, status="refunded", refunded_at=now().isoformat())
     trail(x, heard, result=f"сторно в учёте, ключ {key}")
     audit(s, sp, "Возврат онлайн-оплаты проведён", x.id, amount=fresh["amount"]["value"])
@@ -324,7 +407,13 @@ def refund(pid: str, request: Request):
             obj = yk.refund(prov["id"], x.data["amount"], idem="fleet-refund-" + x.id)
         except ProviderError as e:
             fail(str(e), 502)
-        trail(x, "Запрошен возврат", request="POST /v3/refunds", idempotence_key="fleet-refund-" + x.id, status=obj["status"])
+        trail(
+            x,
+            "Запрошен возврат",
+            request="POST /v3/refunds",
+            idempotence_key="fleet-refund-" + x.id,
+            status=obj["status"],
+        )
     if yk.mode == "emulator":
         notify({"type": "notification", "event": "refund.succeeded", "object": {"id": obj["id"]}})
     return {"ok": True, "refund": obj["id"]}
@@ -359,9 +448,15 @@ def telegram_invoice(pid: str, request: Request):
             fail("Платёж уже завершён", 409)
         kopecks = int(money(x.data["amount"]) * 100)
         try:
-            link = tg_call("createInvoiceLink", title=x.data["label"][:32], description=f"Квитанция {x.code}",
-                           payload=x.id, provider_token=tg_token(), currency="RUB",
-                           prices=[{"label": x.data["label"][:32], "amount": kopecks}])
+            link = tg_call(
+                "createInvoiceLink",
+                title=x.data["label"][:32],
+                description=f"Квитанция {x.code}",
+                payload=x.id,
+                provider_token=tg_token(),
+                currency="RUB",
+                prices=[{"label": x.data["label"][:32], "amount": kopecks}],
+            )
         except (ProviderError, httpx.HTTPError) as e:
             fail(str(e) if isinstance(e, ProviderError) else "Telegram недоступен", 502)
         update(x, provider={"name": "telegram", "mode": "test"})
@@ -375,12 +470,21 @@ def telegram_update(data):
     if q:
         with db() as s:
             x = s.get(Item, q.get("invoice_payload", ""))
-            ok = bool(x and x.kind == "demo_payment" and x.data["status"] == "pending"
-                      and int(money(x.data["amount"]) * 100) == q.get("total_amount") and q.get("currency") == "RUB")
+            ok = bool(
+                x
+                and x.kind == "demo_payment"
+                and x.data["status"] == "pending"
+                and int(money(x.data["amount"]) * 100) == q.get("total_amount")
+                and q.get("currency") == "RUB"
+            )
             if x:
                 trail(x, "pre_checkout_query", result="подтверждено" if ok else "отклонено")
-        tg_call("answerPreCheckoutQuery", pre_checkout_query_id=q["id"], ok=ok,
-                **({} if ok else {"error_message": "Сумма изменилась, откройте оплату заново"}))
+        tg_call(
+            "answerPreCheckoutQuery",
+            pre_checkout_query_id=q["id"],
+            ok=ok,
+            **({} if ok else {"error_message": "Сумма изменилась, откройте оплату заново"}),
+        )
         return {"pre_checkout": ok}
     paid = (data.get("message") or {}).get("successful_payment")
     if paid:
@@ -415,13 +519,28 @@ def journal(request: Request):
         sp = auth(s, request)
         if sp.role not in STAFF:
             fail("Журнал платежей доступен собственнику и финансисту", 403)
-        rows = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "demo_payment",
-                                            Item.data["provider"].isnot(None)).order_by(Item.created.desc()).limit(30)).all()
+        rows = s.scalars(
+            select(Item)
+            .where(Item.space == sp.id, Item.kind == "demo_payment", Item.data["provider"].isnot(None))
+            .order_by(Item.created.desc())
+            .limit(30)
+        ).all()
         mode = provider(s).mode
         return {
-            "mode": mode, "telegram": bool(tg_token()), "since": (now() - timedelta(days=1)).isoformat(),
-            "payments": [{"id": x.id, "code": x.code, "label": x.data["label"], "amount": x.data["amount"],
-                          "status": x.data["status"], "provider": x.data.get("provider"), "log": x.data.get("log", [])}
-                         for x in rows],
+            "mode": mode,
+            "telegram": bool(tg_token()),
+            "since": (now() - timedelta(days=1)).isoformat(),
+            "payments": [
+                {
+                    "id": x.id,
+                    "code": x.code,
+                    "label": x.data["label"],
+                    "amount": x.data["amount"],
+                    "status": x.data["status"],
+                    "provider": x.data.get("provider"),
+                    "log": x.data.get("log", []),
+                }
+                for x in rows
+            ],
             "webhook": URL + "/api/pay/yookassa/webhook",
         }

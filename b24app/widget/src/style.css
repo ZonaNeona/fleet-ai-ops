@@ -1,26 +1,124 @@
 /* Close to the Bitrix24 card look: light, compact, system font. */
-:root { color-scheme: light; font: 13px/1.45 "Open Sans", "Helvetica Neue", Arial, sans-serif; color: #333; background: #fff; }
-body { margin: 0; }
-.w { display: grid; gap: 12px; padding: 14px 16px; max-width: 900px; }
-header { display: flex; justify-content: space-between; align-items: center; }
-header small, section small { color: #828b95; display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.grid > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; }
-.grid b { font-size: 14px; }
-.grid span { color: #6a737f; font-size: 12px; }
-.money .bad { background: #fff0f0; }
-.money .bad b, .money .bad span { color: #c3132e; }
-.car { display: flex !important; gap: 10px; align-items: center; }
-.car > span { display: grid; gap: 2px; }
-.car img { width: 64px; height: 44px; object-fit: cover; border-radius: 6px; }
-.verdict { padding: 10px 14px; border-radius: 10px; border-left: 4px solid; }
-.verdict.ok { background: #effae8; border-color: #7bd500; }
-.verdict.bad { background: #fff6e4; border-color: #ffa900; }
-.verdict ul, section ul { margin: 4px 0 0; padding-left: 18px; }
-button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 0; background: #2fc6f6; color: #fff; cursor: pointer; font-weight: 600; }
-button:disabled { opacity: 0.6; }
-button.ghost { background: transparent; color: #2066b0; padding: 4px 8px; }
-footer { display: flex; gap: 12px; align-items: center; }
-.okmsg { color: #589300; }
-.err { color: #c3132e; }
-.muted { color: #828b95; }
+:root {
+  color-scheme: light;
+  font:
+    13px/1.45 "Open Sans",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  color: #333;
+  background: #fff;
+}
+body {
+  margin: 0;
+}
+.w {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  max-width: 900px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+header small,
+section small {
+  color: #828b95;
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f5f7f8;
+}
+.grid b {
+  font-size: 14px;
+}
+.grid span {
+  color: #6a737f;
+  font-size: 12px;
+}
+.money .bad {
+  background: #fff0f0;
+}
+.money .bad b,
+.money .bad span {
+  color: #c3132e;
+}
+.car {
+  display: flex !important;
+  gap: 10px;
+  align-items: center;
+}
+.car > span {
+  display: grid;
+  gap: 2px;
+}
+.car img {
+  width: 64px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.verdict {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border-left: 4px solid;
+}
+.verdict.ok {
+  background: #effae8;
+  border-color: #7bd500;
+}
+.verdict.bad {
+  background: #fff6e4;
+  border-color: #ffa900;
+}
+.verdict ul,
+section ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+button {
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 0;
+  background: #2fc6f6;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+button:disabled {
+  opacity: 0.6;
+}
+button.ghost {
+  background: transparent;
+  color: #2066b0;
+  padding: 4px 8px;
+}
+footer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.okmsg {
+  color: #589300;
+}
+.err {
+  color: #c3132e;
+}
+.muted {
+  color: #828b95;
+}

@@ -26,8 +26,16 @@ from .domain import fail
 router = APIRouter()
 VIEW = {"owner", "admin", "finance"}
 SCOPE = "https://www.googleapis.com/auth/spreadsheets"
-STATUS = {"posted": "проведён", "review": "ждёт решения", "mismatch": "расхождение", "rejected": "отклонён",
-          "new": "в очереди", "reading": "читается", "checking": "сверяется", "failed": "ошибка"}
+STATUS = {
+    "posted": "проведён",
+    "review": "ждёт решения",
+    "mismatch": "расхождение",
+    "rejected": "отклонён",
+    "new": "в очереди",
+    "reading": "читается",
+    "checking": "сверяется",
+    "failed": "ошибка",
+}
 
 
 def number(v):
@@ -50,24 +58,35 @@ def tables(s, sp) -> dict[str, list[list]]:
     owner = SimpleNamespace(id=sp.id, role="owner", data=sp.data)
     r = report(s, owner)
     digest = [[line.replace("<b>", "").replace("</b>", "")] for line in build(s, sp).splitlines() if line.strip()]
-    summary = [["Показатель", "Значение"],
-               ["Период", f"{r['start']} — {r['end']}"],
-               ["Начислено, ₽", float(Decimal(r["revenue"]))],
-               ["Поступило, ₽", float(Decimal(r["payments"]))],
-               ["Результат парка, ₽", float(Decimal(r["profit"]))],
-               ["Долг, ₽", float(Decimal(r["debt"]))],
-               ["Загрузка, %", r["utilization"]],
-               [""], ["Утренняя сводка"]] + digest
+    summary = [
+        ["Показатель", "Значение"],
+        ["Период", f"{r['start']} — {r['end']}"],
+        ["Начислено, ₽", float(Decimal(r["revenue"]))],
+        ["Поступило, ₽", float(Decimal(r["payments"]))],
+        ["Результат парка, ₽", float(Decimal(r["profit"]))],
+        ["Долг, ₽", float(Decimal(r["debt"]))],
+        ["Загрузка, %", r["utilization"]],
+        [""],
+        ["Утренняя сводка"],
+    ] + digest
     signals = [["Правило", "Что", "Причина", "Что сделать"]] + [
-        [x["label"], x["title"], x["reason"], x["action"]] for x in compute(s, owner, limit=200)]
+        [x["label"], x["title"], x["reason"], x["action"]] for x in compute(s, owner, limit=200)
+    ]
     docs = [["Код", "Получен", "Источник", "Вид", "Статус", "Сумма, ₽", "От кого / имя"]]
     for d in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "inbox").order_by(Item.created)):
         v = d.data.get("values") or {}
         amount = v.get("amount") or v.get("total")
-        docs.append([d.code, d.created.strftime("%d.%m.%Y %H:%M"), d.data.get("source", ""), d.data.get("kind") or "",
-                     STATUS.get(d.data.get("status"), d.data.get("status", "")),
-                     number(amount),
-                     (d.data.get("mail") or {}).get("from") or d.data.get("name", "")])
+        docs.append(
+            [
+                d.code,
+                d.created.strftime("%d.%m.%Y %H:%M"),
+                d.data.get("source", ""),
+                d.data.get("kind") or "",
+                STATUS.get(d.data.get("status"), d.data.get("status", "")),
+                number(amount),
+                (d.data.get("mail") or {}).get("from") or d.data.get("name", ""),
+            ]
+        )
     return {"Сводка": summary, "Сделать сейчас": signals, "Документы": docs}
 
 
@@ -112,8 +131,11 @@ def export_xlsx(request: Request):
     with db() as s:
         body = xlsx(tables(s, viewer(s, request)))
     name = f"fleet-{datetime.now():%Y-%m-%d}.xlsx"
-    return Response(body, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
+    return Response(
+        body,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 # ---------------------------------------------------------------- Google Sheets
@@ -129,10 +151,14 @@ def token() -> str:
     info = json.loads(open(os.environ["GOOGLE_SA_JSON"], encoding="utf-8").read())
     signer = crypt.RSASigner.from_service_account_info(info)
     t = int(time.time())
-    assertion = jwt.encode(signer, {"iss": info["client_email"], "scope": SCOPE, "aud": info["token_uri"],
-                                    "iat": t, "exp": t + 3600})
-    r = httpx.post(info["token_uri"], data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-                                            "assertion": assertion}, timeout=20)
+    assertion = jwt.encode(
+        signer, {"iss": info["client_email"], "scope": SCOPE, "aud": info["token_uri"], "iat": t, "exp": t + 3600}
+    )
+    r = httpx.post(
+        info["token_uri"],
+        data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion": assertion},
+        timeout=20,
+    )
     r.raise_for_status()
     return r.json()["access_token"]
 
@@ -141,23 +167,41 @@ def mirror(data: dict[str, list[list]]) -> dict:
     sheet = os.environ["GOOGLE_SHEET_ID"]
     base = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet}"
     with httpx.Client(headers={"Authorization": "Bearer " + token()}, timeout=30) as c:
-        have = {x["properties"]["title"] for x in c.get(base, params={"fields": "sheets.properties.title"}).raise_for_status().json()["sheets"]}
+        have = {
+            x["properties"]["title"]
+            for x in c.get(base, params={"fields": "sheets.properties.title"}).raise_for_status().json()["sheets"]
+        }
         missing = [n for n in data if n not in have]
         if missing:
-            c.post(base + ":batchUpdate", json={"requests": [{"addSheet": {"properties": {"title": n}}} for n in missing]}).raise_for_status()
+            c.post(
+                base + ":batchUpdate", json={"requests": [{"addSheet": {"properties": {"title": n}}} for n in missing]}
+            ).raise_for_status()
         c.post(base + "/values:batchClear", json={"ranges": [f"'{n}'" for n in data]}).raise_for_status()
-        c.post(base + "/values:batchUpdate", json={"valueInputOption": "RAW", "data": [
-            {"range": f"'{n}'!A1", "values": [[v if v != "" else None for v in row] for row in rows]} for n, rows in data.items()
-        ]}).raise_for_status()
-    return {"url": f"https://docs.google.com/spreadsheets/d/{sheet}", "sheets": {n: len(r) - 1 for n, r in data.items()}}
+        c.post(
+            base + "/values:batchUpdate",
+            json={
+                "valueInputOption": "RAW",
+                "data": [
+                    {"range": f"'{n}'!A1", "values": [[v if v != "" else None for v in row] for row in rows]}
+                    for n, rows in data.items()
+                ],
+            },
+        ).raise_for_status()
+    return {
+        "url": f"https://docs.google.com/spreadsheets/d/{sheet}",
+        "sheets": {n: len(r) - 1 for n, r in data.items()},
+    }
 
 
 @router.get("/api/v1/export")
 def export_view(request: Request):
     with db() as s:
         viewer(s, request)
-    return {"sheets": configured(), "xlsx": "/api/v1/export.xlsx",
-            "url": f"https://docs.google.com/spreadsheets/d/{os.environ['GOOGLE_SHEET_ID']}" if configured() else None}
+    return {
+        "sheets": configured(),
+        "xlsx": "/api/v1/export.xlsx",
+        "url": f"https://docs.google.com/spreadsheets/d/{os.environ['GOOGLE_SHEET_ID']}" if configured() else None,
+    }
 
 
 @router.post("/api/v1/export/sheets")

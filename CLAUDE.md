@@ -17,7 +17,7 @@
 ## Правила
 - Данные учебные. Никаких имён и данных реальных компаний: `python tools/check_private_names.py` должен проходить.
 - Секреты только в `/etc/fleet*.env` на сервере или `.env` локально; в коде и логах их нет.
-- Перед коммитом: `ruff check app scripts tests tools`, `mypy`, `npm run build`; тесты — `pytest` на PostgreSQL (CI или `docker compose`).
+- Перед коммитом: `ruff check` и `ruff format` (app scripts tests tools migrations), `mypy`, `npm run format:check`, `npm run build`; тесты — `pytest` на PostgreSQL (CI или `docker compose`).
 - Новый модуль = тест + строка в README + при необходимости ADR. Комментарии — «почему», а не «что».
 - Интерфейс по-русски, код и комментарии в коде — по-английски, тексты для людей — без канцелярита.
 

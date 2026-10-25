@@ -64,7 +64,9 @@ def build(call):
         stream = dst.add_stream("libmp3lame", rate=rate)
         stream.bit_rate = 32000
         stream.layout = "mono"
-        frame = av.AudioFrame.from_ndarray(__import__("numpy").frombuffer(raw, dtype="<i2").reshape(1, -1), format="s16", layout="mono")
+        frame = av.AudioFrame.from_ndarray(
+            __import__("numpy").frombuffer(raw, dtype="<i2").reshape(1, -1), format="s16", layout="mono"
+        )
         frame.sample_rate = rate
         for packet in stream.encode(frame):
             dst.mux(packet)

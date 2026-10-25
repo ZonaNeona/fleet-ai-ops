@@ -1,0 +1,17 @@
+node_modules
+dist
+public
+n8n/out
+b24app/public
+b24app/widget/node_modules
+package-lock.json
+*.md
+app
+infra
+docs
+migrations
+tests
+reports
+.venv
+.github
+*.html

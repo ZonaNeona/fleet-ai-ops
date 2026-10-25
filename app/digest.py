@@ -36,14 +36,18 @@ def build(s, sp):
     lines = [
         "🌅 <b>Утренняя сводка</b> · " + datetime.now(MSK).strftime("%d.%m"),
         "",
-        f"Вчера: начислено {rub(day['revenue'])}, поступило {rub(day['payments'])}" if day else "Вчера операций не было",
+        f"Вчера: начислено {rub(day['revenue'])}, поступило {rub(day['payments'])}"
+        if day
+        else "Вчера операций не было",
         f"Долг водителей и клиентов: <b>{rub(r['debt'])}</b>",
         f"Загрузка парка: {r['utilization']}% · в ремонте {r['repair']}",
     ]
     if minus:
         worst = sorted(minus, key=lambda x: Decimal(x["result"]))[:3]
-        lines.append(f"В минусе за 30 дней: {len(minus)} машин, хуже всех — " +
-                     ", ".join(f"{x['code']} ({rub(x['result'])})" for x in worst))
+        lines.append(
+            f"В минусе за 30 дней: {len(minus)} машин, хуже всех — "
+            + ", ".join(f"{x['code']} ({rub(x['result'])})" for x in worst)
+        )
     from html import escape
 
     from .signals import compute, summary

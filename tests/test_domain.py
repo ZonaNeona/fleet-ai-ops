@@ -1,13 +1,16 @@
-import pytest, secrets
-from decimal import Decimal
+import secrets
 from datetime import datetime, timedelta
-from sqlalchemy import select, func
-from sqlalchemy.exc import IntegrityError
+from decimal import Decimal
+
+import pytest
 from fastapi import HTTPException
-from app.db import Session, Item, Entry, Booking, Space, now
-from app.seed import create_space, add
-from app.domain import command, calendar, money, today, visible, cansee, post, get
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+
+from app.db import Booking, Entry, Item, Session, Space, now
+from app.domain import calendar, cansee, command, get, money, post, today, visible
 from app.reports import report
+from app.seed import add, create_space
 
 
 @pytest.fixture
@@ -271,9 +274,7 @@ def test_repair_full_cycle(ctx):
     s, sp = ctx
     assert (
         s.scalar(
-            select(func.sum(Entry.amount)).where(
-                Entry.space == sp.id, Entry.vehicle == v.id, Entry.kind == "expense"
-            )
+            select(func.sum(Entry.amount)).where(Entry.space == sp.id, Entry.vehicle == v.id, Entry.kind == "expense")
         )
         == 4500
     )
@@ -454,10 +455,7 @@ def test_owner_payout_accounts_for_loss_making_car(ctx):
     do(ctx, "owner.approve", {"id": st["id"]})
     do(ctx, "owner.pay", {"id": st["id"]})
     assert money(st["amount"]) == 6000
-    assert (
-        s.scalar(select(func.sum(Entry.amount)).where(Entry.space == sp.id, Entry.kind == "owner_payout"))
-        == 6000
-    )
+    assert s.scalar(select(func.sum(Entry.amount)).where(Entry.space == sp.id, Entry.kind == "owner_payout")) == 6000
 
 
 def test_rental_services_snapshot(ctx):
@@ -490,8 +488,12 @@ def test_rental_services_snapshot(ctx):
 
 
 def test_telegram_signed_data(monkeypatch):
-    import hmac, hashlib, json, time
+    import hashlib
+    import hmac
+    import json
+    import time
     from urllib.parse import urlencode
+
     from app.telegram import validate
 
     token = "123456:test-synthetic-token"

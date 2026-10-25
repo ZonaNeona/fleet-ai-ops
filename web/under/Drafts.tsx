@@ -29,7 +29,9 @@ export function Drafts({ drafts, onConfirmed }: { drafts: any[]; onConfirmed?: (
             <p>
               {d.vehicle_code} · {d.payload.description}
             </p>
-            <small>{ok ? "Обращение сохранено в вашей сессии." : "Черновик действует 10 минут. Заявка ещё не создана."}</small>
+            <small>
+              {ok ? "Обращение сохранено в вашей сессии." : "Черновик действует 10 минут. Заявка ещё не создана."}
+            </small>
             <button
               className="button primary"
               disabled={status[d.id] === "Обработка…" || ok || !navigator.onLine}

@@ -42,10 +42,7 @@ type Msg = {
 
 /* Разрешаем только разметку, которую формирует сам бот (parse_mode=HTML Telegram). */
 function safeHtml(text: string) {
-  return text.replace(
-    /<(?!\/?(b|i|u|s|code|a)(\s+href="https?:[^"<>]*")?\s*>)[^>]*>/g,
-    "",
-  );
+  return text.replace(/<(?!\/?(b|i|u|s|code|a)(\s+href="https?:[^"<>]*")?\s*>)[^>]*>/g, "");
 }
 
 const ROLES = [
@@ -66,12 +63,7 @@ const ROLES = [
     id: "client",
     icon: KeyRound,
     title: "Клиент проката",
-    items: [
-      "Свободные машины на даты",
-      "Бронь без пересечений",
-      "Мои брони и статусы",
-      "Обращение в поддержку",
-    ],
+    items: ["Свободные машины на даты", "Бронь без пересечений", "Мои брони и статусы", "Обращение в поддержку"],
   },
   {
     id: "manager",
@@ -87,15 +79,7 @@ const ROLES = [
   },
 ] as const;
 
-export function BotPage({
-  data,
-  bot,
-  openCabinet,
-}: {
-  data: Data;
-  bot?: string;
-  openCabinet: () => void;
-}) {
+export function BotPage({ data, bot, openCabinet }: { data: Data; bot?: string; openCabinet: () => void }) {
   const qc = useQueryClient();
   const storeKey = "ec-bot-" + data.session.id;
   const [msgs, setMsgs] = useState<Msg[]>(() => {
@@ -164,10 +148,7 @@ export function BotPage({
         {
           channel: "fleet-miniapp-v1",
           type: "theme",
-          value:
-            document.documentElement.dataset.theme === "dark"
-              ? "dark"
-              : "light",
+          value: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
         },
         location.origin,
       );
@@ -185,8 +166,7 @@ export function BotPage({
       if (e.data.type === "main-button") setMainButton(e.data.value);
       if (e.data.type === "back-button") setMiniBack(!!e.data.value);
       if (e.data.type === "close") setMiniUrl("");
-      if (e.data.type === "data-changed" || e.data.type === "close")
-        qc.invalidateQueries();
+      if (e.data.type === "data-changed" || e.data.type === "close") qc.invalidateQueries();
     };
     const themeObserver = new MutationObserver(sendTheme);
     themeObserver.observe(document.documentElement, {
@@ -200,10 +180,7 @@ export function BotPage({
     };
   }, [qc]);
   const toMini = (type: string) =>
-    frame.current?.contentWindow?.postMessage(
-      { channel: "fleet-miniapp-v1", type },
-      location.origin,
-    );
+    frame.current?.contentWindow?.postMessage({ channel: "fleet-miniapp-v1", type }, location.origin);
   useEffect(() => {
     try {
       sessionStorage.setItem(storeKey, JSON.stringify(msgs.slice(-60)));
@@ -214,19 +191,11 @@ export function BotPage({
     });
   }, [msgs, pending, storeKey]);
 
-  async function send(payload: {
-    text?: string;
-    callback?: string;
-    message_id?: string;
-    voice?: boolean;
-  }) {
+  async function send(payload: { text?: string; callback?: string; message_id?: string; voice?: boolean }) {
     if (pending) return;
     setError("");
     if (payload.text)
-      setMsgs((m) => [
-        ...m,
-        { from: "me", text: (payload.voice ? "🎤 " : "") + payload.text!, at: Date.now() },
-      ]);
+      setMsgs((m) => [...m, { from: "me", text: (payload.voice ? "🎤 " : "") + payload.text!, at: Date.now() }]);
     setPending(true);
     try {
       const { voice: _voice, ...body } = payload;
@@ -247,12 +216,9 @@ export function BotPage({
           setMsgs((messages) => {
             const next = [...messages];
             for (const item of out) {
-              const index = item.edit_target
-                ? next.findIndex((x) => x.id === item.edit_target)
-                : -1;
+              const index = item.edit_target ? next.findIndex((x) => x.id === item.edit_target) : -1;
               if (index >= 0) next[index] = item;
-              else if (!item.id || !next.some((x) => x.id === item.id))
-                next.push(item);
+              else if (!item.id || !next.some((x) => x.id === item.id)) next.push(item);
             }
             return next;
           });
@@ -262,10 +228,7 @@ export function BotPage({
           }
           return;
         }
-        if (r.state === "failed")
-          throw new Error(
-            r.result?.error || "Бот не смог обработать сообщение",
-          );
+        if (r.state === "failed") throw new Error(r.result?.error || "Бот не смог обработать сообщение");
       }
       throw new Error("Бот не ответил вовремя");
     } catch (e: any) {
@@ -276,8 +239,7 @@ export function BotPage({
   }
   const press = (b: Btn, messageId?: string) => {
     if (b.app) {
-      if (!["client", "driver"].includes(data.session.role))
-        return openCabinet();
+      if (!["client", "driver"].includes(data.session.role)) return openCabinet();
       const target = new URL(b.app_url || "/?tg=1", location.origin);
       setMiniReady(false);
       setMainButton(null);
@@ -301,27 +263,16 @@ export function BotPage({
           <span className="eyebrow">TELEGRAM · ТРИ ТИПА ПОЛЬЗОВАТЕЛЕЙ</span>
           <h2>Один бот для водителей, клиентов и отделов</h2>
           <p>
-            Бот — ещё один вход в ту же систему: те же роли, права,
-            бизнес-команды и учёт, что и в кабинете. Справа — эмулятор: он
-            вызывает тот же код, что и настоящий бот, только ответ приходит
-            сюда, а не в Telegram.
+            Бот — ещё один вход в ту же систему: те же роли, права, бизнес-команды и учёт, что и в кабинете. Справа —
+            эмулятор: он вызывает тот же код, что и настоящий бот, только ответ приходит сюда, а не в Telegram.
           </p>
           <div className="bot-hero-actions">
             {bot && (
-              <a
-                className="button primary"
-                href={`https://t.me/${bot}`}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="button primary" href={`https://t.me/${bot}`} target="_blank" rel="noreferrer">
                 <Send size={16} /> Открыть @{bot}
               </a>
             )}
-            <button
-              className="button secondary"
-              onClick={() => send({ text: "/start" })}
-              disabled={pending}
-            >
+            <button className="button secondary" onClick={() => send({ text: "/start" })} disabled={pending}>
               <MessageSquareText size={16} /> Начать в эмуляторе
             </button>
           </div>
@@ -340,14 +291,8 @@ export function BotPage({
                   <li key={x}>{x}</li>
                 ))}
               </ul>
-              <button
-                className="text-button"
-                disabled={pending}
-                onClick={() => send({ callback: "role:" + r.id })}
-              >
-                Войти в чате как{" "}
-                {r.id === "manager" ? "менеджер" : r.title.toLowerCase()}{" "}
-                <ArrowUpRight size={14} />
+              <button className="text-button" disabled={pending} onClick={() => send({ callback: "role:" + r.id })}>
+                Войти в чате как {r.id === "manager" ? "менеджер" : r.title.toLowerCase()} <ArrowUpRight size={14} />
               </button>
             </div>
           ))}
@@ -356,31 +301,27 @@ export function BotPage({
           <h3>Как это устроено</h3>
           <ol>
             <li>
-              <Workflow size={15} /> Telegram → вебхук с secret_token → задание
-              в очереди: ответ не теряется при перезапуске.
+              <Workflow size={15} /> Telegram → вебхук с secret_token → задание в очереди: ответ не теряется при
+              перезапуске.
             </li>
             <li>
-              <KeyRound size={15} /> Без регистрации: /start → выбор роли. У
-              водителя, клиента, отделов и собственника свои кнопки и права.
+              <KeyRound size={15} /> Без регистрации: /start → выбор роли. У водителя, клиента, отделов и собственника
+              свои кнопки и права.
             </li>
             <li>
-              <ShieldCheck size={15} /> Роль и права проверяет сервер; действия
-              идут через те же команды, что и в кабинете, с ключом
-              идемпотентности.
+              <ShieldCheck size={15} /> Роль и права проверяет сервер; действия идут через те же команды, что и в
+              кабинете, с ключом идемпотентности.
             </li>
             <li>
-              <BotIcon size={15} /> Свободный текст — AI-агент с инструментами и
-              поиском по регламентам; заявки — только после кнопки
-              «Подтвердить».
+              <BotIcon size={15} /> Свободный текст — AI-агент с инструментами и поиском по регламентам; заявки — только
+              после кнопки «Подтвердить».
             </li>
             <li>
-              <Cpu size={15} /> Путь каждого сообщения виден в «Под капотом» →
-              Журнал.
+              <Cpu size={15} /> Путь каждого сообщения виден в «Под капотом» → Журнал.
             </li>
           </ol>
           <p className="muted">
-            В кабинете внутри телефона можно загрузить учебные документы и
-            фотографии. Реальные списания отключены.
+            В кабинете внутри телефона можно загрузить учебные документы и фотографии. Реальные списания отключены.
           </p>
         </div>
         <div className="bot-how card bot-wire">
@@ -390,8 +331,8 @@ export function BotPage({
             канала. Нажмите кнопку в телефоне — здесь появится, что получил бы каждый канал.
           </p>
           <p className="bot-wire-note">
-            На демо VK и MAX не подключены: адаптеры и вебхуки готовы, но к живым сообществу и боту стенд не привязан.
-            У заказчика подключение — это токен канала и адрес вебхука.
+            На демо VK и MAX не подключены: адаптеры и вебхуки готовы, но к живым сообществу и боту стенд не привязан. У
+            заказчика подключение — это токен канала и адрес вебхука.
           </p>
           <div className="tabs">
             {(["vk", "max"] as const).map((c) => (
@@ -400,7 +341,9 @@ export function BotPage({
               </button>
             ))}
           </div>
-          <pre className="bot-wire-json">{wire ? JSON.stringify(wire[wireTab], null, 2).slice(0, 2400) : "Ответов ещё не было."}</pre>
+          <pre className="bot-wire-json">
+            {wire ? JSON.stringify(wire[wireTab], null, 2).slice(0, 2400) : "Ответов ещё не было."}
+          </pre>
         </div>
       </section>
 
@@ -425,9 +368,8 @@ export function BotPage({
                 </span>
                 <strong>Что умеет этот бот?</strong>
                 <p>
-                  Баланс и договор водителя, бронирование для клиентов, заявки и
-                  согласования для отделов. Пишите своими словами — бот найдёт
-                  ответ в правилах или подготовит заявку.
+                  Баланс и договор водителя, бронирование для клиентов, заявки и согласования для отделов. Пишите своими
+                  словами — бот найдёт ответ в правилах или подготовит заявку.
                 </p>
                 <small>Учебный концепт, не официальный бот.</small>
               </div>
@@ -444,26 +386,15 @@ export function BotPage({
                     />
                   )}
                   {m.document && (
-                    <a
-                      className="tg-doc"
-                      href={m.document.data}
-                      download={m.document.name}
-                    >
+                    <a className="tg-doc" href={m.document.data} download={m.document.name}>
                       <FileText size={22} />
                       <span>
                         {m.document.name}
-                        <small>
-                          {Math.round(m.document.size / 1024)} КБ · PDF
-                        </small>
+                        <small>{Math.round(m.document.size / 1024)} КБ · PDF</small>
                       </span>
                     </a>
                   )}
-                  {m.text && (
-                    <div
-                      className="tg-text"
-                      dangerouslySetInnerHTML={{ __html: safeHtml(m.text) }}
-                    />
-                  )}
+                  {m.text && <div className="tg-text" dangerouslySetInnerHTML={{ __html: safeHtml(m.text) }} />}
                   <time>
                     {new Date(m.at).toLocaleTimeString("ru-RU", {
                       hour: "2-digit",
@@ -476,11 +407,7 @@ export function BotPage({
                     {m.kb.map((row, j) => (
                       <div key={j}>
                         {row.map((b, k) => (
-                          <button
-                            key={k}
-                            onClick={() => press(b, m.id)}
-                            disabled={pending && !b.url && !b.app}
-                          >
+                          <button key={k} onClick={() => press(b, m.id)} disabled={pending && !b.url && !b.app}>
                             {b.text}
                             {(b.url || b.app) && <ArrowUpRight size={11} />}
                           </button>
@@ -511,27 +438,12 @@ export function BotPage({
                 setText("");
               }}
             >
-              <button
-                type="button"
-                className="tg-menu"
-                onClick={() => send({ text: "/menu" })}
-                disabled={pending}
-              >
+              <button type="button" className="tg-menu" onClick={() => send({ text: "/menu" })} disabled={pending}>
                 Меню
               </button>
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Сообщение"
-                maxLength={1500}
-              />
+              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Сообщение" maxLength={1500} />
               {text.trim() ? (
-                <button
-                  type="submit"
-                  className="tg-send"
-                  aria-label="Отправить"
-                  disabled={pending}
-                >
+                <button type="submit" className="tg-send" aria-label="Отправить" disabled={pending}>
                   <Send size={18} />
                 </button>
               ) : (
@@ -543,7 +455,9 @@ export function BotPage({
                     type="button"
                     className={"tg-send tg-mic" + (recording ? " on" : "")}
                     aria-label={recording ? "Остановить запись" : "Голосовое сообщение"}
-                    title={recording ? "Остановить и отправить" : "Голосовое: распознаётся моделью и уходит боту текстом"}
+                    title={
+                      recording ? "Остановить и отправить" : "Голосовое: распознаётся моделью и уходит боту текстом"
+                    }
                     disabled={pending}
                     onClick={voice}
                   >
@@ -553,25 +467,15 @@ export function BotPage({
               )}
             </form>
           ) : (
-            <button
-              className="tg-start"
-              onClick={() => send({ text: "/start" })}
-              disabled={pending}
-            >
+            <button className="tg-start" onClick={() => send({ text: "/start" })} disabled={pending}>
               СТАРТ
             </button>
           )}
           {miniUrl && (
-            <div
-              className="phone-mini"
-              role="dialog"
-              aria-label="Mini App в эмуляторе"
-            >
+            <div className="phone-mini" role="dialog" aria-label="Mini App в эмуляторе">
               <div className="phone-mini-bar">
                 <button
-                  onClick={() =>
-                    miniBack ? toMini("back-click") : setMiniUrl("")
-                  }
+                  onClick={() => (miniBack ? toMini("back-click") : setMiniUrl(""))}
                   aria-label="Назад в Mini App"
                 >
                   <ArrowLeft size={18} />
@@ -589,27 +493,16 @@ export function BotPage({
                   <X size={19} />
                 </button>
               </div>
-              <iframe
-                ref={frame}
-                src={miniUrl}
-                title="Кабинет таксопарка"
-                allow="geolocation; camera"
-              />
+              <iframe ref={frame} src={miniUrl} title="Кабинет таксопарка" allow="geolocation; camera" />
               {!miniReady && (
                 <div className="phone-mini-loading">
-                  <LoaderCircle size={24} className="mini-spin" /> Открываем
-                  кабинет…
+                  <LoaderCircle size={24} className="mini-spin" /> Открываем кабинет…
                 </div>
               )}
               {mainButton && (
                 <div className="phone-mini-action">
-                  <button
-                    disabled={mainButton.disabled || mainButton.busy}
-                    onClick={() => toMini("main-click")}
-                  >
-                    {mainButton.busy && (
-                      <LoaderCircle size={16} className="mini-spin" />
-                    )}
+                  <button disabled={mainButton.disabled || mainButton.busy} onClick={() => toMini("main-click")}>
+                    {mainButton.busy && <LoaderCircle size={16} className="mini-spin" />}
                     {mainButton.text}
                   </button>
                 </div>

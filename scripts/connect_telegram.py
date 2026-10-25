@@ -1,10 +1,14 @@
 """Usage: python scripts/connect_telegram.py /root/path-to-token; never prints the token."""
 
-import os, sys, asyncio, secrets
+import asyncio
+import os
+import secrets
+import sys
 from pathlib import Path
-from dotenv import dotenv_values
+
 from aiogram import Bot
 from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
+from dotenv import dotenv_values
 
 
 async def main():
@@ -55,7 +59,13 @@ async def main():
             )
             + "\n"
         )
-        print("Connected @" + me.username + "; main_mini_app=" + str(bool(getattr(me, "has_main_web_app", False))) + "; restart API and worker")
+        print(
+            "Connected @"
+            + me.username
+            + "; main_mini_app="
+            + str(bool(getattr(me, "has_main_web_app", False)))
+            + "; restart API and worker"
+        )
     finally:
         await bot.session.close()
 

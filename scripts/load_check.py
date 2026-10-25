@@ -1,10 +1,22 @@
-import asyncio, hashlib, secrets, time, json, math
+"""Load check: 20 parallel visitor spaces, ordinary requests and the heavy report → reports/load.json (p50/p95).
+
+Run on the host: PYTHONPATH=. .venv/bin/python scripts/load_check.py; the spaces are removed at the end.
+"""
+
+import asyncio
+import hashlib
+import json
+import math
+import secrets
+import time
 from pathlib import Path
+
 import httpx
-from app.db import db, Space, Item, now
 from sqlalchemy import select
-from app.seed import create_space
+
+from app.db import Item, Space, db, now
 from app.reports import report
+from app.seed import create_space
 
 
 def stats(rows):
@@ -31,9 +43,7 @@ async def main():
                 sp.token = hashlib.sha256(token.encode()).hexdigest()
                 created.append(sp.id)
                 sessions.append(token)
-                cards.append(
-                    s.scalar(select(Item.id).where(Item.space == sp.id, Item.kind == "vehicle").limit(1))
-                )
+                cards.append(s.scalar(select(Item.id).where(Item.space == sp.id, Item.kind == "vehicle").limit(1)))
             print("Prepared visitor", i + 1, flush=True)
         async with httpx.AsyncClient(
             base_url="https://fleet.shvarev-demo.ru", timeout=40, limits=httpx.Limits(max_connections=20)

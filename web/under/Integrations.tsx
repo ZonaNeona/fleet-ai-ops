@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, AlertTriangle, Cpu } from "lucide-react";
 import { api, Data, Row } from "../lib";
@@ -18,21 +17,11 @@ export const statusName = (s: string) =>
     success: "Выполнено",
     error: "Ошибка",
   })[s] || s;
-export function SourcesWidget({
-  data,
-  open,
-  go,
-}: {
-  data: Data;
-  open: (r: Row) => void;
-  go?: () => void;
-}) {
+export function SourcesWidget({ data, open, go }: { data: Data; open: (r: Row) => void; go?: () => void }) {
   const q = useQuery({
     queryKey: ["integrations", data.session.role],
     queryFn: () => api("/integrations"),
-    enabled: ["owner", "admin", "finance", "manager"].includes(
-      data.session.role,
-    ),
+    enabled: ["owner", "admin", "finance", "manager"].includes(data.session.role),
     refetchInterval: 10000,
   });
   if (!q.data) return null;

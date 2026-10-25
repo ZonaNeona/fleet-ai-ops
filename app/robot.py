@@ -63,8 +63,11 @@ def crawl(plates: list[str], shots_dir, step) -> list[dict]:
                 title = page.title()
                 if "503" in title or "429" in title:
                     wait = 1.0 * (attempt + 1)
-                    snap(f"Портал ответил {'503 — перегружен' if '503' in title else '429 — слишком часто'}, "
-                         f"повтор через {wait:.0f} с", "retry")
+                    snap(
+                        f"Портал ответил {'503 — перегружен' if '503' in title else '429 — слишком часто'}, "
+                        f"повтор через {wait:.0f} с",
+                        "retry",
+                    )
                     time.sleep(wait)
                     page.reload(wait_until="domcontentloaded")
                     continue
@@ -72,10 +75,13 @@ def crawl(plates: list[str], shots_dir, step) -> list[dict]:
             else:
                 snap("Портал не ответил после повторов — остановка", "error")
                 break
-            found = page.eval_on_selector_all("#fines tbody tr", """trs => trs.filter(tr => tr.cells.length === 6).map(tr => ({
+            found = page.eval_on_selector_all(
+                "#fines tbody tr",
+                """trs => trs.filter(tr => tr.cells.length === 6).map(tr => ({
                 plate: tr.cells[0].innerText.trim(), resolution: tr.cells[1].innerText.trim(), date: tr.cells[2].innerText.trim(),
                 article: tr.cells[3].innerText.split('\\n')[0].trim(), amount: Number(tr.cells[4].dataset.amount),
-                discount_until: tr.cells[5].innerText.trim() }))""")
+                discount_until: tr.cells[5].innerText.trim() }))""",
+            )
             rows += found
             label = page.inner_text(".pager span") if page.query_selector(".pager span") else ""
             snap(f"{label or 'Страница'}: постановлений на странице — {len(found)}")
@@ -95,14 +101,22 @@ class Steps:
         self.started = time.monotonic()
 
     def __call__(self, title, status="success", **extra):
-        self.steps.append({"title": title, "status": status, "ms": round((time.monotonic() - self.started) * 1000), **extra})
+        self.steps.append(
+            {"title": title, "status": status, "ms": round((time.monotonic() - self.started) * 1000), **extra}
+        )
 
 
 def main(run_id: str):
     with db() as s:
         run = s.get(Item, run_id)
-        plates = [v.data["plate"] for v in s.scalars(select(Item).where(
-            Item.space == run.space, Item.kind == "vehicle", Item.data["direction"].astext.in_(DIRECTIONS)).order_by(Item.code))]
+        plates = [
+            v.data["plate"]
+            for v in s.scalars(
+                select(Item)
+                .where(Item.space == run.space, Item.kind == "vehicle", Item.data["direction"].astext.in_(DIRECTIONS))
+                .order_by(Item.code)
+            )
+        ]
         space = run.space
     shots = FILES / space / "robot" / run_id
     shots.mkdir(parents=True, exist_ok=True)
@@ -117,9 +131,17 @@ def main(run_id: str):
     with db() as s:
         run = s.get(Item, run_id)
         rec = reconcile(s, run.space, rows)
-        run.data = {**run.data, "status": "failed" if error else "done", "steps": steps.steps, "rows": rows,
-                    "reconciliation": rec, "plates": len(plates), "finished": now().isoformat(), "error": error,
-                    "seconds": round(time.monotonic() - steps.started, 1)}
+        run.data = {
+            **run.data,
+            "status": "failed" if error else "done",
+            "steps": steps.steps,
+            "rows": rows,
+            "reconciliation": rec,
+            "plates": len(plates),
+            "finished": now().isoformat(),
+            "error": error,
+            "seconds": round(time.monotonic() - steps.started, 1),
+        }
         run.version += 1
 
 
@@ -128,11 +150,16 @@ def main(run_id: str):
 
 def ledger_fines(s, space):
     out = {}
-    for x in s.scalars(select(Item).where(Item.space == space, Item.kind == "source_record",
-                                          Item.data["source"].astext == "fines")):
+    for x in s.scalars(
+        select(Item).where(Item.space == space, Item.kind == "source_record", Item.data["source"].astext == "fines")
+    ):
         v = x.data.get("values") or {}
         if v.get("external_id"):
-            out[v["external_id"]] = {"amount": Decimal(str(v.get("fine") or 0)), "code": v.get("vehicle_code"), "via": v.get("via", "n8n")}
+            out[v["external_id"]] = {
+                "amount": Decimal(str(v.get("fine") or 0)),
+                "code": v.get("vehicle_code"),
+                "via": v.get("via", "n8n"),
+            }
     return out
 
 
@@ -145,13 +172,26 @@ def reconcile(s, space, rows):
         if not mine:
             out.append({**r, "state": "portal-only", "note": "есть на портале, в учёте нет"})
         elif mine["amount"] != amount:
-            out.append({**r, "state": "amount", "ledger": str(mine["amount"]),
-                        "note": f"в учёте {mine['amount']:.0f} ₽, на портале {amount:.0f} ₽"})
+            out.append(
+                {
+                    **r,
+                    "state": "amount",
+                    "ledger": str(mine["amount"]),
+                    "note": f"в учёте {mine['amount']:.0f} ₽, на портале {amount:.0f} ₽",
+                }
+            )
         else:
             out.append({**r, "state": "ok", "note": "сходится"})
     for resolution, mine in known.items():
-        out.append({"resolution": resolution, "plate": mine["code"], "amount": float(mine["amount"]), "state": "ledger-only",
-                    "note": "в учёте есть, на портале не найден — возможно, уже оплачен"})
+        out.append(
+            {
+                "resolution": resolution,
+                "plate": mine["code"],
+                "amount": float(mine["amount"]),
+                "state": "ledger-only",
+                "note": "в учёте есть, на портале не найден — возможно, уже оплачен",
+            }
+        )
     return out
 
 
@@ -166,11 +206,27 @@ def load(s, sp, run):
         code = "fines:robot:" + r["resolution"]
         if s.scalar(select(Item.id).where(Item.space == sp.id, Item.kind == "source_record", Item.code == code)):
             continue
-        add(s, sp.id, "source_record", code, {
-            "source": "fines", "vehicle": v.id, "at": now().isoformat(), "run": run.id,
-            "values": {"vehicle_code": v.code, "fine": f"{Decimal(str(r['amount'])):.2f}", "external_id": r["resolution"],
-                       "discount_percent": 50, "discount_until": r.get("discount_until"), "via": "robot",
-                       "discount_rule": "Учебное условие портала: скидка 50% до указанной даты"}})
+        add(
+            s,
+            sp.id,
+            "source_record",
+            code,
+            {
+                "source": "fines",
+                "vehicle": v.id,
+                "at": now().isoformat(),
+                "run": run.id,
+                "values": {
+                    "vehicle_code": v.code,
+                    "fine": f"{Decimal(str(r['amount'])):.2f}",
+                    "external_id": r["resolution"],
+                    "discount_percent": 50,
+                    "discount_until": r.get("discount_until"),
+                    "via": "robot",
+                    "discount_rule": "Учебное условие портала: скидка 50% до указанной даты",
+                },
+            },
+        )
         added += 1
     for r in run.data.get("reconciliation", []):
         if r["state"] == "portal-only" and r["plate"] in vehicles:
@@ -220,11 +276,16 @@ def robot_run(request: Request):
         fail("Playwright не установлен на этом сервере", 409)
     with db() as s:
         sp = viewer(s, request)
-        busy = s.scalar(select(func.count()).select_from(Job).where(Job.kind == "robot", Job.state.in_(["pending", "running"])))
+        busy = s.scalar(
+            select(func.count()).select_from(Job).where(Job.kind == "robot", Job.state.in_(["pending", "running"]))
+        )
         if busy:
             fail("Робот уже работает — одна сессия браузера на сервер", 429)
-        recent = s.scalar(select(func.count()).select_from(Item).where(
-            Item.space == sp.id, Item.kind == "robot_run", Item.created > now() - timedelta(hours=1)))
+        recent = s.scalar(
+            select(func.count())
+            .select_from(Item)
+            .where(Item.space == sp.id, Item.kind == "robot_run", Item.created > now() - timedelta(hours=1))
+        )
         if recent >= 5:
             fail("Не больше пяти запусков робота в час", 429)
         run = add(s, sp.id, "robot_run", "ROBOT-" + now().strftime("%H%M%S"), {"status": "queued", "steps": []})
@@ -266,8 +327,14 @@ def run_job(job):
     with db() as s:
         run = s.get(Item, job.data["run"])
         run.data = {**run.data, "status": "running", "started": now().isoformat()}
-    r = subprocess.run([sys.executable, "-m", "app.robot", job.data["run"]], capture_output=True, text=True, timeout=180,
-                       cwd=Path(__file__).parent.parent, env={**os.environ, "MALLOC_ARENA_MAX": "2"})
+    r = subprocess.run(
+        [sys.executable, "-m", "app.robot", job.data["run"]],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        cwd=Path(__file__).parent.parent,
+        env={**os.environ, "MALLOC_ARENA_MAX": "2"},
+    )
     if r.returncode:  # reported on the run, not retried: a second browser run would only repeat the failure
         error = (r.stderr.strip().splitlines() or ["робот завершился с ошибкой"])[-1][:300]
         with db() as s:

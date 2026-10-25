@@ -45,8 +45,12 @@ def rest_base(key):
 
 def issue_key(s, sp):
     key = "b24_" + secrets.token_urlsafe(18)
-    s.add(System(key="b24key:" + hashlib.sha256(key.encode()).hexdigest()[:40],
-                 data={"space": sp.id, "expires": (now() + timedelta(hours=24)).isoformat()}))
+    s.add(
+        System(
+            key="b24key:" + hashlib.sha256(key.encode()).hexdigest()[:40],
+            data={"space": sp.id, "expires": (now() + timedelta(hours=24)).isoformat()},
+        )
+    )
     return key
 
 
@@ -76,8 +80,13 @@ def portal_call(space_id, method, params, source):
         try:
             answer = Emulator(json.loads(json.dumps(item.data)), save).call(method, params, source=source)
         except ReadOnly as e:
-            return JSONResponse({"error": "ERROR_METHOD_NOT_FOUND" if "не разрешён" in str(e) else "INVALID_ARG_VALUE",
-                                 "error_description": str(e)}, status_code=400)
+            return JSONResponse(
+                {
+                    "error": "ERROR_METHOD_NOT_FOUND" if "не разрешён" in str(e) else "INVALID_ARG_VALUE",
+                    "error_description": str(e),
+                },
+                status_code=400,
+            )
         if "data" in holder:
             item.data = holder["data"]
             item.version += 1
@@ -103,8 +112,9 @@ def form_params(raw):
 async def rest(key: str, method: str, request: Request):
     space = space_of(key)
     if not space:
-        return JSONResponse({"error": "INVALID_CREDENTIALS", "error_description": "Неверный или истёкший ключ"},
-                            status_code=401)
+        return JSONResponse(
+            {"error": "INVALID_CREDENTIALS", "error_description": "Неверный или истёкший ключ"}, status_code=401
+        )
     method = method.removesuffix(".json")
     body = await request.body()
     if request.headers.get("content-type", "").startswith("application/json") and body:
@@ -138,7 +148,9 @@ def card(s, sp, deal):
     if deal["CATEGORY_ID"] == "1":
         out["candidate"] = {"name": deal["TITLE"].split("·")[-1].strip(), "experience": deal.get("UF_CRM_EXPERIENCE")}
         return out
-    c = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "contract", Item.code == deal.get("UF_CRM_CONTRACT")))
+    c = s.scalar(
+        select(Item).where(Item.space == sp.id, Item.kind == "contract", Item.code == deal.get("UF_CRM_CONTRACT"))
+    )
     if not c:
         out["note"] = "Договора по сделке ещё нет: машина не выдана"
         return out
@@ -147,23 +159,59 @@ def card(s, sp, deal):
     scope = SimpleNamespace(id=sp.id)
     charged = Decimal(balance(s, scope, c.id, ["charge"]))
     paid = Decimal(balance(s, scope, c.id, ["payment"]))
-    fines = [x for x in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "source_record",
-                                                       Item.data["source"].astext == "fines",
-                                                       Item.data["vehicle"].astext == car.id))]
-    docs = [x for x in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "inbox"))
-            if (x.data.get("links") or {}).get("vehicle") == car.id]
-    out.update({
-        "driver": {"name": person.data.get("name") if person else "—", "phone": person.data.get("phone") if person else None},
-        "contract": {"code": c.code, "status": c.data["status"], "start": c.data["start"], "end": c.data["end"],
-                     "rate": c.data["rate"], "direction": c.data["direction"]},
-        "car": {"code": car.code, "model": car.data["model"], "plate": car.data["plate"], "status": car.data["status"],
-                "image": car.data.get("thumb")},
-        "money": {"charged": f"{charged:.2f}", "paid": f"{paid:.2f}", "debt": f"{max(charged - paid, Decimal(0)):.2f}",
-                  "crm_paid": deal.get("UF_CRM_PAID")},
-        "fines": [{"number": (x.data.get("values") or {}).get("external_id"), "amount": (x.data.get("values") or {}).get("fine")}
-                  for x in fines],
-        "documents": [{"code": x.code, "kind": x.data.get("kind"), "status": x.data.get("status")} for x in docs],
-    })
+    fines = [
+        x
+        for x in s.scalars(
+            select(Item).where(
+                Item.space == sp.id,
+                Item.kind == "source_record",
+                Item.data["source"].astext == "fines",
+                Item.data["vehicle"].astext == car.id,
+            )
+        )
+    ]
+    docs = [
+        x
+        for x in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "inbox"))
+        if (x.data.get("links") or {}).get("vehicle") == car.id
+    ]
+    out.update(
+        {
+            "driver": {
+                "name": person.data.get("name") if person else "—",
+                "phone": person.data.get("phone") if person else None,
+            },
+            "contract": {
+                "code": c.code,
+                "status": c.data["status"],
+                "start": c.data["start"],
+                "end": c.data["end"],
+                "rate": c.data["rate"],
+                "direction": c.data["direction"],
+            },
+            "car": {
+                "code": car.code,
+                "model": car.data["model"],
+                "plate": car.data["plate"],
+                "status": car.data["status"],
+                "image": car.data.get("thumb"),
+            },
+            "money": {
+                "charged": f"{charged:.2f}",
+                "paid": f"{paid:.2f}",
+                "debt": f"{max(charged - paid, Decimal(0)):.2f}",
+                "crm_paid": deal.get("UF_CRM_PAID"),
+            },
+            "fines": [
+                {
+                    "number": (x.data.get("values") or {}).get("external_id"),
+                    "amount": (x.data.get("values") or {}).get("fine"),
+                }
+                for x in fines
+            ],
+            "documents": [{"code": x.code, "kind": x.data.get("kind"), "status": x.data.get("status")} for x in docs],
+        }
+    )
     return out
 
 
@@ -273,11 +321,17 @@ def app_robot(body: dict, request: Request):
     form = {
         "event_token": token,
         "code": ROBOT_CODE,
-        "document_id[0]": "crm", "document_id[1]": "CCrmDocumentDeal", "document_id[2]": f"DEAL_{deal}",
-        "document_type[0]": "crm", "document_type[1]": "CCrmDocumentDeal", "document_type[2]": "DEAL",
+        "document_id[0]": "crm",
+        "document_id[1]": "CCrmDocumentDeal",
+        "document_id[2]": f"DEAL_{deal}",
+        "document_type[0]": "crm",
+        "document_type[1]": "CCrmDocumentDeal",
+        "document_type[2]": "DEAL",
         "properties[notify_manager]": "Y",
-        "auth[access_token]": key, "auth[domain]": "fleet-demo.bitrix24.ru",
-        "auth[client_endpoint]": rest_base(key), "auth[application_token]": app_token(key),
+        "auth[access_token]": key,
+        "auth[domain]": "fleet-demo.bitrix24.ru",
+        "auth[client_endpoint]": rest_base(key),
+        "auth[application_token]": app_token(key),
         "ts": str(int(datetime.now().timestamp())),
     }
     try:
@@ -286,7 +340,10 @@ def app_robot(body: dict, request: Request):
         fail(f"Приложение не ответило: {type(e).__name__}", 502)
     if r.status_code != 200:
         fail(f"Приложение ответило {r.status_code}: {r.text[:200]}", 502)
-    return {"event_token": token, "app": r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text[:300]}
+    return {
+        "event_token": token,
+        "app": r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text[:300],
+    }
 
 
 def app_token(key):
@@ -298,5 +355,6 @@ def app_token(key):
 def app_token_check(request: Request):
     """The PHP app verifies a robot call by asking the fleet for the token that belongs to the key."""
     guard(request)
-    return {"application_token": app_token(request.query_params.get("key") or request.headers.get("x-b24app-key") or "")}
-
+    return {
+        "application_token": app_token(request.query_params.get("key") or request.headers.get("x-b24app-key") or "")
+    }

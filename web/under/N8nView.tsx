@@ -73,7 +73,9 @@ export function N8nView({ data, openRow, initialRun }: { data: Data; openRow: (r
     queryFn: () => api("/integrations"),
     enabled: staff,
     refetchInterval: (q) =>
-      ((q.state.data as any)?.runs || []).some((r: any) => ["queued", "running", "pending"].includes(r.status)) ? 1500 : 10000,
+      ((q.state.data as any)?.runs || []).some((r: any) => ["queued", "running", "pending"].includes(r.status))
+        ? 1500
+        : 10000,
   });
   const runs: any[] = (list.data?.runs || []).filter((r: any) => r.source === source);
   useEffect(() => {
@@ -219,7 +221,13 @@ export function N8nView({ data, openRow, initialRun }: { data: Data; openRow: (r
             </div>
             <p className="k-lead">{SIMPLE_NODE[node.name] || meta(node).tech}</p>
             {step && (
-              <Kv items={[["Статус", step.status === "success" ? "выполнено" : "ошибка"], ["Время", ms(step.ms)], ["Записей на выходе", step.items]]} />
+              <Kv
+                items={[
+                  ["Статус", step.status === "success" ? "выполнено" : "ошибка"],
+                  ["Время", ms(step.ms)],
+                  ["Записей на выходе", step.items],
+                ]}
+              />
             )}
             {eng && (
               <Section title="Параметры ноды">
@@ -238,14 +246,26 @@ export function N8nView({ data, openRow, initialRun }: { data: Data; openRow: (r
             <h3 className="k-h">{SOURCES[source].title}</h3>
             <p className="k-lead">
               <Say
-                simple={SOURCES[source].what + " Конвейер забирает данные, проверяет их и сверяет с учётом. Повторный запуск не создаёт дублей."}
+                simple={
+                  SOURCES[source].what +
+                  " Конвейер забирает данные, проверяет их и сверяет с учётом. Повторный запуск не создаёт дублей."
+                }
                 eng="Webhook/Schedule → HTTP к источнику → Code: валидация схемы → HMAC-подписанный пакет → транзакционный ingest (идемпотентно по run). Трасса читается из SQLite n8n через loopback-ридер с HMAC."
               />
             </p>
             {run ? (
               <Kv
                 items={[
-                  ["Статус", live ? "выполняется…" : run.status === "done" ? "завершено" : run.status === "failed" ? "ошибка" : run.status],
+                  [
+                    "Статус",
+                    live
+                      ? "выполняется…"
+                      : run.status === "done"
+                        ? "завершено"
+                        : run.status === "failed"
+                          ? "ошибка"
+                          : run.status,
+                  ],
                   ["Исполнение n8n", run.execution_id ? "#" + run.execution_id : "ожидается"],
                   ["Строк получено", run.data?.rows],
                   ["Расхождений", run.data?.diffs],
@@ -286,7 +306,9 @@ export function N8nView({ data, openRow, initialRun }: { data: Data; openRow: (r
                     <button key={r.id} className={run?.id === r.id ? "active" : ""} onClick={() => setRunId(r.id)}>
                       <i className={"k-dot " + r.status} />
                       <span>{new Date(r.started).toLocaleTimeString("ru-RU", { timeZone: "Europe/Moscow" })}</span>
-                      <small>#{r.execution_id || "—"} · {r.data?.rows ?? 0} стр. · {r.data?.diffs ?? 0} расх.</small>
+                      <small>
+                        #{r.execution_id || "—"} · {r.data?.rows ?? 0} стр. · {r.data?.diffs ?? 0} расх.
+                      </small>
                     </button>
                   ))}
                 </div>
@@ -298,7 +320,11 @@ export function N8nView({ data, openRow, initialRun }: { data: Data; openRow: (r
       <Timeline
         frames={frames}
         replay={replay}
-        empty={live ? "n8n выполняет workflow — трасса придёт из базы исполнений" : "Запустите workflow — исполнение проиграется по нодам"}
+        empty={
+          live
+            ? "n8n выполняет workflow — трасса придёт из базы исполнений"
+            : "Запустите workflow — исполнение проиграется по нодам"
+        }
       />
     </div>
   );

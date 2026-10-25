@@ -82,10 +82,16 @@ def review(space, call_id):
     last = None
     for provider, model in options:
         try:
-            answer, meta = call(space, model, [
-                {"role": "system", "content": PROMPT.format(items=items_text)},
-                {"role": "user", "content": heard["text"]},
-            ], max_tokens=1400, provider=provider)
+            answer, meta = call(
+                space,
+                model,
+                [
+                    {"role": "system", "content": PROMPT.format(items=items_text)},
+                    {"role": "user", "content": heard["text"]},
+                ],
+                max_tokens=1400,
+                provider=provider,
+            )
             raw_items = answer.fields.get("items") or []
             items = [Check.model_validate(i).model_dump() for i in raw_items if i.get("key") in KEYS]
             if {i["key"] for i in items} != set(KEYS):
@@ -99,12 +105,18 @@ def review(space, call_id):
         raise RuntimeError(f"Разбор не прошёл проверку: {str(last)[:160]}")
     items.sort(key=lambda i: KEYS.index(i["key"]))
     result = {
-        "call": call_id, "transcript": heard["text"], "seconds": heard["seconds"],
+        "call": call_id,
+        "transcript": heard["text"],
+        "seconds": heard["seconds"],
         "stt": {"model": heard["model"], "cost": heard["cost"], "ms": heard["ms"]},
         "review": {"model": meta["model"], "cost": meta["cost"], "ms": meta["ms"], "tokens": meta["tokens"]},
-        "summary": answer.answer[:1200], "topic": str(answer.fields.get("topic") or "")[:80],
-        "outcome": str(answer.fields.get("outcome") or "")[:300], "advice": str(answer.fields.get("advice") or "")[:400],
-        "items": items, "score": score(items), "at": now().isoformat(),
+        "summary": answer.answer[:1200],
+        "topic": str(answer.fields.get("topic") or "")[:80],
+        "outcome": str(answer.fields.get("outcome") or "")[:300],
+        "advice": str(answer.fields.get("advice") or "")[:400],
+        "items": items,
+        "score": score(items),
+        "at": now().isoformat(),
     }
     with db() as s:
         row = s.get(System, key)
@@ -131,13 +143,26 @@ def calls_list(request: Request):
         rows = []
         for c in index():
             done = s.get(System, cache_key(c["id"], audio(c["id"])))
-            job = s.scalar(select(Job).where(Job.space == sp.id, Job.kind == "call", Job.data["call"].astext == c["id"])
-                           .order_by(Job.due.desc()).limit(1))
-            rows.append({**c, "audio": f"/calls/{c['id']}.mp3", "review": done.data if done else None,
-                         "job": {"state": job.state, "error": (job.result or {}).get("error")} if job else None})
+            job = s.scalar(
+                select(Job)
+                .where(Job.space == sp.id, Job.kind == "call", Job.data["call"].astext == c["id"])
+                .order_by(Job.due.desc())
+                .limit(1)
+            )
+            rows.append(
+                {
+                    **c,
+                    "audio": f"/calls/{c['id']}.mp3",
+                    "review": done.data if done else None,
+                    "job": {"state": job.state, "error": (job.result or {}).get("error")} if job else None,
+                }
+            )
         reviewed = [r["review"]["score"] for r in rows if r["review"] and r["review"]["score"] is not None]
-        return {"rows": rows, "checklist": [{"key": k, "label": label, "weight": w} for k, label, w in CHECKLIST],
-                "average": round(sum(reviewed) / len(reviewed)) if reviewed else None}
+        return {
+            "rows": rows,
+            "checklist": [{"key": k, "label": label, "weight": w} for k, label, w in CHECKLIST],
+            "average": round(sum(reviewed) / len(reviewed)) if reviewed else None,
+        }
 
 
 @router.post("/api/v1/calls/{call_id}/review")
@@ -146,8 +171,11 @@ def calls_review(call_id: str, request: Request):
         sp = viewer(s, request)
         if s.get(System, cache_key(call_id, audio(call_id))):
             return {"state": "done"}
-        busy = s.scalar(select(Job).where(Job.kind == "call", Job.data["call"].astext == call_id,
-                                          Job.state.in_(["pending", "running"])))
+        busy = s.scalar(
+            select(Job).where(
+                Job.kind == "call", Job.data["call"].astext == call_id, Job.state.in_(["pending", "running"])
+            )
+        )
         if not busy:
             s.add(Job(space=sp.id, kind="call", data={"call": call_id, "role": sp.role}))
         return {"state": "queued"}

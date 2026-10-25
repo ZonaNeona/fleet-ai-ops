@@ -26,13 +26,45 @@ type Crm = {
   synced_at: string;
   funnels: { id: number; name: string; key: string; stages: { id: string; name: string; semantics: string }[] }[];
   deals: Deal[];
-  leads: { id: string; title: string; name: string; status: string; source: string; manager: string; created: string }[];
-  reconciliation: { deal: string; title: string; contract: string; contract_id: string | null; crm_paid: string; ledger_paid: string | null; diff: string | null; ok: boolean; note: string }[];
+  leads: {
+    id: string;
+    title: string;
+    name: string;
+    status: string;
+    source: string;
+    manager: string;
+    created: string;
+  }[];
+  reconciliation: {
+    deal: string;
+    title: string;
+    contract: string;
+    contract_id: string | null;
+    crm_paid: string;
+    ledger_paid: string | null;
+    diff: string | null;
+    ok: boolean;
+    note: string;
+  }[];
   trace: { method: string; params: any; ms: number; rows: number; total?: number; next?: number }[];
-  summary: { hiring_total: number; hiring_won: number; hiring_conversion: number; stuck: number; leads_new: number; mismatches: number; calls: number; ms: number };
+  summary: {
+    hiring_total: number;
+    hiring_won: number;
+    hiring_conversion: number;
+    stuck: number;
+    leads_new: number;
+    mismatches: number;
+    calls: number;
+    ms: number;
+  };
   tasks: { id: string; TITLE: string; DEADLINE: string; createdDate: string }[];
 };
-const LEAD: Record<string, string> = { NEW: "новый", IN_PROCESS: "в работе", JUNK: "некачественный", CONVERTED: "сконвертирован" };
+const LEAD: Record<string, string> = {
+  NEW: "новый",
+  IN_PROCESS: "в работе",
+  JUNK: "некачественный",
+  CONVERTED: "сконвертирован",
+};
 const when = (v: string) =>
   new Date(v).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -53,7 +85,12 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
     }
   };
   if (crm.error) return <div className="error">{(crm.error as Error).message}</div>;
-  if (!crm.data) return <div className="cr-loading"><LoaderCircle className="spin" /> Читаем Битрикс24…</div>;
+  if (!crm.data)
+    return (
+      <div className="cr-loading">
+        <LoaderCircle className="spin" /> Читаем Битрикс24…
+      </div>
+    );
   const c = crm.data;
   const funnel = c.funnels.find((f) => f.key === tab);
 
@@ -82,10 +119,24 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
       </div>
 
       <div className="cr-kpis">
-        <div><b>{c.summary.hiring_conversion}%</b><span>отклик → на линии ({c.summary.hiring_won} из {c.summary.hiring_total})</span></div>
-        <div className={c.summary.stuck ? "warn" : ""}><b>{c.summary.stuck}</b><span>сделок зависли дольше 3 дней</span></div>
-        <div><b>{c.summary.leads_new}</b><span>новых лидов за неделю</span></div>
-        <div className={c.summary.mismatches ? "bad" : ""}><b>{c.summary.mismatches}</b><span>расхождений «оплачено в CRM ↔ учёт»</span></div>
+        <div>
+          <b>{c.summary.hiring_conversion}%</b>
+          <span>
+            отклик → на линии ({c.summary.hiring_won} из {c.summary.hiring_total})
+          </span>
+        </div>
+        <div className={c.summary.stuck ? "warn" : ""}>
+          <b>{c.summary.stuck}</b>
+          <span>сделок зависли дольше 3 дней</span>
+        </div>
+        <div>
+          <b>{c.summary.leads_new}</b>
+          <span>новых лидов за неделю</span>
+        </div>
+        <div className={c.summary.mismatches ? "bad" : ""}>
+          <b>{c.summary.mismatches}</b>
+          <span>расхождений «оплачено в CRM ↔ учёт»</span>
+        </div>
       </div>
 
       <div className="list-toolbar">
@@ -132,7 +183,9 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
                       {d.contract ? ` · договор ${d.contract}` : ""}
                     </p>
                     <div className="kanban-meta">
-                      <span><UserRound size={12} /> {d.manager}</span>
+                      <span>
+                        <UserRound size={12} /> {d.manager}
+                      </span>
                       {Number(d.amount) > 0 && <strong>{rub(d.amount)}</strong>}
                     </div>
                   </div>
@@ -148,25 +201,42 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
         <div className="cr-table">
           <table>
             <thead>
-              <tr><th>Лид</th><th>Контакт</th><th>Источник</th><th>Статус</th><th>Ответственный</th><th>Создан</th></tr>
+              <tr>
+                <th>Лид</th>
+                <th>Контакт</th>
+                <th>Источник</th>
+                <th>Статус</th>
+                <th>Ответственный</th>
+                <th>Создан</th>
+              </tr>
             </thead>
             <tbody>
               {c.leads.map((l) => (
                 <tr key={l.id}>
-                  <td><b>{l.title}</b><small>B24 #{l.id}</small></td>
+                  <td>
+                    <b>{l.title}</b>
+                    <small>B24 #{l.id}</small>
+                  </td>
                   <td>{l.name}</td>
                   <td>{l.source}</td>
-                  <td><span className={"cr-pill " + l.status}>{LEAD[l.status] || l.status}</span></td>
+                  <td>
+                    <span className={"cr-pill " + l.status}>{LEAD[l.status] || l.status}</span>
+                  </td>
                   <td>{l.manager}</td>
                   <td>{when(l.created)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="muted cr-note"><Clock3 size={13} /> Часть лидов датирована позже сегодня — они появятся при следующей синхронизации, как в живом портале.</p>
+          <p className="muted cr-note">
+            <Clock3 size={13} /> Часть лидов датирована позже сегодня — они появятся при следующей синхронизации, как в
+            живом портале.
+          </p>
           <p className="muted cr-note">
             Заявки с клиентского сайта приходят сюда лидом и сделкой в воронке «Прокат»:{" "}
-            <a href="/auto" target="_blank" rel="noreferrer">открыть сайт таксопарка</a>
+            <a href="/auto" target="_blank" rel="noreferrer">
+              открыть сайт таксопарка
+            </a>
           </p>
         </div>
       )}
@@ -179,19 +249,47 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
           </p>
           <table>
             <thead>
-              <tr><th>Сделка</th><th>Договор</th><th className="num">Оплачено в CRM</th><th className="num">Пришло в учёт</th><th className="num">Разница</th><th>Итог</th></tr>
+              <tr>
+                <th>Сделка</th>
+                <th>Договор</th>
+                <th className="num">Оплачено в CRM</th>
+                <th className="num">Пришло в учёт</th>
+                <th className="num">Разница</th>
+                <th>Итог</th>
+              </tr>
             </thead>
             <tbody>
               {c.reconciliation.map((r) => {
                 const row = data.contract.find((x) => x.id === r.contract_id);
                 return (
                   <tr key={r.deal} className={r.ok ? "" : "bad"}>
-                    <td><b>{r.title}</b><small>B24 #{r.deal}</small></td>
-                    <td>{row ? <button className="link" onClick={() => open(row)}>{r.contract}</button> : r.contract}</td>
+                    <td>
+                      <b>{r.title}</b>
+                      <small>B24 #{r.deal}</small>
+                    </td>
+                    <td>
+                      {row ? (
+                        <button className="link" onClick={() => open(row)}>
+                          {r.contract}
+                        </button>
+                      ) : (
+                        r.contract
+                      )}
+                    </td>
                     <td className="num">{rub(r.crm_paid)}</td>
                     <td className="num">{r.ledger_paid != null ? rub(r.ledger_paid) : "—"}</td>
                     <td className="num">{r.diff && Number(r.diff) !== 0 ? rub(r.diff) : "—"}</td>
-                    <td>{r.ok ? <span className="cr-ok"><CircleCheck size={14} /> сходится</span> : <span className="cr-bad"><AlertTriangle size={14} /> {r.note}</span>}</td>
+                    <td>
+                      {r.ok ? (
+                        <span className="cr-ok">
+                          <CircleCheck size={14} /> сходится
+                        </span>
+                      ) : (
+                        <span className="cr-bad">
+                          <AlertTriangle size={14} /> {r.note}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -211,18 +309,29 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
       {tab === "log" && (
         <div className="cr-table">
           <p className="cr-lead">
-            Последняя синхронизация — это настоящие вызовы REST в порядке выполнения. Списки читаются постранично (по 50), пока
-            портал отдаёт <code>next</code>. Код одинаковый для эмулятора и живого портала.
+            Последняя синхронизация — это настоящие вызовы REST в порядке выполнения. Списки читаются постранично (по
+            50), пока портал отдаёт <code>next</code>. Код одинаковый для эмулятора и живого портала.
           </p>
           <table>
             <thead>
-              <tr><th>Метод</th><th>Параметры</th><th className="num">Строк</th><th className="num">Всего</th><th className="num">next</th><th className="num">мс</th></tr>
+              <tr>
+                <th>Метод</th>
+                <th>Параметры</th>
+                <th className="num">Строк</th>
+                <th className="num">Всего</th>
+                <th className="num">next</th>
+                <th className="num">мс</th>
+              </tr>
             </thead>
             <tbody>
               {c.trace.map((t, i) => (
                 <tr key={i}>
-                  <td><code>{t.method}</code></td>
-                  <td><code className="cr-params">{JSON.stringify(t.params)}</code></td>
+                  <td>
+                    <code>{t.method}</code>
+                  </td>
+                  <td>
+                    <code className="cr-params">{JSON.stringify(t.params)}</code>
+                  </td>
                   <td className="num">{t.rows}</td>
                   <td className="num">{t.total ?? "—"}</td>
                   <td className="num">{t.next ?? "—"}</td>
@@ -233,10 +342,17 @@ export function CrmPage({ data, open, toast }: { data: Data; open: (row: Row) =>
           </table>
           {!!c.tasks.length && (
             <>
-              <h3 className="cr-h"><Server size={15} /> Задачи, созданные агентом после подтверждения</h3>
+              <h3 className="cr-h">
+                <Server size={15} /> Задачи, созданные агентом после подтверждения
+              </h3>
               <ul className="cr-tasks">
                 {c.tasks.map((t) => (
-                  <li key={t.id}><b>{t.TITLE}</b><small>#{t.id} · срок {when(t.DEADLINE)}</small></li>
+                  <li key={t.id}>
+                    <b>{t.TITLE}</b>
+                    <small>
+                      #{t.id} · срок {when(t.DEADLINE)}
+                    </small>
+                  </li>
                 ))}
               </ul>
             </>

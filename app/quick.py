@@ -24,8 +24,17 @@ def rub(v) -> str:
 def call(space, role, trace, name, args=None):
     started = time.monotonic()
     result = execute(space, role, name, args or {}, "quick:" + name)
-    trace.append({"step": "tool", "title": name, "ms": round((time.monotonic() - started) * 1000), "status": "success",
-                  "arguments": args or {}, "output": result, "role": role})
+    trace.append(
+        {
+            "step": "tool",
+            "title": name,
+            "ms": round((time.monotonic() - started) * 1000),
+            "status": "success",
+            "arguments": args or {},
+            "output": result,
+            "role": role,
+        }
+    )
     return result
 
 
@@ -33,8 +42,10 @@ def worst(space, role, trace):
     r = call(space, role, trace, "vehicle_economics", {"worst": 3})
     lines = [f"**Хуже всех по результату за {r['period'][0]} — {r['period'][1]}:**"]
     for v in r["vehicles"]:
-        lines.append(f"• **{v['code']}** {v['model']} — результат {rub(v['result'])}: выручка {rub(v['revenue'])}, "
-                     f"расходы {rub(v['expenses'])}, доля накладных {rub(v['overhead'])}")
+        lines.append(
+            f"• **{v['code']}** {v['model']} — результат {rub(v['result'])}: выручка {rub(v['revenue'])}, "
+            f"расходы {rub(v['expenses'])}, доля накладных {rub(v['overhead'])}"
+        )
     lines.append("\nРазбивка по каждой машине — в разделе «Аналитика».")
     return "\n".join(lines)
 
@@ -44,9 +55,12 @@ def debt(space, role, trace):
     aging = r.get("aging") or {}
     parts = ", ".join(f"{k} дн. — {rub(v)}" for k, v in aging.items() if Decimal(str(v or 0)))
     own = role in ("driver", "client")
-    return (f"**{'Ваш долг' if own else 'Долг водителей и клиентов'}: {rub(r['debt'])}.** За период начислено "
-            f"{rub(r['revenue'])}, поступило {rub(r['payments'])}." + (f"\nПо возрасту: {parts}." if parts else "") +
-            ("" if own else "\n\nКому звонить первым — в блоке «Сделать сейчас» на главной."))
+    return (
+        f"**{'Ваш долг' if own else 'Долг водителей и клиентов'}: {rub(r['debt'])}.** За период начислено "
+        f"{rub(r['revenue'])}, поступило {rub(r['payments'])}."
+        + (f"\nПо возрасту: {parts}." if parts else "")
+        + ("" if own else "\n\nКому звонить первым — в блоке «Сделать сейчас» на главной.")
+    )
 
 
 def repair(space, role, trace):
@@ -64,10 +78,14 @@ def hiring(space, role, trace):
     p = call(space, role, trace, "crm_pipeline", {"funnel": "hiring"})
     sm = p["summary"]
     stuck = [d for f in p["funnels"] for d in f["stuck"]]
-    lines = [f"**Найм водителей:** {sm['hiring_won']} из {sm['hiring_total']} вышли на линию ({sm['hiring_conversion']}%)."]
+    lines = [
+        f"**Найм водителей:** {sm['hiring_won']} из {sm['hiring_total']} вышли на линию ({sm['hiring_conversion']}%)."
+    ]
     if stuck:
         lines.append(f"Зависли дольше нормы: **{len(stuck)}**")
-        lines += [f"• {d['title']} — {d['days_in_stage']} дн. на стадии «{d['stage']}», {d['manager']}" for d in stuck[:5]]
+        lines += [
+            f"• {d['title']} — {d['days_in_stage']} дн. на стадии «{d['stage']}», {d['manager']}" for d in stuck[:5]
+        ]
     else:
         lines.append("Зависших кандидатов нет.")
     return "\n".join(lines)
@@ -101,7 +119,9 @@ INTENTS: list[tuple[re.Pattern[str], Callable]] = [
     (re.compile(r"что (сделать|делать) (сейчас|сегодня)|сделать сейчас|на что обратить|что горит|срочн"), now_list),
 ]
 # «Why», advice and conditional questions need reasoning: the agent answers them.
-SPECIFIC = re.compile(r"почему|зачем|посовет|что делать с|как (исправ|улучш|поднять|снизить)|если |спрогноз|сравни .* с ")
+SPECIFIC = re.compile(
+    r"почему|зачем|посовет|что делать с|как (исправ|улучш|поднять|снизить)|если |спрогноз|сравни .* с "
+)
 
 
 def match(question: str):

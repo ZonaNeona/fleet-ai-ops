@@ -58,12 +58,9 @@ type MiniState = {
   receipts: Row[];
 };
 const plus = (date: string, days: number) =>
-  new Date(Date.parse(date + "T12:00:00Z") + days * 86400000)
-    .toISOString()
-    .slice(0, 10);
+  new Date(Date.parse(date + "T12:00:00Z") + days * 86400000).toISOString().slice(0, 10);
 const homeFor = (role: string) => (role === "driver" ? "driver" : "catalog");
-const pathNow = () =>
-  location.hash.startsWith("#tg/") ? location.hash.slice(4).split("&")[0] : "";
+const pathNow = () => (location.hash.startsWith("#tg/") ? location.hash.slice(4).split("&")[0] : "");
 function go(path: string) {
   location.hash = "tg/" + path;
   haptic();
@@ -112,20 +109,13 @@ async function command(action: string, payload: Record<string, unknown>) {
   return result as Row;
 }
 async function upload(file: File) {
-  if (file.size > 8 * 1024 * 1024)
-    throw new Error("Размер файла — не больше 8 МБ");
+  if (file.size > 8 * 1024 * 1024) throw new Error("Размер файла — не больше 8 МБ");
   const form = new FormData();
   form.append("file", file);
   return api<Row>("/files", { method: "POST", body: form });
 }
 
-function Primary({
-  button,
-  onClick,
-}: {
-  button: ActionButton;
-  onClick: () => void;
-}) {
+function Primary({ button, onClick }: { button: ActionButton; onClick: () => void }) {
   const callback = useRef(onClick);
   callback.current = onClick;
   useEffect(
@@ -210,10 +200,7 @@ export function MiniApp() {
       removeEventListener("offline", update);
     };
   }, []);
-  if (
-    auth.isLoading ||
-    (auth.data?.id && (!boot.data || !state.data) && !boot.error && !state.error)
-  )
+  if (auth.isLoading || (auth.data?.id && (!boot.data || !state.data) && !boot.error && !state.error))
     return (
       <div className="mini">
         <Spinner />
@@ -224,10 +211,7 @@ export function MiniApp() {
       <div className="mini">
         <Empty
           title="Не удалось открыть кабинет"
-          text={
-            (auth.error || boot.error || state.error)?.message ||
-            "Начните личную демосессию на сайте."
-          }
+          text={(auth.error || boot.error || state.error)?.message || "Начните личную демосессию на сайте."}
         />
         <button className="mini-primary" onClick={() => qc.invalidateQueries()}>
           Повторить
@@ -242,23 +226,14 @@ export function MiniApp() {
       <div className="mini">
         <div className="mini-welcome">
           <CarFront size={36} />
-          <h1>
-            {boot.data.session.role === "owner"
-              ? "Ваш бизнес. Вся картина."
-              : "Рабочее место отдела"}
-          </h1>
+          <h1>{boot.data.session.role === "owner" ? "Ваш бизнес. Вся картина." : "Рабочее место отдела"}</h1>
           <p>
             {boot.data.session.role === "owner"
               ? "Экономика, загрузка и решения — в мобильном дашборде."
               : "В демо доступно в веб-кабинете."}
           </p>
-          <a
-            className="mini-primary"
-            href="/?web=1"
-            target={embedded() ? "_top" : "_self"}
-          >
-            Открыть{" "}
-            {boot.data.session.role === "owner" ? "дашборд" : "веб-кабинет"}
+          <a className="mini-primary" href="/?web=1" target={embedded() ? "_top" : "_self"}>
+            Открыть {boot.data.session.role === "owner" ? "дашборд" : "веб-кабинет"}
             <ArrowUpRight size={17} />
           </a>
         </div>
@@ -292,9 +267,7 @@ function Experience({
   refresh: () => Promise<void>;
 }) {
   const home = homeFor(data.session.role);
-  const [path, setPath] = useState(
-    pathNow() || deepRoute(nativeApp()?.initDataUnsafe?.start_param) || home,
-  );
+  const [path, setPath] = useState(pathNow() || deepRoute(nativeApp()?.initDataUnsafe?.start_param) || home);
   const [payment, setPayment] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -337,17 +310,20 @@ function Experience({
     await run(async () => {
       const r = await api<{ link: string }>(`/payments/${payment.id}/telegram`, { method: "POST", body: "{}" });
       nativeApp()?.openInvoice?.(r.link, (status) => {
-        if (status === "paid") setTimeout(() => api<Row>("/items/" + payment.id).then(setPayment).then(refresh), 1500);
+        if (status === "paid")
+          setTimeout(
+            () =>
+              api<Row>("/items/" + payment.id)
+                .then(setPayment)
+                .then(refresh),
+            1500,
+          );
       });
     });
   }
   useEffect(() => {
     if (!location.hash.startsWith("#tg/"))
-      history.replaceState(
-        null,
-        "",
-        location.pathname + location.search + "#tg/" + path,
-      );
+      history.replaceState(null, "", location.pathname + location.search + "#tg/" + path);
     const follow = () => {
       setPath(pathNow() || home);
       setError("");
@@ -359,19 +335,9 @@ function Experience({
   }, [home]);
   const back = () => {
     if (payment) setPayment(null);
-    else
-      go(
-        path.startsWith("driver")
-          ? "driver"
-          : path.startsWith("rentals/")
-            ? "rentals"
-            : home,
-      );
+    else go(path.startsWith("driver") ? "driver" : path.startsWith("rentals/") ? "rentals" : home);
   };
-  useEffect(
-    () => setBackButton(path !== home || !!payment, back),
-    [path, home, !!payment],
-  );
+  useEffect(() => setBackButton(path !== home || !!payment, back), [path, home, !!payment]);
   async function run(fn: () => Promise<unknown>, message?: string) {
     if (!online || busy) return;
     setBusy(true);
@@ -387,9 +353,7 @@ function Experience({
     }
   }
   async function pay(purpose: string, target: string) {
-    await run(async () =>
-      setPayment(await command("demo_payment.create", { purpose, target })),
-    );
+    await run(async () => setPayment(await command("demo_payment.create", { purpose, target })));
   }
   const isDriver = data.session.role === "driver";
   const tabs = isDriver
@@ -406,26 +370,18 @@ function Experience({
       ] as const);
   const money = (id: string) => state.contracts.find((c) => c.id === id);
   const vehicle = (id: string) => data.vehicle.find((v) => v.id === id);
-  const selectedContract = path.startsWith("rentals/")
-    ? data.contract.find((c) => c.id === path.split("/")[1])
-    : null;
+  const selectedContract = path.startsWith("rentals/") ? data.contract.find((c) => c.id === path.split("/")[1]) : null;
   const active = data.contract.filter((c) => c.status === "active");
   const my = active[0];
   const myCar = my && vehicle(my.vehicle);
   const selectedTicket = path.startsWith("driver/tickets/")
     ? data.ticket.find((t) => t.id === path.split("/")[2])
     : null;
-  const isCatalog =
-    !isDriver && (path === "catalog" || path.startsWith("car/"));
+  const isCatalog = !isDriver && (path === "catalog" || path.startsWith("car/"));
   return (
     <div className="mini">
       <header className="mini-header">
-        <button
-          aria-label="Назад"
-          className="mini-icon"
-          onClick={back}
-          disabled={path === home && !payment}
-        >
+        <button aria-label="Назад" className="mini-icon" onClick={back} disabled={path === home && !payment}>
           <ArrowLeft size={19} />
         </button>
         <div className="mini-brand">
@@ -453,9 +409,7 @@ function Experience({
               <CreditCard size={27} />
             </span>
             <span className="mini-eyebrow">ТЕСТОВЫЙ РЕЖИМ</span>
-            <h1>
-              {payment.status === "paid" ? "Оплата проведена" : payment.label}
-            </h1>
+            <h1>{payment.status === "paid" ? "Оплата проведена" : payment.label}</h1>
             <div className="mini-big-amount">{rub(payment.amount)}</div>
             <p>
               {payment.status === "paid"
@@ -474,7 +428,13 @@ function Experience({
               <span>Квитанция</span>
               <strong>{payment.code}</strong>
               <span>Способ оплаты</span>
-              <strong>{payment.provider?.name === "telegram" ? "Telegram Payments · тест" : payment.provider ? "ЮKassa · тест" : "Онлайн, тестовый режим"}</strong>
+              <strong>
+                {payment.provider?.name === "telegram"
+                  ? "Telegram Payments · тест"
+                  : payment.provider
+                    ? "ЮKassa · тест"
+                    : "Онлайн, тестовый режим"}
+              </strong>
             </div>
             {payment.status === "paid" ? (
               <>
@@ -510,14 +470,7 @@ function Experience({
           </section>
         ) : (
           <>
-            {isCatalog && (
-              <Catalog
-                data={data}
-                path={path}
-                online={online}
-                refresh={refresh}
-              />
-            )}
+            {isCatalog && <Catalog data={data} path={path} online={online} refresh={refresh} />}
             {!isDriver && path === "rentals" && (
               <>
                 <div className="mini-title">
@@ -526,16 +479,10 @@ function Experience({
                   <p>От первого резерва до возвращения ключей.</p>
                 </div>
                 {[...data.contract].reverse().map((c) => (
-                  <button
-                    className="mini-rental"
-                    key={c.id}
-                    onClick={() => go("rentals/" + c.id)}
-                  >
+                  <button className="mini-rental" key={c.id} onClick={() => go("rentals/" + c.id)}>
                     <img src={vehicle(c.vehicle)?.image} alt="" />
                     <div>
-                      <span className={"mini-badge " + c.status}>
-                        {statusLabel(c.status)}
-                      </span>
+                      <span className={"mini-badge " + c.status}>{statusLabel(c.status)}</span>
                       <h3>{vehicle(c.vehicle)?.model}</h3>
                       <p>
                         {dt(c.start)} — {dt(c.end)}
@@ -562,40 +509,28 @@ function Experience({
                   pay={() => pay("deposit", selectedContract.id)}
                   cancel={() =>
                     run(
-                      () =>
-                        command("contract.cancel", { id: selectedContract.id }),
+                      () => command("contract.cancel", { id: selectedContract.id }),
                       "Бронь отменена. Если залог внесён, запрос возврата передан финансисту.",
                     )
                   }
                   busy={busy || !online}
                 />
               ) : (
-                <Empty
-                  title="Аренда недоступна"
-                  text="Проверьте роль и выбранную демосессию."
-                />
+                <Empty title="Аренда недоступна" text="Проверьте роль и выбранную демосессию." />
               ))}
             {isDriver && path === "driver" && (
               <>
                 <div className="mini-title">
                   <span className="mini-eyebrow">ХОРОШЕЙ СМЕНЫ</span>
                   <h1>
-                    {data.client
-                      .find((c) => c.id === data.session.principals.driver)
-                      ?.name?.split(" ")[0] || "Ваш кабинет"}
+                    {data.client.find((c) => c.id === data.session.principals.driver)?.name?.split(" ")[0] ||
+                      "Ваш кабинет"}
                   </h1>
                   <p>Автомобиль, расчёты и помощь — рядом.</p>
                 </div>
                 <section className="mini-balance">
                   <span>К оплате по действующим договорам</span>
-                  <strong>
-                    {rub(
-                      active.reduce(
-                        (a, c) => a + Number(money(c.id)?.debt || 0),
-                        0,
-                      ),
-                    )}
-                  </strong>
+                  <strong>{rub(active.reduce((a, c) => a + Number(money(c.id)?.debt || 0), 0))}</strong>
                   <small>Залоги и штрафы считаются отдельно</small>
                 </section>
                 {active.map((c) => (
@@ -615,20 +550,11 @@ function Experience({
                       </div>
                     </div>
                     {Number(money(c.id)?.debt) > 0 && (
-                      <button
-                        className="mini-primary"
-                        disabled={busy || !online}
-                        onClick={() => pay("rent", c.id)}
-                      >
+                      <button className="mini-primary" disabled={busy || !online} onClick={() => pay("rent", c.id)}>
                         Оплатить · {rub(money(c.id)?.debt)}
                       </button>
                     )}
-                    <a
-                      className="mini-link"
-                      href={`/api/v1/documents/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a className="mini-link" href={`/api/v1/documents/${c.id}`} target="_blank" rel="noreferrer">
                       Договор PDF <ArrowUpRight size={14} />
                     </a>
                   </div>
@@ -641,17 +567,13 @@ function Experience({
                         <React.Fragment key={day.date}>
                           <span>
                             {dt(day.date)}
-                            <small style={{ display: "block" }}>
-                              {day.reason}
-                            </small>
+                            <small style={{ display: "block" }}>{day.reason}</small>
                           </span>
                           <b>{rub(day.amount)}</b>
                         </React.Fragment>
                       ))}
                     </div>
-                    <p className="mini-hint">
-                      По утверждённому графику договора {my.code}.
-                    </p>
+                    <p className="mini-hint">По утверждённому графику договора {my.code}.</p>
                   </section>
                 )}
                 {myCar && (
@@ -676,10 +598,7 @@ function Experience({
                     </div>
                   </div>
                 )}
-                <button
-                  className="mini-shortcut"
-                  onClick={() => go("driver/inspection")}
-                >
+                <button className="mini-shortcut" onClick={() => go("driver/inspection")}>
                   <ShieldCheck />
                   <div>
                     <strong>Предсменный осмотр</strong>
@@ -694,9 +613,7 @@ function Experience({
                 <div className="mini-title">
                   <span className="mini-eyebrow">СВЕРКА ЧЕРЕЗ N8N</span>
                   <h1>Штрафы</h1>
-                  <p>
-                    Учебные постановления. Оплата отражается отдельно от аренды.
-                  </p>
+                  <p>Учебные постановления. Оплата отражается отдельно от аренды.</p>
                 </div>
                 <button
                   className="mini-link"
@@ -713,19 +630,11 @@ function Experience({
                   Обновить из источника
                 </button>
                 {state.fines
-                  .filter(
-                    (f) =>
-                      path === "driver/fines" || f.id === path.split("/")[2],
-                  )
+                  .filter((f) => path === "driver/fines" || f.id === path.split("/")[2])
                   .map((f) => (
                     <div className="mini-surface" key={f.id}>
                       <div className="mini-row">
-                        <span
-                          className={
-                            "mini-badge " +
-                            (f.status === "paid" ? "completed" : "draft")
-                          }
-                        >
+                        <span className={"mini-badge " + (f.status === "paid" ? "completed" : "draft")}>
                           {f.status === "paid" ? "Оплачено" : "К оплате"}
                         </span>
                         <small>{vehicle(f.vehicle)?.plate}</small>
@@ -734,8 +643,7 @@ function Experience({
                       <p>{f.external_id}</p>
                       {f.discount_percent > 0 && (
                         <p className="mini-hint">
-                          Учебная скидка {f.discount_percent}% до{" "}
-                          {dt(f.discount_until)} · исходная сумма{" "}
+                          Учебная скидка {f.discount_percent}% до {dt(f.discount_until)} · исходная сумма{" "}
                           {rub(f.amount)}
                         </p>
                       )}
@@ -743,13 +651,8 @@ function Experience({
                         {f.source} · {f.at ? dt(f.at) : ""}
                       </small>
                       {f.status !== "paid" ? (
-                        <button
-                          className="mini-primary"
-                          disabled={busy || !online}
-                          onClick={() => pay("fine", f.id)}
-                        >
-                          Оплатить {f.discount_percent ? "со скидкой" : ""} ·{" "}
-                          {rub(f.due)}
+                        <button className="mini-primary" disabled={busy || !online} onClick={() => pay("fine", f.id)}>
+                          Оплатить {f.discount_percent ? "со скидкой" : ""} · {rub(f.due)}
                         </button>
                       ) : (
                         <a
@@ -764,10 +667,7 @@ function Experience({
                     </div>
                   ))}
                 {!state.fines.length && (
-                  <Empty
-                    title="Постановлений пока нет"
-                    text="Запросите свежую сверку через n8n."
-                  />
+                  <Empty title="Постановлений пока нет" text="Запросите свежую сверку через n8n." />
                 )}
               </>
             )}
@@ -778,10 +678,7 @@ function Experience({
                   <h1>Помощь на дороге</h1>
                   <p>Зафиксируйте ситуацию — отдел получит всё необходимое.</p>
                 </div>
-                <button
-                  className="mini-shortcut"
-                  onClick={() => go("driver/accident")}
-                >
+                <button className="mini-shortcut" onClick={() => go("driver/accident")}>
                   <HelpCircle />
                   <div>
                     <strong>Сообщить о ДТП</strong>
@@ -789,10 +686,7 @@ function Experience({
                   </div>
                   <ChevronRight />
                 </button>
-                <button
-                  className="mini-shortcut"
-                  onClick={() => go("driver/inspection")}
-                >
+                <button className="mini-shortcut" onClick={() => go("driver/inspection")}>
                   <ShieldCheck />
                   <div>
                     <strong>Осмотреть автомобиль</strong>
@@ -802,11 +696,7 @@ function Experience({
                 </button>
                 <h2>Мои обращения</h2>
                 {data.ticket.map((t) => (
-                  <button
-                    className="mini-shortcut"
-                    key={t.id}
-                    onClick={() => go("driver/tickets/" + t.id)}
-                  >
+                  <button className="mini-shortcut" key={t.id} onClick={() => go("driver/tickets/" + t.id)}>
                     <Wrench size={19} />
                     <div>
                       <strong>{t.title}</strong>
@@ -819,39 +709,28 @@ function Experience({
                 ))}
               </>
             )}
-            {isDriver &&
-              (path === "driver/accident" || path === "driver/inspection") && (
-                <DriverForm
-                  key={path}
-                  inspection={path.endsWith("inspection")}
-                  cars={
-                    active
-                      .map((c) => vehicle(c.vehicle))
-                      .filter(Boolean) as Row[]
-                  }
-                  online={online}
-                  onDone={async (row) => {
-                    await refresh();
-                    go(
-                      row.kind === "ticket"
-                        ? "driver/tickets/" + row.id
-                        : "driver",
-                    );
-                    setNotice(
-                      row.kind === "ticket"
-                        ? "Обращение передано техническому отделу"
-                        : "Осмотр сохранён. Спасибо за внимательность.",
-                    );
-                  }}
-                />
-              )}
+            {isDriver && (path === "driver/accident" || path === "driver/inspection") && (
+              <DriverForm
+                key={path}
+                inspection={path.endsWith("inspection")}
+                cars={active.map((c) => vehicle(c.vehicle)).filter(Boolean) as Row[]}
+                online={online}
+                onDone={async (row) => {
+                  await refresh();
+                  go(row.kind === "ticket" ? "driver/tickets/" + row.id : "driver");
+                  setNotice(
+                    row.kind === "ticket"
+                      ? "Обращение передано техническому отделу"
+                      : "Осмотр сохранён. Спасибо за внимательность.",
+                  );
+                }}
+              />
+            )}
             {isDriver &&
               path.startsWith("driver/tickets/") &&
               (selectedTicket ? (
                 <div className="mini-surface">
-                  <span className="mini-badge">
-                    {statusLabel(selectedTicket.status)}
-                  </span>
+                  <span className="mini-badge">{statusLabel(selectedTicket.status)}</span>
                   <h1>{selectedTicket.title}</h1>
                   <p>{selectedTicket.description}</p>
                   {selectedTicket.location && (
@@ -873,13 +752,7 @@ function Experience({
                     </b>
                   </div>
                   {selectedTicket.photos?.map((id: string) => (
-                    <a
-                      className="mini-link"
-                      key={id}
-                      href={`/api/v1/files/${id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a className="mini-link" key={id} href={`/api/v1/files/${id}`} target="_blank" rel="noreferrer">
                       Фото к обращению <ArrowUpRight size={14} />
                     </a>
                   ))}
@@ -887,14 +760,7 @@ function Experience({
               ) : (
                 <Empty title="Обращение недоступно" />
               ))}
-            {path === "profile" && (
-              <Profile
-                data={data}
-                state={state}
-                online={online}
-                refresh={refresh}
-              />
-            )}
+            {path === "profile" && <Profile data={data} state={state} online={online} refresh={refresh} />}
           </>
         )}
         <footer className="mini-credit">
@@ -912,11 +778,7 @@ function Experience({
             <button
               key={id}
               aria-current={path === id ? "page" : undefined}
-              className={
-                path === id || (id === "rentals" && path.startsWith("rentals/"))
-                  ? "active"
-                  : ""
-              }
+              className={path === id || (id === "rentals" && path.startsWith("rentals/")) ? "active" : ""}
               onClick={() => go(id)}
             >
               <Icon size={20} />
@@ -949,9 +811,7 @@ function Catalog({
   const [collection, setCollection] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const car = path.startsWith("car/")
-    ? data.vehicle.find((v) => v.id === path.split("/")[1])
-    : undefined;
+  const car = path.startsWith("car/") ? data.vehicle.find((v) => v.id === path.split("/")[1]) : undefined;
   const available = useQuery({
     queryKey: ["tg-availability", start, end, data.session.id],
     queryFn: () => api(`/availability?start=${start}&end=${end}`),
@@ -967,17 +827,12 @@ function Catalog({
   };
   const quote = useQuery({
     queryKey: ["tg-quote", payload, data.session.id],
-    queryFn: () =>
-      api("/rental/quote", { method: "POST", body: JSON.stringify(payload) }),
+    queryFn: () => api("/rental/quote", { method: "POST", body: JSON.stringify(payload) }),
     enabled: !!car && start >= data.today && end > start,
     staleTime: 0,
     retry: false,
   });
-  const eligible = new Set(
-    (available.data?.items || [])
-      .filter((v: any) => v.available)
-      .map((v: any) => v.id),
-  );
+  const eligible = new Set((available.data?.items || []).filter((v: any) => v.available).map((v: any) => v.id));
   const cars = data.vehicle.filter(
     (v) =>
       ["rental", "commercial"].includes(v.direction) &&
@@ -986,11 +841,7 @@ function Catalog({
       (!price || Number(v.rate) <= price),
   );
   const classes = [
-    ...new Set(
-      data.vehicle
-        .filter((v) => ["rental", "commercial"].includes(v.direction))
-        .map((v) => String(v.class)),
-    ),
+    ...new Set(data.vehicle.filter((v) => ["rental", "commercial"].includes(v.direction)).map((v) => String(v.class))),
   ];
   const changeStart = (v: string) => {
     setStart(v);
@@ -1067,11 +918,9 @@ function Catalog({
     return (
       <>
         <div className="mini-gallery">
-          {[...new Set<string>(car.images?.length ? car.images : [car.image])]
-            .filter(Boolean)
-            .map((src, i) => (
-              <img key={src} src={src} alt={`${car.model} · фото ${i + 1}`} />
-            ))}
+          {[...new Set<string>(car.images?.length ? car.images : [car.image])].filter(Boolean).map((src, i) => (
+            <img key={src} src={src} alt={`${car.model} · фото ${i + 1}`} />
+          ))}
           <span className="mini-gallery-tag">
             {car.class} · {car.year}
           </span>
@@ -1094,21 +943,13 @@ function Catalog({
         <div className="mini-surface">
           <h3>Сделаем поездку удобнее</h3>
           <label className="mini-check">
-            <input
-              type="checkbox"
-              checked={delivery}
-              onChange={(e) => setDelivery(e.target.checked)}
-            />
+            <input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} />
             <span>
               Доставка автомобиля<small>1 500 ₽</small>
             </span>
           </label>
           <label className="mini-check">
-            <input
-              type="checkbox"
-              checked={collection}
-              onChange={(e) => setCollection(e.target.checked)}
-            />
+            <input type="checkbox" checked={collection} onChange={(e) => setCollection(e.target.checked)} />
             <span>
               Забрать после аренды<small>1 500 ₽</small>
             </span>
@@ -1132,9 +973,7 @@ function Catalog({
               {quote.data.discount_percent > 0 && (
                 <>
                   <span>Скидка за срок</span>
-                  <b className="mini-positive">
-                    −{quote.data.discount_percent}%
-                  </b>
+                  <b className="mini-positive">−{quote.data.discount_percent}%</b>
                 </>
               )}
               <span>Доставка и забор</span>
@@ -1148,21 +987,16 @@ function Catalog({
             <p>Рассчитываем стоимость…</p>
           )}
           <p className="mini-hint">
-            Резерв на 30 минут. Менеджер подтвердит бронь после проверки
-            документов. Бронирование не списывает деньги.
+            Резерв на 30 минут. Менеджер подтвердит бронь после проверки документов. Бронирование не списывает деньги.
           </p>
           {!eligible.has(car.id) && available.data && (
             <ErrorBox text="На эти даты автомобиль недоступен. Выберите другой период." />
           )}
         </div>
-        <ErrorBox
-          text={error || quote.error?.message || available.error?.message}
-        />
+        <ErrorBox text={error || quote.error?.message || available.error?.message} />
         <Primary
           button={{
-            text: quote.data
-              ? `Забронировать за ${rub(quote.data.total)}`
-              : "Рассчитываем стоимость…",
+            text: quote.data ? `Забронировать за ${rub(quote.data.total)}` : "Рассчитываем стоимость…",
             disabled: !ready || !online,
             busy,
           }}
@@ -1184,29 +1018,18 @@ function Catalog({
       {dates}
       <div className="mini-filter">
         <div className="mini-chips">
-          <button
-            className={!carClass ? "selected" : ""}
-            onClick={() => setClass("")}
-          >
+          <button className={!carClass ? "selected" : ""} onClick={() => setClass("")}>
             Все
           </button>
           {classes.map((c) => (
-            <button
-              key={c}
-              className={c === carClass ? "selected" : ""}
-              onClick={() => setClass(c)}
-            >
+            <button key={c} className={c === carClass ? "selected" : ""} onClick={() => setClass(c)}>
               {c}
             </button>
           ))}
         </div>
         <label>
           <SlidersHorizontal size={15} />
-          <select
-            aria-label="Цена в сутки"
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-          >
+          <select aria-label="Цена в сутки" value={price} onChange={(e) => setPrice(Number(e.target.value))}>
             <option value={0}>Любая цена</option>
             <option value={3500}>До 3 500 ₽ / сутки</option>
             <option value={6000}>До 6 000 ₽ / сутки</option>
@@ -1217,27 +1040,14 @@ function Catalog({
         <h2>Выберите свой автомобиль</h2>
         <span>{available.isFetching ? "…" : cars.length}</span>
       </div>
-      <ErrorBox
-        text={
-          available.error?.message ||
-          (end <= start ? "Возврат должен быть позже получения" : "")
-        }
-      />
+      <ErrorBox text={available.error?.message || (end <= start ? "Возврат должен быть позже получения" : "")} />
       {available.isLoading ? (
         <Spinner />
       ) : cars.length ? (
         cars.map((v, i) => (
-          <button
-            className="mini-car"
-            key={v.id}
-            onClick={() => go("car/" + v.id)}
-          >
+          <button className="mini-car" key={v.id} onClick={() => go("car/" + v.id)}>
             <div className="mini-car-image">
-              <img
-                src={v.image}
-                alt={v.model}
-                loading={i < 2 ? "eager" : "lazy"}
-              />
+              <img src={v.image} alt={v.model} loading={i < 2 ? "eager" : "lazy"} />
               <span className="mini-car-class">{v.class}</span>
               <span className="mini-car-arrow">
                 <ArrowUpRight size={22} />
@@ -1247,10 +1057,7 @@ function Catalog({
               <div>
                 <h2>{v.model}</h2>
                 <p>
-                  {v.year} ·{" "}
-                  {v.direction === "commercial"
-                    ? "Для бизнеса"
-                    : "Для ваших маршрутов"}
+                  {v.year} · {v.direction === "commercial" ? "Для бизнеса" : "Для ваших маршрутов"}
                 </p>
               </div>
               <div className="mini-car-rate">
@@ -1261,10 +1068,7 @@ function Catalog({
           </button>
         ))
       ) : (
-        <Empty
-          title="На эти даты всё занято"
-          text="Измените даты или снимите фильтры — подберём другой вариант."
-        />
+        <Empty title="На эти даты всё занято" text="Измените даты или снимите фильтры — подберём другой вариант." />
       )}
     </>
   );
@@ -1302,16 +1106,10 @@ function Rental({
         <span className="mini-eyebrow">ВАША АРЕНДА · {c.code}</span>
         <h1>{car?.model}</h1>
         <span className={"mini-badge " + c.status}>
-          {c.status === "draft"
-            ? remaining
-              ? "Резерв · ждёт менеджера"
-              : "Резерв истёк"
-            : statusLabel(c.status)}
+          {c.status === "draft" ? (remaining ? "Резерв · ждёт менеджера" : "Резерв истёк") : statusLabel(c.status)}
         </span>
       </div>
-      {car?.image && (
-        <img className="mini-rental-hero" src={car.image} alt={car.model} />
-      )}
+      {car?.image && <img className="mini-rental-hero" src={car.image} alt={car.model} />}
       <section className="mini-surface">
         <div className="mini-row">
           <span>
@@ -1339,11 +1137,7 @@ function Rental({
           <b>
             {rub(
               c.quote_total ||
-                Number(c.rate) *
-                  Math.max(
-                    1,
-                    (Date.parse(c.end) - Date.parse(c.start)) / 86400000,
-                  ) +
+                Number(c.rate) * Math.max(1, (Date.parse(c.end) - Date.parse(c.start)) / 86400000) +
                   Number(c.services_amount || 0),
             )}
           </b>
@@ -1354,24 +1148,15 @@ function Rental({
         </div>
         {c.refund_status && (
           <p className="mini-hint">
-            Возврат залога:{" "}
-            {c.refund_status === "completed"
-              ? "выполнен"
-              : "ожидает финансиста"}
+            Возврат залога: {c.refund_status === "completed" ? "выполнен" : "ожидает финансиста"}
           </p>
         )}
-        {["confirmed", "active"].includes(c.status) &&
-          Number(amounts?.deposit_due) > 0 && (
-            <button className="mini-primary" onClick={pay} disabled={busy}>
-              Оплатить залог · {rub(amounts?.deposit_due)}
-            </button>
-          )}
-        <a
-          className="mini-link"
-          href={`/api/v1/documents/${c.id}`}
-          target="_blank"
-          rel="noreferrer"
-        >
+        {["confirmed", "active"].includes(c.status) && Number(amounts?.deposit_due) > 0 && (
+          <button className="mini-primary" onClick={pay} disabled={busy}>
+            Оплатить залог · {rub(amounts?.deposit_due)}
+          </button>
+        )}
+        <a className="mini-link" href={`/api/v1/documents/${c.id}`} target="_blank" rel="noreferrer">
           <FileText size={16} /> Договор и расчёты PDF
         </a>
         <button className="mini-link" onClick={() => go("profile")}>
@@ -1380,17 +1165,11 @@ function Rental({
         {["draft", "confirmed"].includes(c.status) &&
           (confirmCancel ? (
             <div className="mini-cancel">
-              <p>
-                Отменить бронирование? Возврат внесённого залога подтвердит
-                финансист.
-              </p>
+              <p>Отменить бронирование? Возврат внесённого залога подтвердит финансист.</p>
               <button className="mini-primary" disabled={busy} onClick={cancel}>
                 Да, отменить бронь
               </button>
-              <button
-                className="mini-link"
-                onClick={() => setConfirmCancel(false)}
-              >
+              <button className="mini-link" onClick={() => setConfirmCancel(false)}>
                 Сохранить бронь
               </button>
             </div>
@@ -1398,10 +1177,8 @@ function Rental({
             <button
               className="mini-link mini-danger"
               onClick={() =>
-                confirmAction(
-                  "Отменить бронь? Если залог внесён, запрос возврата получит финансист.",
-                  cancel,
-                  () => setConfirmCancel(true),
+                confirmAction("Отменить бронь? Если залог внесён, запрос возврата получит финансист.", cancel, () =>
+                  setConfirmCancel(true),
                 )
               }
             >
@@ -1424,9 +1201,7 @@ function Profile({
   online: boolean;
   refresh: () => Promise<void>;
 }) {
-  const person = data.client.find(
-    (c) => c.id === data.session.principals[data.session.role],
-  );
+  const person = data.client.find((c) => c.id === data.session.principals[data.session.role]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function attach(type: string, file?: File) {
@@ -1452,10 +1227,7 @@ function Profile({
       <div className="mini-title">
         <span className="mini-eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span>
         <h1>{person?.name || "Ваш профиль"}</h1>
-        <p>
-          {data.session.role === "driver" ? "Водитель" : "Клиент проката"} ·
-          учебная карточка
-        </p>
+        <p>{data.session.role === "driver" ? "Водитель" : "Клиент проката"} · учебная карточка</p>
       </div>
       <ErrorBox text={error} />
       <section className="mini-surface">
@@ -1463,10 +1235,7 @@ function Profile({
           <h2>Документы</h2>
           <span className="mini-badge">{statusLabel(person?.status)}</span>
         </div>
-        <p className="mini-hint">
-          Для демонстрации используйте учебные изображения. JPEG, PNG или PDF,
-          до 8 МБ.
-        </p>
+        <p className="mini-hint">Для демонстрации используйте учебные изображения. JPEG, PNG или PDF, до 8 МБ.</p>
         {[
           ["passport", "Паспорт"],
           ["license", "Водительское удостоверение"],
@@ -1479,11 +1248,7 @@ function Profile({
                 <strong>{title}</strong>
                 <small>{doc ? doc.name : "Файл ещё не загружен"}</small>
                 {doc && (
-                  <a
-                    href={`/api/v1/files/${doc.file}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <a href={`/api/v1/files/${doc.file}`} target="_blank" rel="noreferrer">
                     Открыть
                   </a>
                 )}
@@ -1502,10 +1267,7 @@ function Profile({
           );
         })}
         {busy && <p className="mini-hint">Загружаем документ…</p>}
-        <p className="mini-hint">
-          Загрузка передаёт комплект сотруднику на проверку. Решение принимает
-          специалист.
-        </p>
+        <p className="mini-hint">Загрузка передаёт комплект сотруднику на проверку. Решение принимает специалист.</p>
       </section>
       <section className="mini-surface">
         <h2>Квитанции</h2>
@@ -1536,10 +1298,7 @@ function Profile({
       <div className="mini-surface">
         <ShieldCheck size={22} />
         <h3>Учебные данные</h3>
-        <p>
-          Люди, договоры и оплаты в кабинете — учебные. Роль можно сменить в
-          боте командой /roles.
-        </p>
+        <p>Люди, договоры и оплаты в кабинете — учебные. Роль можно сменить в боте командой /roles.</p>
       </div>
     </>
   );
@@ -1609,9 +1368,7 @@ function DriverForm({
               mileage: Number(mileage),
               fuel: Number(fuel),
               notes,
-              shots: Object.fromEntries(
-                Object.entries(shots).map(([k, f]) => [k, f.id]),
-              ),
+              shots: Object.fromEntries(Object.entries(shots).map(([k, f]) => [k, f.id])),
             }
           : {
               vehicle,
@@ -1630,27 +1387,13 @@ function DriverForm({
       setBusy(false);
     }
   }
-  if (!car)
-    return (
-      <Empty
-        title="Нет действующего автомобиля"
-        text="Этот сценарий доступен после выдачи автомобиля."
-      />
-    );
+  if (!car) return <Empty title="Нет действующего автомобиля" text="Этот сценарий доступен после выдачи автомобиля." />;
   return (
     <>
       <div className="mini-title">
-        <span className="mini-eyebrow">
-          {inspection
-            ? "ПЕРЕД ВЫЕЗДОМ"
-            : `ПОМОЩЬ НА ДОРОГЕ · ШАГ ${step + 1} ИЗ 3`}
-        </span>
+        <span className="mini-eyebrow">{inspection ? "ПЕРЕД ВЫЕЗДОМ" : `ПОМОЩЬ НА ДОРОГЕ · ШАГ ${step + 1} ИЗ 3`}</span>
         <h1>
-          {inspection
-            ? "Осмотр автомобиля"
-            : ["Что произошло?", "Зафиксируем детали", "Проверьте обращение"][
-                step
-              ]}
+          {inspection ? "Осмотр автомобиля" : ["Что произошло?", "Зафиксируем детали", "Проверьте обращение"][step]}
         </h1>
         <p>
           {inspection
@@ -1684,22 +1427,11 @@ function DriverForm({
             <div className="mini-numbers">
               <label className="mini-field">
                 Пробег, км
-                <input
-                  type="number"
-                  min={car.mileage}
-                  value={mileage}
-                  onChange={(e) => setMileage(e.target.value)}
-                />
+                <input type="number" min={car.mileage} value={mileage} onChange={(e) => setMileage(e.target.value)} />
               </label>
               <label className="mini-field">
                 Топливо, %
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={fuel}
-                  onChange={(e) => setFuel(e.target.value)}
-                />
+                <input type="number" min="0" max="100" value={fuel} onChange={(e) => setFuel(e.target.value)} />
               </label>
             </div>
           ) : (
@@ -1738,17 +1470,10 @@ function DriverForm({
       {(inspection || step === 1) && (
         <>
           <section className="mini-surface">
-            <h3>
-              {inspection
-                ? "Четыре стороны автомобиля"
-                : "Фотографии происшествия"}
-            </h3>
+            <h3>{inspection ? "Четыре стороны автомобиля" : "Фотографии происшествия"}</h3>
             <div className="mini-photo-grid">
               {positions.map(([key, label]) => (
-                <label
-                  key={key}
-                  className={"mini-photo " + (shots[key] ? "uploaded" : "")}
-                >
+                <label key={key} className={"mini-photo " + (shots[key] ? "uploaded" : "")}>
                   <input
                     aria-label={`Фото: ${label}`}
                     type="file"
@@ -1757,31 +1482,19 @@ function DriverForm({
                     disabled={busy || !online}
                     onChange={(e) => photo(key, e.target.files?.[0])}
                   />
-                  {shots[key] ? (
-                    <CheckCircle2 size={24} />
-                  ) : (
-                    <Upload size={24} />
-                  )}
+                  {shots[key] ? <CheckCircle2 size={24} /> : <Upload size={24} />}
                   <strong>{label}</strong>
-                  <small>
-                    {shots[key] ? "Фото загружено" : "Камера или файл"}
-                  </small>
+                  <small>{shots[key] ? "Фото загружено" : "Камера или файл"}</small>
                 </label>
               ))}
             </div>
           </section>
           <label className="mini-field mini-surface">
-            {inspection
-              ? "Замечания, если есть"
-              : "Обстоятельства происшествия"}
+            {inspection ? "Замечания, если есть" : "Обстоятельства происшествия"}
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={
-                inspection
-                  ? "Например: повреждение на правой двери"
-                  : "Что произошло, есть ли повреждения"
-              }
+              placeholder={inspection ? "Например: повреждение на правой двери" : "Что произошло, есть ли повреждения"}
               maxLength={2000}
               rows={4}
             />
@@ -1800,9 +1513,7 @@ function DriverForm({
             <span>Приложено фотографий</span>
             <b>{Object.keys(shots).length}</b>
           </div>
-          <p className="mini-hint">
-            Срочное обращение. Учебный срок реакции отдела — 15 минут.
-          </p>
+          <p className="mini-hint">Срочное обращение. Учебный срок реакции отдела — 15 минут.</p>
           <button className="mini-link" onClick={() => setStep(1)}>
             Изменить детали
           </button>
@@ -1810,11 +1521,7 @@ function DriverForm({
       )}
       <Primary
         button={{
-          text: inspection
-            ? "Сохранить предсменный осмотр"
-            : step < 2
-              ? "Продолжить"
-              : "Отправить обращение в сервис",
+          text: inspection ? "Сохранить предсменный осмотр" : step < 2 ? "Продолжить" : "Отправить обращение в сервис",
           busy,
           disabled:
             !online ||
@@ -1824,9 +1531,7 @@ function DriverForm({
                 ? !location.trim()
                 : !notes.trim() || !Object.keys(shots).length),
         }}
-        onClick={
-          inspection || step === 2 ? submit : () => setStep((s) => s + 1)
-        }
+        onClick={inspection || step === 2 ? submit : () => setStep((s) => s + 1)}
       />
     </>
   );

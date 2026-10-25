@@ -36,8 +36,14 @@ _hits: dict[str, list[float]] = {}
 def tools(role=ROLE):
     from .agent import tools_for
 
-    return [{"name": t["function"]["name"], "description": t["function"]["description"],
-             "inputSchema": t["function"]["parameters"]} for t in tools_for(role)]
+    return [
+        {
+            "name": t["function"]["name"],
+            "description": t["function"]["description"],
+            "inputSchema": t["function"]["parameters"],
+        }
+        for t in tools_for(role)
+    ]
 
 
 def handle(message, space, role=ROLE):
@@ -52,10 +58,15 @@ def handle(message, space, role=ROLE):
         return {"jsonrpc": "2.0", "id": mid, "result": result}
 
     if method == "initialize":
-        return ok({"protocolVersion": PROTOCOL, "capabilities": {"tools": {"listChanged": False}},
-                   "serverInfo": {"name": "fleet-ai-ops", "version": "1.0"},
-                   "instructions": "Учебный таксопарк: автопарк, договоры, экономика машин, регламенты, Битрикс24. "
-                                   "Данные учебные. Инструменты записи создают только черновики — их подтверждает человек в кабинете."})
+        return ok(
+            {
+                "protocolVersion": PROTOCOL,
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": "fleet-ai-ops", "version": "1.0"},
+                "instructions": "Учебный таксопарк: автопарк, договоры, экономика машин, регламенты, Битрикс24. "
+                "Данные учебные. Инструменты записи создают только черновики — их подтверждает человек в кабинете.",
+            }
+        )
     if method == "ping":
         return ok({})
     if method == "tools/list":
@@ -64,11 +75,31 @@ def handle(message, space, role=ROLE):
         params = message.get("params") or {}
         name, args = params.get("name"), params.get("arguments") or {}
         if not space:
-            return ok({"content": [{"type": "text", "text": "Нет активного хода: инструменты вызываются только внутри вопроса посетителя."}],
-                       "isError": True})
+            return ok(
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Нет активного хода: инструменты вызываются только внутри вопроса посетителя.",
+                        }
+                    ],
+                    "isError": True,
+                }
+            )
         try:
-            result = execute(space, role, name, args, "mcp:" + hashlib.sha256(json.dumps([name, args, time.time()]).encode()).hexdigest()[:24])
-            return ok({"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, default=str)}], "isError": False})
+            result = execute(
+                space,
+                role,
+                name,
+                args,
+                "mcp:" + hashlib.sha256(json.dumps([name, args, time.time()]).encode()).hexdigest()[:24],
+            )
+            return ok(
+                {
+                    "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, default=str)}],
+                    "isError": False,
+                }
+            )
         except Exception as e:
             reason = getattr(e, "detail", None) or str(e) or type(e).__name__
             return ok({"content": [{"type": "text", "text": str(reason)[:500]}], "isError": True})
@@ -109,23 +140,49 @@ def limited(key):
 
 @router.post("/api/mcp")
 async def mcp_http(request: Request):
-    key = request.query_params.get("key") or (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    key = (
+        request.query_params.get("key") or (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    )
     turn = hermes_turn(key)
     space, role = turn if turn else (space_for_key(key), ROLE)
     if not space and not turn:
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32001, "message": "Нужен действующий ключ: создайте его в консоли «Под капотом» → MCP"}}, status_code=401)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {
+                    "code": -32001,
+                    "message": "Нужен действующий ключ: создайте его в консоли «Под капотом» → MCP",
+                },
+            },
+            status_code=401,
+        )
     try:
         body = await request.json()
     except Exception:
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Некорректный JSON"}}, status_code=400)
+        return JSONResponse(
+            {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Некорректный JSON"}}, status_code=400
+        )
     batch = body if isinstance(body, list) else [body]
     if len(batch) > 10:
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Слишком большой пакет"}}, status_code=400)
+        return JSONResponse(
+            {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Слишком большой пакет"}},
+            status_code=400,
+        )
     if any(m.get("method") == "tools/call" for m in batch if isinstance(m, dict)) and limited(key):
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32002, "message": f"Не больше {CALLS_PER_MINUTE} вызовов в минуту"}}, status_code=429)
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32002, "message": f"Не больше {CALLS_PER_MINUTE} вызовов в минуту"},
+            },
+            status_code=429,
+        )
     import anyio
 
-    out = [r for r in [await anyio.to_thread.run_sync(handle, m, space, role) for m in batch if isinstance(m, dict)] if r]
+    out = [
+        r for r in [await anyio.to_thread.run_sync(handle, m, space, role) for m in batch if isinstance(m, dict)] if r
+    ]
     if not out:
         return Response(status_code=202)
     return JSONResponse(out if isinstance(body, list) else out[0], headers={"MCP-Protocol-Version": PROTOCOL})
@@ -144,8 +201,12 @@ def mcp_key(request: Request):
     with db() as s:
         sp = auth(s, request)
         key = "fl_" + secrets.token_urlsafe(24)
-        s.add(System(key="mcp:" + hashlib.sha256(key.encode()).hexdigest()[:40],
-                     data={"space": sp.id, "expires": (now() + timedelta(hours=24)).isoformat()}))
+        s.add(
+            System(
+                key="mcp:" + hashlib.sha256(key.encode()).hexdigest()[:40],
+                data={"space": sp.id, "expires": (now() + timedelta(hours=24)).isoformat()},
+            )
+        )
         return {"key": key, "expires_hours": 24, "role": ROLE}
 
 
@@ -175,4 +236,3 @@ def stdio():
 
 if __name__ == "__main__":
     stdio()
-

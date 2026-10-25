@@ -6,16 +6,29 @@ from tests.cleanup import drop_space
 
 
 def test_form_arrays_parse_like_a_portal():
-    params = b24.form_params("fields%5BTITLE%5D=%D0%97%D0%B2%D0%BE%D0%BD%D0%BE%D0%BA&fields%5BRESPONSIBLE_ID%5D=7&id=101")
+    params = b24.form_params(
+        "fields%5BTITLE%5D=%D0%97%D0%B2%D0%BE%D0%BD%D0%BE%D0%BA&fields%5BRESPONSIBLE_ID%5D=7&id=101"
+    )
     assert params == {"fields": {"TITLE": "Звонок", "RESPONSIBLE_ID": "7"}, "id": "101"}
 
 
 def test_emulator_writes_and_logs():
-    p = Emulator({"deals": [{"ID": "101", "STAGE_ID": "NEW", "CATEGORY_ID": "0", "DATE_CREATE": "2026-01-01T10:00:00+03:00"}],
-                  "users": [], "categories": [], "statuses": [], "leads": []})
-    assert p.call("crm.deal.update", {"id": 101, "fields": {"STAGE_ID": "PREPARATION"}}, source="test")["result"] is True
+    p = Emulator(
+        {
+            "deals": [{"ID": "101", "STAGE_ID": "NEW", "CATEGORY_ID": "0", "DATE_CREATE": "2026-01-01T10:00:00+03:00"}],
+            "users": [],
+            "categories": [],
+            "statuses": [],
+            "leads": [],
+        }
+    )
+    assert (
+        p.call("crm.deal.update", {"id": 101, "fields": {"STAGE_ID": "PREPARATION"}}, source="test")["result"] is True
+    )
     assert p.data["deals"][0]["STAGE_ID"] == "PREPARATION" and p.data["stagehistory"][-1]["STAGE_ID"] == "PREPARATION"
-    cid = p.call("crm.timeline.comment.add", {"fields": {"ENTITY_ID": 101, "ENTITY_TYPE": "deal", "COMMENT": "ok"}})["result"]
+    cid = p.call("crm.timeline.comment.add", {"fields": {"ENTITY_ID": 101, "ENTITY_TYPE": "deal", "COMMENT": "ok"}})[
+        "result"
+    ]
     assert p.call("crm.timeline.comment.list", {"filter": {"ENTITY_ID": "101"}})["result"][0]["ID"] == str(cid)
     assert [x["method"] for x in p.data["log"]] == ["crm.deal.update", "crm.timeline.comment.add"]
     try:
@@ -52,9 +65,11 @@ def test_app_round_trip(monkeypatch):
     info = c.get(f"/api/b24app/deal/{rental['ID']}", headers={"X-B24App-Key": key}).json()
     assert info["contract"]["code"] == rental["UF_CRM_CONTRACT"] and "ok" in info["verdict"]
     # The app writes into the portal over REST: a form-encoded comment, as PHP clients often send.
-    r = c.post(f"/api/b24/rest/{key}/crm.timeline.comment.add.json",
-               content=f"fields[ENTITY_ID]={rental['ID']}&fields[ENTITY_TYPE]=deal&fields[COMMENT]=hello",
-               headers={"Content-Type": "application/x-www-form-urlencoded"})
+    r = c.post(
+        f"/api/b24/rest/{key}/crm.timeline.comment.add.json",
+        content=f"fields[ENTITY_ID]={rental['ID']}&fields[ENTITY_TYPE]=deal&fields[COMMENT]=hello",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
     assert r.status_code == 200
     journal = c.get(f"/api/v1/b24app/journal?deal={rental['ID']}").json()
     assert journal["comments"][-1]["COMMENT"] == "hello" and journal["log"][-1]["source"] == "приложение"

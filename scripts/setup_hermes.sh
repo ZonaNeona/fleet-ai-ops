@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-time on the host: Hermes Agent profile «fleet» next to the existing «pulse» one.
-#   bash scripts/setup_hermes.sh
-# The profile reaches the stand's tools through the stand's MCP server over HTTP with a server key; its API server
-# listens on 127.0.0.1:8664. Keys are generated here and written only to the profile's .env and /etc/fleet.env.
+# One-time on the host: Hermes Agent profile «fleet» for the agent router (ADR 0014).
+#   bash scripts/setup_hermes.sh            (Hermes Agent installed for the user «hermes»)
+# The profile's API server listens on 127.0.0.1:8664; its tools come from the stand's MCP server over HTTP with a
+# server key. Keys are generated here and written only to the profile's .env and /etc/fleet.env.
 set -euo pipefail
 HERMES=/home/hermes/.local/bin/hermes
 PROFILE=/home/hermes/.hermes/profiles/fleet
@@ -11,36 +11,24 @@ key() { openssl rand -hex 24; }
 setenv() {  # setenv FILE NAME VALUE — replace or append, never print the value
   if grep -q "^$2=" "$1"; then sed -i "s|^$2=.*|$2=$3|" "$1"; else echo "$2=$3" >> "$1"; fi
 }
+fleet() { sed -n "s/^$1=//p" /etc/fleet.env; }
 
-[ -d "$PROFILE" ] || as_hermes "$HERMES" profile create fleet --clone-from pulse --no-alias >/dev/null
-# The persona and skills are the fleet's, not the cloned ones.
-rm -rf "$PROFILE"/skills/pulse-*
+[ -d "$PROFILE" ] || as_hermes "$HERMES" profile create fleet --no-alias >/dev/null
 install -o hermes -g hermes -m 644 infra/hermes/SOUL.md "$PROFILE/SOUL.md"
 for skill in infra/hermes/skills/*/; do
   install -d -o hermes -g hermes "$PROFILE/skills/$(basename "$skill")"
   install -o hermes -g hermes -m 644 "$skill/SKILL.md" "$PROFILE/skills/$(basename "$skill")/SKILL.md"
 done
-python3 - "$PROFILE/config.yaml" <<'PY'
-import re, sys
-path = sys.argv[1]
-text = open(path).read()
-block = """mcp_servers:
-  fleet:
-    url: http://127.0.0.1:3008/api/mcp
-    headers:
-      Authorization: Bearer ${FLEET_MCP_KEY}
-    timeout: 60
-"""
-text = re.sub(r"mcp_servers:\n(?:[ \t]+.*\n)*", block, text)
-open(path, "w").write(text)
-PY
+sed "s|__OPENROUTER_BASE_URL__|$(fleet OPENROUTER_BASE_URL)|" infra/hermes/config.yaml > "$PROFILE/config.yaml"
+chown hermes:hermes "$PROFILE/config.yaml"
 
 ENVF="$PROFILE/.env"
-grep -q '^FLEET_MCP_KEY=' "$ENVF" || setenv "$ENVF" FLEET_MCP_KEY "$(key)"
-if ! grep -q '^API_SERVER_PORT=8664$' "$ENVF"; then
-  setenv "$ENVF" API_SERVER_PORT 8664
-  setenv "$ENVF" API_SERVER_KEY "$(key)"
-fi
+touch "$ENVF"
+setenv "$ENVF" OPENROUTER_API_KEY "$(fleet OPENROUTER_API_KEY)"
+setenv "$ENVF" OPENROUTER_BASE_URL "$(fleet OPENROUTER_BASE_URL)"
+setenv "$ENVF" API_SERVER_PORT 8664
+grep -q '^API_SERVER_KEY=.' "$ENVF" || setenv "$ENVF" API_SERVER_KEY "$(key)"
+grep -q '^FLEET_MCP_KEY=.' "$ENVF" || setenv "$ENVF" FLEET_MCP_KEY "$(key)"
 chown hermes:hermes "$ENVF" && chmod 600 "$ENVF"
 setenv /etc/fleet.env HERMES_API_URL http://127.0.0.1:8664
 setenv /etc/fleet.env HERMES_API_KEY "$(sed -n 's/^API_SERVER_KEY=//p' "$ENVF")"

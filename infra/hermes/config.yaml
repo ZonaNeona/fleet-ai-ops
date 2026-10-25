@@ -1,0 +1,27 @@
+# Hermes Agent profile «fleet» (scripts/setup_hermes.sh fills __OPENROUTER_BASE_URL__ from /etc/fleet.env).
+# The API server only: the stand starts runs over HTTP; tools come from the stand's MCP server.
+model:
+  default: anthropic/claude-haiku-5.5
+  provider: openrouter
+  base_url: __OPENROUTER_BASE_URL__
+agent:
+  reasoning_effort: "none"
+  api_max_retries: 1
+  auto_recovery_cycles: 1
+providers:
+  openrouter:
+    request_timeout_seconds: 60
+tools:
+  tool_search:
+    enabled: "off"
+gateway:
+  standalone: true
+platform_toolsets:
+  cli: [skills]
+  api_server: [skills]
+mcp_servers:
+  fleet:
+    url: http://127.0.0.1:3008/api/mcp
+    headers:
+      Authorization: Bearer ${FLEET_MCP_KEY}
+    timeout: 60

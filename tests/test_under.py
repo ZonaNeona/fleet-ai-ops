@@ -1,15 +1,19 @@
-import json, time, secrets
-from types import SimpleNamespace
+import json
+import secrets
+import time
 from datetime import timedelta
+from types import SimpleNamespace
+
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import select, func, text
-from app.db import db, Space, Item, Job, Event, now
+from sqlalchemy import func, select, text
+
+from app.agent import confirm, execute, tools_for
+from app.db import Event, Item, Job, Space, db, now
+from app.integrations import Ingest, enqueue, ingest, sign, verify_context
+from app.rag import chunks, search
 from app.seed import create_space
-from app.agent import execute, confirm, tools_for
-from app.rag import search, chunks
-from app.integrations import sign, verify_context, ingest, Ingest, enqueue
 from tests.cleanup import drop_space
 from tests.test_integration import client
 
@@ -60,11 +64,7 @@ def test_tools_scope_and_confirmation(client):
             "foreign",
         )
     with db() as s:
-        before = s.scalar(
-            select(func.count())
-            .select_from(Item)
-            .where(Item.space == sid, Item.kind == "ticket")
-        )
+        before = s.scalar(select(func.count()).select_from(Item).where(Item.space == sid, Item.kind == "ticket"))
     draft = execute(
         sid,
         "driver",
@@ -78,12 +78,7 @@ def test_tools_scope_and_confirmation(client):
     )["draft"]
     with db() as s:
         assert (
-            s.scalar(
-                select(func.count())
-                .select_from(Item)
-                .where(Item.space == sid, Item.kind == "ticket")
-            )
-            == before
+            s.scalar(select(func.count()).select_from(Item).where(Item.space == sid, Item.kind == "ticket")) == before
         )
     r = c.post("/api/v1/under/drafts/" + draft["id"] + "/confirm", json={})
     assert r.status_code == 200
@@ -91,18 +86,11 @@ def test_tools_scope_and_confirmation(client):
     assert again.json()["id"] == r.json()["id"]
     with db() as s:
         assert (
-            s.scalar(
-                select(func.count())
-                .select_from(Item)
-                .where(Item.space == sid, Item.kind == "ticket")
-            )
+            s.scalar(select(func.count()).select_from(Item).where(Item.space == sid, Item.kind == "ticket"))
             == before + 1
         )
         s.get(Space, sid).role = "owner"
-    assert (
-        c.post("/api/v1/under/drafts/" + draft["id"] + "/confirm", json={}).status_code
-        == 404
-    )
+    assert c.post("/api/v1/under/drafts/" + draft["id"] + "/confirm", json={}).status_code == 404
 
 
 def test_draft_foreign_space_and_expiry(client):
@@ -122,12 +110,7 @@ def test_draft_foreign_space_and_expiry(client):
             },
             "draft",
         )["draft"]
-        assert (
-            c.post(
-                "/api/v1/under/drafts/" + draft["id"] + "/confirm", json={}
-            ).status_code
-            == 404
-        )
+        assert c.post("/api/v1/under/drafts/" + draft["id"] + "/confirm", json={}).status_code == 404
         with db() as s:
             d = s.get(Item, draft["id"])
             d.data = {**d.data, "expires": (now() - timedelta(seconds=1)).isoformat()}
@@ -143,12 +126,8 @@ def test_ingest_signature_repeat_and_isolation(client):
     c, sid = client
     with db() as s:
         ctx = enqueue(s, s.get(Space, sid), "telematics")
-        vehicle = s.scalar(
-            select(Item).where(Item.space == sid, Item.kind == "vehicle")
-        )
-    rows = [
-        {"vehicle_code": vehicle.code, "mileage": str(vehicle.data["mileage"] + 100)}
-    ]
+        vehicle = s.scalar(select(Item).where(Item.space == sid, Item.kind == "vehicle"))
+    rows = [{"vehicle_code": vehicle.code, "mileage": str(vehicle.data["mileage"] + 100)}]
     body = Ingest(
         context=ctx,
         rows=rows,
@@ -159,12 +138,7 @@ def test_ingest_signature_repeat_and_isolation(client):
     assert ingest(body)["duplicate"]
     with db() as s:
         assert (
-            s.scalar(
-                select(func.count())
-                .select_from(Item)
-                .where(Item.space == sid, Item.kind == "source_record")
-            )
-            == 1
+            s.scalar(select(func.count()).select_from(Item).where(Item.space == sid, Item.kind == "source_record")) == 1
         )
         assert s.get(Item, vehicle.id).data["mileage"] == vehicle.data["mileage"]
     tampered = body.model_copy(deep=True)
@@ -194,12 +168,7 @@ def test_log_role_scope(client):
         )
         s.get(Space, sid).role = "driver"
     assert "Закрытый финансовый вопрос" not in c.get("/api/v1/under/log").text
-    assert (
-        c.post(
-            "/api/v1/under/agent", json={"prompt": "долг", "space": "foreign"}
-        ).status_code
-        == 200
-    )
+    assert c.post("/api/v1/under/agent", json={"prompt": "долг", "space": "foreign"}).status_code == 200
 
 
 def test_expired_source_context():
@@ -306,10 +275,7 @@ def test_agent_history_stays_in_role_and_space(client, monkeypatch):
         )
         transcript = json.dumps(seen, ensure_ascii=False)
         assert "Моя подвеска" in transcript and "TP-0002" in transcript
-        assert all(
-            word not in transcript
-            for word in ["Чужие финансы", "Другое пространство", "Старое сообщение"]
-        )
+        assert all(word not in transcript for word in ["Чужие финансы", "Другое пространство", "Старое сообщение"])
     finally:
         drop_space(oid)
 

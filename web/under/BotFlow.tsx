@@ -28,20 +28,169 @@ import { Frame, Say, Section, Timeline, useEngineer, useReplay } from "./kit";
 type N = Omit<FNode, "sub"> & { tech: string; simple: string; engineer: string };
 
 const NODES: N[] = [
-  { id: "tg", x: 0, y: 170, icon: Send, color: "#2aabee", title: "Telegram", tech: "Bot API · Mini App", simple: "Водитель, клиент или сотрудник пишет боту или нажимает кнопку.", engineer: "Update (message / callback_query) приходит POST-ом на вебхук; Mini App авторизуется по HMAC initData." },
-  { id: "hook", x: 220, y: 170, icon: Webhook, color: "#a78bfa", title: "Вебхук", tech: "secret_token · дедуп", simple: "Сервер проверяет, что сообщение действительно от Telegram, и сразу отвечает «принято».", engineer: "X-Telegram-Bot-Api-Secret-Token сравнивается в постоянное время; update_id пишется в System — повторная доставка не создаст второго задания." },
-  { id: "queue", x: 440, y: 170, icon: ListOrdered, color: "#fbbf24", title: "Очередь", tech: "job kind=telegram", simple: "Сообщение ждёт исполнителя — ничего не потеряется при перезапуске.", engineer: "Job в PostgreSQL, воркер берёт SKIP LOCKED; эмулятор ставит job kind=telegram_sim и вызывает тот же handle()." },
-  { id: "router", x: 660, y: 170, icon: GitBranch, color: "#22d3ee", title: "Маршрутизатор", tech: "telegram.handle()", simple: "Бот понимает, кто пишет и что это: команда, кнопка меню или свободный текст.", engineer: "Пространство по tg_user (FOR UPDATE), роль из пространства, а не из текста; callback-префиксы d: c: m: s: f: → действия ролей." },
-  { id: "start", x: 900, y: -40, icon: UserRound, color: "#f472b6", title: "Выбор роли", tech: "/start · /roles", simple: "Регистрации нет: бот сразу предлагает зайти водителем, клиентом проката, сотрудником или собственником. Роль можно сменить в любой момент.", engineer: "Пространство из пула claim_space(), роль по умолчанию — водитель; role:<id> меняет роль, данные и права дальше проверяются по роли пространства." },
-  { id: "menu", x: 900, y: 170, icon: LayoutGrid, color: "#60a5fa", title: "Меню роли", tech: "inline keyboard", simple: "У каждой роли свои кнопки: баланс и договор у водителя, брони у клиента, заявки у отделов.", engineer: "menu(sp) строит клавиатуру по роли; каждое действие — функция driver_action / client_action / staff_action / finance_action." },
-  { id: "text", x: 900, y: 380, icon: MessageSquareText, color: "#c084fc", title: "Свободный текст", tech: "→ агент", simple: "Можно просто написать своими словами — вопрос или проблему.", engineer: "Текст без команды уходит агенту до основной транзакции (LLM не держит блокировку пространства)." },
-  { id: "commands", x: 1140, y: 110, icon: ShieldCheck, color: "#f472b6", title: "Бизнес-команды", tech: "domain.command", simple: "Те же проверки, что и в кабинете: права роли, статус, защита от двойного нажатия.", engineer: "command(s, sp, action, payload, key='tg:'+update_id) — идемпотентность по update_id, аудит + outbox в одной транзакции." },
-  { id: "db", x: 1380, y: 110, icon: Database, color: "#60a5fa", title: "Учёт", tech: "PostgreSQL 16", simple: "Деньги, договоры и заявки — в одном учёте с кабинетом.", engineer: "NUMERIC, EXCLUDE для броней; бот и кабинет видят одни и те же данные мгновенно." },
-  { id: "agent", x: 1140, y: 380, icon: Bot, color: "#22d3ee", title: "AI-агент", tech: "tools по роли", simple: "Помощник отвечает по данным вашей роли или по регламентам.", engineer: "agent.run: tool calling ≤4 раундов, инструменты tools_for(role); лимит 10 AI-запросов/час на пространство." },
-  { id: "rag", x: 1380, y: 300, icon: BookOpen, color: "#34d399", title: "Регламенты", tech: "RAG", simple: "Правила парка — ответ со ссылкой на документ.", engineer: "search_knowledge → pgvector + FTS → RRF; без источников — честное «не нашёл»." },
-  { id: "draft", x: 1380, y: 470, icon: ClipboardCheck, color: "#f472b6", title: "Черновик заявки", tech: "human-in-the-loop", simple: "Заявку агент только готовит — создаёт её человек кнопкой «Подтвердить».", engineer: "create_ticket → черновик на 10 минут; кнопка agentconfirm:<id> → confirm() → обычная бизнес-команда." },
-  { id: "notify", x: 1620, y: 110, icon: BellRing, color: "#fb923c", title: "Уведомления", tech: "outbox → notify", simple: "Сервис и менеджер получают сообщение о новой заявке в свой Telegram.", engineer: "Событие outbox → job notify → sendMessage только тем, кому объект виден по правам." },
-  { id: "reply", x: 440, y: -40, icon: Reply, color: "#34d399", title: "Ответ", tech: "Bot API / эмулятор", simple: "Ответ с кнопками приходит в чат.", engineer: "_deliver: sendMessage / sendPhoto / sendDocument (HTML parse_mode); в эмуляторе те же сообщения сериализуются в JSON." },
+  {
+    id: "tg",
+    x: 0,
+    y: 170,
+    icon: Send,
+    color: "#2aabee",
+    title: "Telegram",
+    tech: "Bot API · Mini App",
+    simple: "Водитель, клиент или сотрудник пишет боту или нажимает кнопку.",
+    engineer: "Update (message / callback_query) приходит POST-ом на вебхук; Mini App авторизуется по HMAC initData.",
+  },
+  {
+    id: "hook",
+    x: 220,
+    y: 170,
+    icon: Webhook,
+    color: "#a78bfa",
+    title: "Вебхук",
+    tech: "secret_token · дедуп",
+    simple: "Сервер проверяет, что сообщение действительно от Telegram, и сразу отвечает «принято».",
+    engineer:
+      "X-Telegram-Bot-Api-Secret-Token сравнивается в постоянное время; update_id пишется в System — повторная доставка не создаст второго задания.",
+  },
+  {
+    id: "queue",
+    x: 440,
+    y: 170,
+    icon: ListOrdered,
+    color: "#fbbf24",
+    title: "Очередь",
+    tech: "job kind=telegram",
+    simple: "Сообщение ждёт исполнителя — ничего не потеряется при перезапуске.",
+    engineer:
+      "Job в PostgreSQL, воркер берёт SKIP LOCKED; эмулятор ставит job kind=telegram_sim и вызывает тот же handle().",
+  },
+  {
+    id: "router",
+    x: 660,
+    y: 170,
+    icon: GitBranch,
+    color: "#22d3ee",
+    title: "Маршрутизатор",
+    tech: "telegram.handle()",
+    simple: "Бот понимает, кто пишет и что это: команда, кнопка меню или свободный текст.",
+    engineer:
+      "Пространство по tg_user (FOR UPDATE), роль из пространства, а не из текста; callback-префиксы d: c: m: s: f: → действия ролей.",
+  },
+  {
+    id: "start",
+    x: 900,
+    y: -40,
+    icon: UserRound,
+    color: "#f472b6",
+    title: "Выбор роли",
+    tech: "/start · /roles",
+    simple:
+      "Регистрации нет: бот сразу предлагает зайти водителем, клиентом проката, сотрудником или собственником. Роль можно сменить в любой момент.",
+    engineer:
+      "Пространство из пула claim_space(), роль по умолчанию — водитель; role:<id> меняет роль, данные и права дальше проверяются по роли пространства.",
+  },
+  {
+    id: "menu",
+    x: 900,
+    y: 170,
+    icon: LayoutGrid,
+    color: "#60a5fa",
+    title: "Меню роли",
+    tech: "inline keyboard",
+    simple: "У каждой роли свои кнопки: баланс и договор у водителя, брони у клиента, заявки у отделов.",
+    engineer:
+      "menu(sp) строит клавиатуру по роли; каждое действие — функция driver_action / client_action / staff_action / finance_action.",
+  },
+  {
+    id: "text",
+    x: 900,
+    y: 380,
+    icon: MessageSquareText,
+    color: "#c084fc",
+    title: "Свободный текст",
+    tech: "→ агент",
+    simple: "Можно просто написать своими словами — вопрос или проблему.",
+    engineer: "Текст без команды уходит агенту до основной транзакции (LLM не держит блокировку пространства).",
+  },
+  {
+    id: "commands",
+    x: 1140,
+    y: 110,
+    icon: ShieldCheck,
+    color: "#f472b6",
+    title: "Бизнес-команды",
+    tech: "domain.command",
+    simple: "Те же проверки, что и в кабинете: права роли, статус, защита от двойного нажатия.",
+    engineer:
+      "command(s, sp, action, payload, key='tg:'+update_id) — идемпотентность по update_id, аудит + outbox в одной транзакции.",
+  },
+  {
+    id: "db",
+    x: 1380,
+    y: 110,
+    icon: Database,
+    color: "#60a5fa",
+    title: "Учёт",
+    tech: "PostgreSQL 16",
+    simple: "Деньги, договоры и заявки — в одном учёте с кабинетом.",
+    engineer: "NUMERIC, EXCLUDE для броней; бот и кабинет видят одни и те же данные мгновенно.",
+  },
+  {
+    id: "agent",
+    x: 1140,
+    y: 380,
+    icon: Bot,
+    color: "#22d3ee",
+    title: "AI-агент",
+    tech: "tools по роли",
+    simple: "Помощник отвечает по данным вашей роли или по регламентам.",
+    engineer:
+      "agent.run: tool calling ≤4 раундов, инструменты tools_for(role); лимит 10 AI-запросов/час на пространство.",
+  },
+  {
+    id: "rag",
+    x: 1380,
+    y: 300,
+    icon: BookOpen,
+    color: "#34d399",
+    title: "Регламенты",
+    tech: "RAG",
+    simple: "Правила парка — ответ со ссылкой на документ.",
+    engineer: "search_knowledge → pgvector + FTS → RRF; без источников — честное «не нашёл».",
+  },
+  {
+    id: "draft",
+    x: 1380,
+    y: 470,
+    icon: ClipboardCheck,
+    color: "#f472b6",
+    title: "Черновик заявки",
+    tech: "human-in-the-loop",
+    simple: "Заявку агент только готовит — создаёт её человек кнопкой «Подтвердить».",
+    engineer: "create_ticket → черновик на 10 минут; кнопка agentconfirm:<id> → confirm() → обычная бизнес-команда.",
+  },
+  {
+    id: "notify",
+    x: 1620,
+    y: 110,
+    icon: BellRing,
+    color: "#fb923c",
+    title: "Уведомления",
+    tech: "outbox → notify",
+    simple: "Сервис и менеджер получают сообщение о новой заявке в свой Telegram.",
+    engineer: "Событие outbox → job notify → sendMessage только тем, кому объект виден по правам.",
+  },
+  {
+    id: "reply",
+    x: 440,
+    y: -40,
+    icon: Reply,
+    color: "#34d399",
+    title: "Ответ",
+    tech: "Bot API / эмулятор",
+    simple: "Ответ с кнопками приходит в чат.",
+    engineer:
+      "_deliver: sendMessage / sendPhoto / sendDocument (HTML parse_mode); в эмуляторе те же сообщения сериализуются в JSON.",
+  },
 ];
 
 const EDGES: FEdge[] = [
@@ -65,22 +214,80 @@ const EDGES: FEdge[] = [
 const back = (...ids: string[]) => ids.map((id) => ({ id, reverse: true }));
 const IN = ["tg-hook", "hook-queue", "queue-router"];
 
-type Sc = { id: string; icon: any; title: string; steps: (Omit<Frame, "key" | "label"> & { label: string; simple: string; eng: string })[] };
+type Sc = {
+  id: string;
+  icon: any;
+  title: string;
+  steps: (Omit<Frame, "key" | "label"> & { label: string; simple: string; eng: string })[];
+};
 const SCENARIOS: Sc[] = [
   {
     id: "balance",
     icon: Wallet,
     title: "Водитель жмёт «Баланс»",
     steps: [
-      { node: "tg", label: "Кнопка", simple: "Водитель нажимает «💰 Баланс и долг».", eng: "callback_query data=d:balance" },
-      { node: "hook", edges: ["tg-hook"], label: "Вебхук", simple: "Сервер проверяет подпись Telegram.", eng: "secret_token ok, update_id новый" },
-      { node: "queue", edges: ["hook-queue"], label: "Очередь", simple: "Нажатие стало задачей.", eng: "Job(kind=telegram)" },
-      { node: "router", edges: ["queue-router"], label: "Роль", simple: "Бот узнаёт водителя по Telegram-аккаунту.", eng: "Space по tg_user, role=driver" },
-      { node: "menu", edges: ["router-menu"], label: "Действие", simple: "Выбрано действие водителя «баланс».", eng: "driver_action('balance')" },
-      { node: "commands", edges: ["menu-commands"], label: "Права", simple: "Считаются только договоры этого водителя.", eng: "report(s, sp) в scope роли" },
-      { node: "db", edges: ["commands-db"], label: "Учёт", simple: "Цифры — из того же учёта, что видит собственник.", eng: "начисления − платежи, NUMERIC" },
-      { node: "reply", edges: [...back("commands-db", "menu-commands", "router-menu"), "router-reply"], label: "Ответ", simple: "Бот присылает баланс и кнопки дальше.", eng: "sendMessage + inline keyboard" },
-      { node: "tg", edges: ["reply-tg"], label: "В чате", simple: "Через секунду ответ в чате.", eng: "≈1 с от нажатия до ответа" },
+      {
+        node: "tg",
+        label: "Кнопка",
+        simple: "Водитель нажимает «💰 Баланс и долг».",
+        eng: "callback_query data=d:balance",
+      },
+      {
+        node: "hook",
+        edges: ["tg-hook"],
+        label: "Вебхук",
+        simple: "Сервер проверяет подпись Telegram.",
+        eng: "secret_token ok, update_id новый",
+      },
+      {
+        node: "queue",
+        edges: ["hook-queue"],
+        label: "Очередь",
+        simple: "Нажатие стало задачей.",
+        eng: "Job(kind=telegram)",
+      },
+      {
+        node: "router",
+        edges: ["queue-router"],
+        label: "Роль",
+        simple: "Бот узнаёт водителя по Telegram-аккаунту.",
+        eng: "Space по tg_user, role=driver",
+      },
+      {
+        node: "menu",
+        edges: ["router-menu"],
+        label: "Действие",
+        simple: "Выбрано действие водителя «баланс».",
+        eng: "driver_action('balance')",
+      },
+      {
+        node: "commands",
+        edges: ["menu-commands"],
+        label: "Права",
+        simple: "Считаются только договоры этого водителя.",
+        eng: "report(s, sp) в scope роли",
+      },
+      {
+        node: "db",
+        edges: ["commands-db"],
+        label: "Учёт",
+        simple: "Цифры — из того же учёта, что видит собственник.",
+        eng: "начисления − платежи, NUMERIC",
+      },
+      {
+        node: "reply",
+        edges: [...back("commands-db", "menu-commands", "router-menu"), "router-reply"],
+        label: "Ответ",
+        simple: "Бот присылает баланс и кнопки дальше.",
+        eng: "sendMessage + inline keyboard",
+      },
+      {
+        node: "tg",
+        edges: ["reply-tg"],
+        label: "В чате",
+        simple: "Через секунду ответ в чате.",
+        eng: "≈1 с от нажатия до ответа",
+      },
     ],
   },
   {
@@ -89,13 +296,55 @@ const SCENARIOS: Sc[] = [
     title: "Вопрос своими словами",
     steps: [
       { node: "tg", label: "Вопрос", simple: "«Какие документы нужны водителю?»", eng: "message.text" },
-      { node: "queue", edges: IN.slice(0, 2), label: "Приём", simple: "Принято и поставлено в очередь.", eng: "webhook → Job" },
-      { node: "router", edges: ["queue-router"], label: "Разбор", simple: "Это не кнопка — свободный текст.", eng: "нет '/' и callback → агент" },
-      { node: "text", edges: ["router-text"], label: "Текст", simple: "Текст уходит помощнику.", eng: "agent_message(space, role, text)" },
-      { node: "agent", edges: ["text-agent"], label: "Агент", simple: "Помощник решает искать в регламентах.", eng: "tool_call search_knowledge" },
-      { node: "rag", edges: ["agent-rag"], label: "Регламенты", simple: "Находит нужные правила.", eng: "pgvector + FTS → RRF, порог 0.38" },
-      { node: "reply", edges: [...back("agent-rag", "text-agent", "router-text"), "router-reply"], label: "Ответ", simple: "Ответ со ссылкой на источник.", eng: "answer + «Источники: …»" },
-      { node: "tg", edges: ["reply-tg"], label: "В чате", simple: "Ответ в чате за несколько секунд.", eng: "2–6 с, стоимость в Usage" },
+      {
+        node: "queue",
+        edges: IN.slice(0, 2),
+        label: "Приём",
+        simple: "Принято и поставлено в очередь.",
+        eng: "webhook → Job",
+      },
+      {
+        node: "router",
+        edges: ["queue-router"],
+        label: "Разбор",
+        simple: "Это не кнопка — свободный текст.",
+        eng: "нет '/' и callback → агент",
+      },
+      {
+        node: "text",
+        edges: ["router-text"],
+        label: "Текст",
+        simple: "Текст уходит помощнику.",
+        eng: "agent_message(space, role, text)",
+      },
+      {
+        node: "agent",
+        edges: ["text-agent"],
+        label: "Агент",
+        simple: "Помощник решает искать в регламентах.",
+        eng: "tool_call search_knowledge",
+      },
+      {
+        node: "rag",
+        edges: ["agent-rag"],
+        label: "Регламенты",
+        simple: "Находит нужные правила.",
+        eng: "pgvector + FTS → RRF, порог 0.38",
+      },
+      {
+        node: "reply",
+        edges: [...back("agent-rag", "text-agent", "router-text"), "router-reply"],
+        label: "Ответ",
+        simple: "Ответ со ссылкой на источник.",
+        eng: "answer + «Источники: …»",
+      },
+      {
+        node: "tg",
+        edges: ["reply-tg"],
+        label: "В чате",
+        simple: "Ответ в чате за несколько секунд.",
+        eng: "2–6 с, стоимость в Usage",
+      },
     ],
   },
   {
@@ -103,13 +352,54 @@ const SCENARIOS: Sc[] = [
     icon: Wrench,
     title: "Поломка → заявка",
     steps: [
-      { node: "tg", label: "Сообщение", simple: "«Стучит подвеска, посмотрите»", eng: "message.text (в настоящем боте — можно с фото)" },
-      { node: "router", edges: IN, label: "Разбор", simple: "Принято, это свободный текст.", eng: "webhook → Job → handle()" },
-      { node: "agent", edges: ["router-text", "text-agent"], label: "Агент", simple: "Помощник понимает: это проблема с машиной.", eng: "tool_call create_ticket" },
-      { node: "draft", edges: ["agent-draft"], label: "Черновик", simple: "Готовит заявку, но не создаёт её сам.", eng: "черновик 10 мин, кнопка agentconfirm" },
-      { node: "commands", edges: ["draft-commands"], label: "Подтверждение", simple: "Водитель нажимает «Подтвердить» — заявка создаётся.", eng: "confirm() → command('ticket.create')" },
-      { node: "db", edges: ["commands-db"], label: "Учёт", simple: "Заявка сразу видна сервису в кабинете.", eng: "Item(kind=ticket), SLA от приоритета" },
-      { node: "notify", edges: ["db-notify"], label: "Сервис", simple: "Сервис получает уведомление в свой Telegram.", eng: "outbox → notify → sendMessage" },
+      {
+        node: "tg",
+        label: "Сообщение",
+        simple: "«Стучит подвеска, посмотрите»",
+        eng: "message.text (в настоящем боте — можно с фото)",
+      },
+      {
+        node: "router",
+        edges: IN,
+        label: "Разбор",
+        simple: "Принято, это свободный текст.",
+        eng: "webhook → Job → handle()",
+      },
+      {
+        node: "agent",
+        edges: ["router-text", "text-agent"],
+        label: "Агент",
+        simple: "Помощник понимает: это проблема с машиной.",
+        eng: "tool_call create_ticket",
+      },
+      {
+        node: "draft",
+        edges: ["agent-draft"],
+        label: "Черновик",
+        simple: "Готовит заявку, но не создаёт её сам.",
+        eng: "черновик 10 мин, кнопка agentconfirm",
+      },
+      {
+        node: "commands",
+        edges: ["draft-commands"],
+        label: "Подтверждение",
+        simple: "Водитель нажимает «Подтвердить» — заявка создаётся.",
+        eng: "confirm() → command('ticket.create')",
+      },
+      {
+        node: "db",
+        edges: ["commands-db"],
+        label: "Учёт",
+        simple: "Заявка сразу видна сервису в кабинете.",
+        eng: "Item(kind=ticket), SLA от приоритета",
+      },
+      {
+        node: "notify",
+        edges: ["db-notify"],
+        label: "Сервис",
+        simple: "Сервис получает уведомление в свой Telegram.",
+        eng: "outbox → notify → sendMessage",
+      },
     ],
   },
   {
@@ -118,9 +408,27 @@ const SCENARIOS: Sc[] = [
     title: "Новый пользователь",
     steps: [
       { node: "tg", label: "/start", simple: "Человек впервые открывает бота.", eng: "message /start" },
-      { node: "router", edges: IN, label: "Новый", simple: "Бот создаёт ему личное пространство.", eng: "claim_space() из пула — мгновенно" },
-      { node: "start", edges: ["router-start"], label: "Выбор роли", simple: "Регистрации нет: бот сразу предлагает выбрать роль.", eng: "role_picker() → role:<id>" },
-      { node: "reply", edges: [...back("router-start"), "router-reply"], label: "Меню", simple: "Показывает меню выбранной роли.", eng: "menu(sp)" },
+      {
+        node: "router",
+        edges: IN,
+        label: "Новый",
+        simple: "Бот создаёт ему личное пространство.",
+        eng: "claim_space() из пула — мгновенно",
+      },
+      {
+        node: "start",
+        edges: ["router-start"],
+        label: "Выбор роли",
+        simple: "Регистрации нет: бот сразу предлагает выбрать роль.",
+        eng: "role_picker() → role:<id>",
+      },
+      {
+        node: "reply",
+        edges: [...back("router-start"), "router-reply"],
+        label: "Меню",
+        simple: "Показывает меню выбранной роли.",
+        eng: "menu(sp)",
+      },
       { node: "tg", edges: ["reply-tg"], label: "В чате", simple: "Можно пользоваться.", eng: "" },
     ],
   },
@@ -131,8 +439,14 @@ export function BotFlow({ data, openEmulator }: { data: Data; openEmulator: () =
   const [sc, setSc] = useState<Sc | null>(null);
   const [run, setRun] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const log = useQuery({ queryKey: ["under-log", data.session.role], queryFn: () => api("/under/log"), refetchInterval: 5000 });
-  const feed = (log.data?.rows || []).filter((r: any) => r.type === "webhook" || r.type === "telegram" || r.type === "telegram_sim").slice(0, 8);
+  const log = useQuery({
+    queryKey: ["under-log", data.session.role],
+    queryFn: () => api("/under/log"),
+    refetchInterval: 5000,
+  });
+  const feed = (log.data?.rows || [])
+    .filter((r: any) => r.type === "webhook" || r.type === "telegram" || r.type === "telegram_sim")
+    .slice(0, 8);
   const frames: Frame[] = useMemo(() => (sc?.steps || []).map((s, i) => ({ ...s, key: sc!.id + i, hold: 1400 })), [sc]);
   const replay = useReplay(frames, sc ? sc.id + run : "none");
   const step = replay.current ? sc?.steps[replay.pos] : null;
@@ -215,7 +529,11 @@ export function BotFlow({ data, openEmulator }: { data: Data; openEmulator: () =
           <Section title={sc.title}>
             <ol className="k-steps">
               {sc.steps.map((s, i) => (
-                <li key={i} className={i === replay.pos ? "now" : i < replay.pos || replay.done ? "done" : ""} onClick={() => replay.seek(i)}>
+                <li
+                  key={i}
+                  className={i === replay.pos ? "now" : i < replay.pos || replay.done ? "done" : ""}
+                  onClick={() => replay.seek(i)}
+                >
                   <b>{s.label}</b>
                   <span>{eng ? s.eng || s.simple : s.simple}</span>
                 </li>
@@ -244,7 +562,8 @@ export function BotFlow({ data, openEmulator }: { data: Data; openEmulator: () =
                   <i className="k-dot done" />
                   <span>{r.title}</span>
                   <small>
-                    {new Date(r.at).toLocaleTimeString("ru-RU", { timeZone: "Europe/Moscow" })} · {r.role || data.session.roles[data.session.role]}
+                    {new Date(r.at).toLocaleTimeString("ru-RU", { timeZone: "Europe/Moscow" })} ·{" "}
+                    {r.role || data.session.roles[data.session.role]}
                   </small>
                 </button>
               ))}

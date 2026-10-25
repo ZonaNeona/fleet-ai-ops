@@ -1,15 +1,19 @@
 """Transactional application commands shared by HTTP, Telegram and jobs."""
 
-import hashlib, json, math
-from typing import NoReturn
-from datetime import datetime, date, timedelta
+import hashlib
+import json
+import math
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from typing import NoReturn
 from zoneinfo import ZoneInfo
-from sqlalchemy import select, func, text
-from psycopg.types.range import Range
+
 from fastapi import HTTPException
-from .db import Item, Entry, Event, Job, Booking, Receipt, now, uid
-from .seed import add, BRANCHES
+from psycopg.types.range import Range
+from sqlalchemy import func, select, text
+
+from .db import Booking, Entry, Event, Item, Job, Receipt, now, uid
+from .seed import BRANCHES, add
 
 STAFF = {"owner", "manager", "service", "finance", "screening", "admin"}
 READ = {
@@ -182,11 +186,7 @@ def cansee(s, sp, x):
     if x.kind == "tariff":
         return True
     if x.kind == "vehicle":
-        return (
-            sp.role == "client"
-            and d["direction"] in ("rental", "commercial")
-            or x.id in allowed_vehicle_ids(s, sp)
-        )
+        return sp.role == "client" and d["direction"] in ("rental", "commercial") or x.id in allowed_vehicle_ids(s, sp)
     if x.kind == "contract":
         return (
             d.get("client") == sp.data.get(sp.role)
@@ -210,11 +210,7 @@ def visible(s, sp, kind):
         return xs
     ids = allowed_vehicle_ids(s, sp)
     if kind == "vehicle":
-        return [
-            x
-            for x in xs
-            if x.id in ids or sp.role == "client" and x.data["direction"] in ("rental", "commercial")
-        ]
+        return [x for x in xs if x.id in ids or sp.role == "client" and x.data["direction"] in ("rental", "commercial")]
     if kind == "contract":
         return (
             [x for x in xs if x.data.get("vehicle") in ids]
@@ -233,13 +229,15 @@ def serialize(x):
 def file_access(s, sp, x):
     if sp.role in ("owner", "admin") or x.data.get("creator_role") == sp.role:
         return True
-    if any(x.id == doc.get("file") for c in visible(s, sp, "client")
-           for doc in c.data.get("document_files", []) if isinstance(doc, dict)):
+    if any(
+        x.id == doc.get("file")
+        for c in visible(s, sp, "client")
+        for doc in c.data.get("document_files", [])
+        if isinstance(doc, dict)
+    ):
         return True
     return any(
-        x.id in parent.data.get("photos", [])
-        for kind in ("ticket", "inspection")
-        for parent in visible(s, sp, kind)
+        x.id in parent.data.get("photos", []) for kind in ("ticket", "inspection") for parent in visible(s, sp, kind)
     )
 
 
@@ -302,7 +300,11 @@ def calendar(c, start=None, end=None):
         reason = (
             "Согласованное освобождение"
             if exempt
-            else "Первый день бесплатно" if free else "Выходной по графику" if off else "Аренда по договору"
+            else "Первый день бесплатно"
+            if free
+            else "Выходной по графику"
+            if off
+            else "Аренда по договору"
         )
         result.append(
             {
@@ -424,9 +426,11 @@ def command(s, sp, action, p, key):
     title = ""
     if action.startswith("demo_payment."):
         from .miniapp import payment_command
+
         x, title = payment_command(s, sp, action, p, x)
     elif action == "driver.inspection":
         from .miniapp import inspection_command
+
         x, title = inspection_command(s, sp, p)
     elif action == "client.create":
         name = str(p.get("name", "")).strip()
@@ -480,9 +484,7 @@ def command(s, sp, action, p, key):
             fail("Укажите основание решения")
         if p.get("approved") and len(x.data.get("documents", [])) < 2:
             fail("Недостаточно документов")
-        update(
-            x, status="approved" if p.get("approved") else "rejected", review_reason=str(p["reason"])[:500]
-        )
+        update(x, status="approved" if p.get("approved") else "rejected", review_reason=str(p["reason"])[:500])
         title = "Проверка клиента завершена"
     elif action == "contract.create":
         v = get(s, sp, p.get("vehicle"), "vehicle", True)
@@ -504,6 +506,7 @@ def command(s, sp, action, p, key):
         quote = None
         if direction in ("rental", "commercial"):
             from .miniapp import rental_quote
+
             quote = rental_quote(s, sp, p)
             if p.get("quote_version") and p["quote_version"] != quote["version"]:
                 fail("Цена изменилась. Обновите расчёт и подтвердите бронирование.", 409)
@@ -530,7 +533,9 @@ def command(s, sp, action, p, key):
             * (
                 Decimal(".9")
                 if (end - start).days >= 30
-                else Decimal(".95") if (end - start).days >= 7 else Decimal("1")
+                else Decimal(".95")
+                if (end - start).days >= 7
+                else Decimal("1")
             )
         )
         x = add(
@@ -619,15 +624,11 @@ def command(s, sp, action, p, key):
             fail("Клиент ещё не прошёл проверку")
         if x.data["direction"] == "buyout" and not x.data.get("terms_approved", True):
             fail("Сначала финансист должен утвердить предложение выкупа")
-        if x.data["direction"] == "taxi" and (
-            client.data.get("age", 0) < 21 or client.data.get("experience", 0) < 3
-        ):
+        if x.data["direction"] == "taxi" and (client.data.get("age", 0) < 21 or client.data.get("experience", 0) < 3):
             fail("Для такси: возраст от 21 года, стаж от 3 лет")
         if client.data.get("type") == "company" and not client.data.get("representative"):
             fail("Укажите представителя организации")
-        b = s.scalar(
-            select(Booking).where(Booking.space == sp.id, Booking.contract == x.id, Booking.state == "hold")
-        )
+        b = s.scalar(select(Booking).where(Booking.space == sp.id, Booking.contract == x.id, Booking.state == "hold"))
         if not b or b.expires < now():
             fail("Резерв истёк — создайте новый договор", 409)
         b.state = "confirmed"
@@ -640,9 +641,7 @@ def command(s, sp, action, p, key):
         if v.data["status"] != "ready" or not v.data.get("inspection_ok"):
             fail("Сначала завершите осмотр и подготовку автомобиля")
         b = s.scalar(
-            select(Booking).where(
-                Booking.space == sp.id, Booking.contract == x.id, Booking.state == "confirmed"
-            )
+            select(Booking).where(Booking.space == sp.id, Booking.contract == x.id, Booking.state == "confirmed")
         )
         if not b:
             fail("Нет подтверждённой брони", 409)
@@ -664,6 +663,7 @@ def command(s, sp, action, p, key):
                 component="services",
             )
         from .miniapp import balance
+
         deposit_due = max(Decimal(0), money(x.data["deposit"]) - balance(s, sp, x.id, ["deposit", "deposit_release"]))
         if deposit_due:
             post(
@@ -681,12 +681,11 @@ def command(s, sp, action, p, key):
         require_status(x, ["draft", "confirmed"])
         update(x, status="cancelled")
         from .miniapp import balance
+
         refundable = balance(s, sp, x.id, ["deposit", "deposit_release"])
         if refundable > 0:
             update(x, refund_requested=str(money(refundable)), refund_status="pending")
-        s.query(Booking).filter(Booking.contract == x.id, Booking.space == sp.id).update(
-            {"state": "cancelled"}
-        )
+        s.query(Booking).filter(Booking.contract == x.id, Booking.space == sp.id).update({"state": "cancelled"})
         title = "Бронирование отменено"
     elif action == "contract.extend":
         require_status(x, ["active", "confirmed"])
@@ -816,9 +815,7 @@ def command(s, sp, action, p, key):
             return_inspection=act.id,
         )
         update(v, mileage=mileage, fuel=fuel, status="inspection", inspection_ok=False)
-        s.query(Booking).filter(Booking.space == sp.id, Booking.contract == x.id).update(
-            {"state": "completed"}
-        )
+        s.query(Booking).filter(Booking.space == sp.id, Booking.contract == x.id).update({"state": "completed"})
         title = "Возврат оформлен · итоговый расчёт готов"
     elif action in ("contract.holiday", "contract.schedule", "contract.close_request"):
         require_status(x, ["active"])
@@ -909,9 +906,7 @@ def command(s, sp, action, p, key):
         )
         post(s, sp, "payment", x.data["close_quote"], x.data["vehicle"], x.id, "Оплата досрочного выкупа")
         update(x, status="bought", closed_at=str(today()))
-        s.query(Booking).filter(Booking.space == sp.id, Booking.contract == x.id).update(
-            {"state": "completed"}
-        )
+        s.query(Booking).filter(Booking.space == sp.id, Booking.contract == x.id).update({"state": "completed"})
         v = get(s, sp, x.data["vehicle"], "vehicle")
         update(v, status="sold")
         title = "Выкуп завершён · акт передачи готов"
@@ -972,9 +967,7 @@ def command(s, sp, action, p, key):
         if p.get("branch") not in {b["id"] for b in BRANCHES}:
             fail("Неизвестная площадка")
         if s.scalar(
-            select(Booking.id).where(
-                Booking.space == sp.id, Booking.vehicle == x.id, Booking.state == "active"
-            )
+            select(Booking.id).where(Booking.space == sp.id, Booking.vehicle == x.id, Booking.state == "active")
         ):
             fail("Нельзя переместить выданный автомобиль")
         update(x, branch=p["branch"])
@@ -989,6 +982,7 @@ def command(s, sp, action, p, key):
             fail("Некорректный приоритет")
         photos = p.get("photos", [])
         from .miniapp import validate_photos
+
         validate_photos(s, sp, photos)
         for photo in photos:
             get(s, sp, photo, "file")
@@ -1141,10 +1135,7 @@ def command(s, sp, action, p, key):
             fail("Сначала выполните контрольный осмотр автомобиля")
         elapsed = max(
             0,
-            int(
-                (now() - datetime.fromisoformat(v.data.get("down_since", now().isoformat()))).total_seconds()
-                / 3600
-            ),
+            int((now() - datetime.fromisoformat(v.data.get("down_since", now().isoformat()))).total_seconds() / 3600),
         )
         update(x, status="closed", downtime_hours=elapsed, closed_at=now().isoformat())
         update(v, status="ready")
@@ -1200,7 +1191,11 @@ def command(s, sp, action, p, key):
         else:
             post(s, sp, "cash_refund", amount, c.data["vehicle"], c.id, "Возврат залога")
         if c.data.get("refund_status") == "pending":
-            update(c, refund_requested=str(money(balance - amount)), refund_status="completed" if balance == amount else "pending")
+            update(
+                c,
+                refund_requested=str(money(balance - amount)),
+                refund_status="completed" if balance == amount else "pending",
+            )
         x = c
         title = "Залог обработан"
     elif action.startswith("period."):
@@ -1222,9 +1217,7 @@ def command(s, sp, action, p, key):
         if old:
             fail("Отчёт за этот месяц уже сформирован")
         vs = s.scalars(
-            select(Item).where(
-                Item.space == sp.id, Item.kind == "vehicle", Item.data["investor"].astext == inv.id
-            )
+            select(Item).where(Item.space == sp.id, Item.kind == "vehicle", Item.data["investor"].astext == inv.id)
         ).all()
         lines = []
         for v in vs:
@@ -1371,9 +1364,7 @@ def command(s, sp, action, p, key):
                 unmatched.append(row)
                 continue
             c = s.scalar(
-                select(Item).where(
-                    Item.space == sp.id, Item.kind == "contract", Item.code == row.get("contract")
-                )
+                select(Item).where(Item.space == sp.id, Item.kind == "contract", Item.code == row.get("contract"))
             )
             if not c:
                 unmatched.append({**row, "error": "Договор не найден"})

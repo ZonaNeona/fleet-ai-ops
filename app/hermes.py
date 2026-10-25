@@ -43,8 +43,12 @@ def configured() -> bool:
 
 
 def _client(timeout) -> httpx.Client:
-    return httpx.Client(base_url=os.environ["HERMES_API_URL"].rstrip("/"), timeout=timeout, trust_env=False,
-                        headers={"Authorization": "Bearer " + os.environ["HERMES_API_KEY"]})
+    return httpx.Client(
+        base_url=os.environ["HERMES_API_URL"].rstrip("/"),
+        timeout=timeout,
+        trust_env=False,
+        headers={"Authorization": "Bearer " + os.environ["HERMES_API_KEY"]},
+    )
 
 
 def _record_turn(space, role, job):
@@ -80,23 +84,38 @@ def run(job, trace) -> Result:
 def _turn(job, trace) -> Result:
     run_id = None
     started = time.monotonic()
-    question = (f"[Роль пользователя: {job.data['role']}. Инструменты уже ограничены этой ролью.]\n"
-                + job.data["prompt"][:2000])
+    question = (
+        f"[Роль пользователя: {job.data['role']}. Инструменты уже ограничены этой ролью.]\n" + job.data["prompt"][:2000]
+    )
     try:
         with _client(20) as c:
             r = c.post("/v1/runs", json={"input": question, "session_id": f"fleet-{job.space}-{job.data['role']}"})
             r.raise_for_status()
             run_id = str(r.json().get("run_id") or r.json().get("id"))
-        trace.append({"step": "hermes", "title": "Hermes принял ход", "ms": round((time.monotonic() - started) * 1000),
-                      "status": "success", "output": {"run": run_id}})
+        trace.append(
+            {
+                "step": "hermes",
+                "title": "Hermes принял ход",
+                "ms": round((time.monotonic() - started) * 1000),
+                "status": "success",
+                "output": {"run": run_id},
+            }
+        )
         result = _events(run_id, trace, started)
     except (httpx.HTTPError, ValueError, KeyError) as e:
         if run_id:
             _stop(run_id)
         raise HermesUnavailable("Hermes не ответил: " + type(e).__name__) from None
     with db() as s:
-        s.add(Usage(space=job.space, model="hermes:" + (result.model or "?"), cost=result.cost, tokens=result.tokens,
-                    ms=round((time.monotonic() - started) * 1000)))
+        s.add(
+            Usage(
+                space=job.space,
+                model="hermes:" + (result.model or "?"),
+                cost=result.cost,
+                tokens=result.tokens,
+                ms=round((time.monotonic() - started) * 1000),
+            )
+        )
     return result
 
 
@@ -139,9 +158,17 @@ def _events(run_id, trace, started) -> Result:
                 used.append(name)
             elif kind == "tool.completed" and name:
                 began = opened.pop(name, time.monotonic())
-                trace.append({"step": "tool", "title": name, "ms": round((time.monotonic() - began) * 1000),
-                              "status": "denied" if event.get("error") else "success", "via": "hermes · MCP",
-                              "arguments": event.get("arguments") or {}, "output": _preview(event.get("preview") or "")})
+                trace.append(
+                    {
+                        "step": "tool",
+                        "title": name,
+                        "ms": round((time.monotonic() - began) * 1000),
+                        "status": "denied" if event.get("error") else "success",
+                        "via": "hermes · MCP",
+                        "arguments": event.get("arguments") or {},
+                        "output": _preview(event.get("preview") or ""),
+                    }
+                )
             elif kind == "message.delta":
                 answer += str(event.get("delta") or "")
             elif kind == "run.completed":
@@ -151,8 +178,17 @@ def _events(run_id, trace, started) -> Result:
                 completion = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
                 tokens = prompt + completion
                 cost = Decimal(str(usage.get("cost") or usage.get("cost_usd") or 0)) or price(model, prompt, completion)
-                trace.append({"step": "llm", "title": "Hermes · ответ", "model": model, "tokens": tokens,
-                              "cost": str(cost), "ms": round((time.monotonic() - started) * 1000), "status": "success"})
+                trace.append(
+                    {
+                        "step": "llm",
+                        "title": "Hermes · ответ",
+                        "model": model,
+                        "tokens": tokens,
+                        "cost": str(cost),
+                        "ms": round((time.monotonic() - started) * 1000),
+                        "status": "success",
+                    }
+                )
                 return Result(str(event.get("output") or answer).strip(), model, used, tokens, cost)
             elif kind in ("run.failed", "run.cancelled", "run.interrupted"):
                 raise HermesUnavailable(str(event.get("error") or kind))

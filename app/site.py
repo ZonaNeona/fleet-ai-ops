@@ -32,13 +32,30 @@ from .seed import FLEET, claim_space
 
 router = APIRouter()
 MSK = ZoneInfo("Europe/Moscow")
-TEMPLATES = Environment(loader=FileSystemLoader(Path(__file__).parent / "templates"), autoescape=select_autoescape(),
-                        trim_blocks=True, lstrip_blocks=True)
+TEMPLATES = Environment(
+    loader=FileSystemLoader(Path(__file__).parent / "templates"),
+    autoescape=select_autoescape(),
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 BUYOUT = ["moskvich-3", "belgee-x50", "geely-emgrand", "haval-f7"]  # the models the fleet sells on buyout
 BUYOUT_FINAL = Decimal(150000)  # the final payment of a buyout contract, as in the fleet's own contracts
 SCHEDULES = {"7/0": "без выходных", "6/1": "один выходной в неделю", "5/2": "два выходных в неделю"}
 CLASSES = ["Комфорт", "Бизнес", "Премиум"]
-MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+MONTHS = [
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+]
 WEEKDAYS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
 
 
@@ -94,9 +111,13 @@ def slug(model: str) -> str:
 
 
 def busy(s, sp) -> dict[str, list[tuple[datetime, datetime]]]:
-    rows = s.execute(select(Booking.vehicle, Booking.period).where(
-        Booking.space == sp.id, Booking.state.in_(["active", "confirmed", "hold"]),
-        (Booking.expires.is_(None)) | (Booking.expires > now()))).all()
+    rows = s.execute(
+        select(Booking.vehicle, Booking.period).where(
+            Booking.space == sp.id,
+            Booking.state.in_(["active", "confirmed", "hold"]),
+            (Booking.expires.is_(None)) | (Booking.expires > now()),
+        )
+    ).all()
     out: dict[str, list] = {}
     for vehicle, period in rows:
         if period.upper and period.upper > now():
@@ -117,16 +138,27 @@ def car(v, periods):
     c = FLEET.get(slug(v.data["model"]), {})
     free = free_from(periods)
     return {
-        "id": v.id, "code": v.code, "model": v.data["model"], "slug": slug(v.data["model"]),
-        "url": f"/auto/{v.code.lower()}-{slug(v.data['model'])}", "class": v.data.get("class", c.get("class", "")),
-        "year": v.data["year"], "rate": Decimal(v.data["rate"]), "image": v.data.get("image"), "thumb": v.data.get("thumb"),
-        "mileage": v.data.get("mileage"), "free": free.astimezone(MSK).date() if free else None,
+        "id": v.id,
+        "code": v.code,
+        "model": v.data["model"],
+        "slug": slug(v.data["model"]),
+        "url": f"/auto/{v.code.lower()}-{slug(v.data['model'])}",
+        "class": v.data.get("class", c.get("class", "")),
+        "year": v.data["year"],
+        "rate": Decimal(v.data["rate"]),
+        "image": v.data.get("image"),
+        "thumb": v.data.get("thumb"),
+        "mileage": v.data.get("mileage"),
+        "free": free.astimezone(MSK).date() if free else None,
     }
 
 
 def rental_cars(s, sp):
-    cars = s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "vehicle",
-                                        Item.data["direction"].astext == "rental").order_by(Item.code)).all()
+    cars = s.scalars(
+        select(Item)
+        .where(Item.space == sp.id, Item.kind == "vehicle", Item.data["direction"].astext == "rental")
+        .order_by(Item.code)
+    ).all()
     periods = busy(s, sp)
     return [car(v, periods.get(v.id, [])) for v in cars]
 
@@ -136,13 +168,29 @@ def buyout_offer(key, schedule="6/1"):
     daily = Decimal(c["rate"] + 200)  # buyout rate: the taxi rate plus the share that goes to the car's price
     start = today()
     end = start.replace(year=start.year + 1)
-    days = sum(1 for i in range((end - start).days)
-               if not ((schedule == "6/1" and (start + timedelta(i)).weekday() == 6)
-                       or (schedule == "5/2" and (start + timedelta(i)).weekday() >= 5)))
-    return {"slug": key, "model": c["model"], "class": c["class"], "url": f"/auto/vykup/{key}",
-            "image": f"/cars/{key}.webp", "thumb": f"/cars/{key}-sm.webp", "daily": daily, "schedule": schedule,
-            "days": days, "months": 12, "final": BUYOUT_FINAL, "total": daily * days + BUYOUT_FINAL,
-            "month_payment": (daily * days / 12).quantize(Decimal(1))}
+    days = sum(
+        1
+        for i in range((end - start).days)
+        if not (
+            (schedule == "6/1" and (start + timedelta(i)).weekday() == 6)
+            or (schedule == "5/2" and (start + timedelta(i)).weekday() >= 5)
+        )
+    )
+    return {
+        "slug": key,
+        "model": c["model"],
+        "class": c["class"],
+        "url": f"/auto/vykup/{key}",
+        "image": f"/cars/{key}.webp",
+        "thumb": f"/cars/{key}-sm.webp",
+        "daily": daily,
+        "schedule": schedule,
+        "days": days,
+        "months": 12,
+        "final": BUYOUT_FINAL,
+        "total": daily * days + BUYOUT_FINAL,
+        "month_payment": (daily * days / 12).quantize(Decimal(1)),
+    }
 
 
 def calendar(periods, weeks=5):
@@ -151,8 +199,9 @@ def calendar(periods, weeks=5):
     for i in range(weeks * 7):
         d = start + timedelta(days=i)
         moment = datetime(d.year, d.month, d.day, 10, tzinfo=MSK)  # a rental day runs 10:00 → 10:00 MSK
-        out.append({"date": d, "past": d < today(), "busy": any(a <= moment < b for a, b in periods),
-                    "today": d == today()})
+        out.append(
+            {"date": d, "past": d < today(), "busy": any(a <= moment < b for a, b in periods), "today": d == today()}
+        )
     return out
 
 
@@ -170,8 +219,10 @@ def catalog(request: Request, type: str = "", cls: str = "", price: int = 0, sor
         cars = [c for c in cars if c["rate"] <= price]
     if free:
         cars = [c for c in cars if not c["free"] or c["free"] <= today() + timedelta(days=3)]
-    cars.sort(key=lambda c: (c["free"] or today(), c["rate"]) if sort == "free" else (c["rate"], c["code"]),
-              reverse=sort == "price_desc")
+    cars.sort(
+        key=lambda c: (c["free"] or today(), c["rate"]) if sort == "free" else (c["rate"], c["code"]),
+        reverse=sort == "price_desc",
+    )
     offers = [buyout_offer(k) for k in BUYOUT]
     # One card per model and the earliest free car: the catalog stays readable on a phone.
     models: dict[str, dict] = {}
@@ -181,8 +232,20 @@ def catalog(request: Request, type: str = "", cls: str = "", price: int = 0, sor
         m["cars"].append(c)
         if (c["free"] or today()) < (m["free"] or today()):
             m.update({k: c[k] for k in ("code", "url", "free")})
-    return page("catalog.html", request, cars=cars, models=list(models.values()), offers=offers, type=type, cls=cls,
-                price=price, sort=sort, free=free, classes=CLASSES, total=len(cars))
+    return page(
+        "catalog.html",
+        request,
+        cars=cars,
+        models=list(models.values()),
+        offers=offers,
+        type=type,
+        cls=cls,
+        price=price,
+        sort=sort,
+        free=free,
+        classes=CLASSES,
+        total=len(cars),
+    )
 
 
 # Declared before /auto/{ref}: routes match in order.
@@ -201,8 +264,16 @@ def buyout_page(key: str, request: Request, schedule: str = "6/1"):
 
 
 @router.get("/auto/{ref}", response_class=HTMLResponse)
-def car_page(ref: str, request: Request, start: str = "", end: str = "", delivery: str = "", collection: str = "",
-             driver: str = "", error: str = ""):
+def car_page(
+    ref: str,
+    request: Request,
+    start: str = "",
+    end: str = "",
+    delivery: str = "",
+    collection: str = "",
+    driver: str = "",
+    error: str = "",
+):
     from .miniapp import rental_quote
 
     m = re.match(r"^(tp-\d{4})(?:-[a-z0-9-]+)?$", ref)
@@ -210,8 +281,14 @@ def car_page(ref: str, request: Request, start: str = "", end: str = "", deliver
         return page("missing.html", request, status=404)
     with db() as s:
         sp = showcase(s)
-        v = s.scalar(select(Item).where(Item.space == sp.id, Item.kind == "vehicle", Item.code == m.group(1).upper(),
-                                        Item.data["direction"].astext == "rental"))
+        v = s.scalar(
+            select(Item).where(
+                Item.space == sp.id,
+                Item.kind == "vehicle",
+                Item.code == m.group(1).upper(),
+                Item.data["direction"].astext == "rental",
+            )
+        )
         if not v:
             return page("missing.html", request, status=404)
         periods = busy(s, sp).get(v.id, [])
@@ -224,9 +301,22 @@ def car_page(ref: str, request: Request, start: str = "", end: str = "", deliver
         quote = None
         error = "Проверьте даты: начало не раньше сегодня, окончание позже начала." if error else ""
         try:
-            quote = rental_quote(s, sp, {"vehicle": v.id, "start": start, "end": end, "delivery": bool(delivery),
-                                         "collection": bool(collection), "additional_driver": driver[:60]})
-            wanted = (datetime.fromisoformat(start + "T10:00:00+03:00"), datetime.fromisoformat(end + "T10:00:00+03:00"))
+            quote = rental_quote(
+                s,
+                sp,
+                {
+                    "vehicle": v.id,
+                    "start": start,
+                    "end": end,
+                    "delivery": bool(delivery),
+                    "collection": bool(collection),
+                    "additional_driver": driver[:60],
+                },
+            )
+            wanted = (
+                datetime.fromisoformat(start + "T10:00:00+03:00"),
+                datetime.fromisoformat(end + "T10:00:00+03:00"),
+            )
             if any(a < wanted[1] and wanted[0] < b for a, b in periods):
                 error = "На эти даты машина занята — посмотрите календарь или выберите другую машину этой модели."
         except HTTPException as e:
@@ -234,8 +324,21 @@ def car_page(ref: str, request: Request, start: str = "", end: str = "", deliver
         except ValueError:
             error = "Проверьте даты"
         same = [x for x in rental_cars(s, sp) if x["model"] == c["model"] and x["code"] != c["code"]][:6]
-    return page("car.html", request, car=c, quote=quote, error=error, start=start, end=end, delivery=bool(delivery),
-                collection=bool(collection), driver=driver, calendar=calendar(periods), weekdays=WEEKDAYS, same=same)
+    return page(
+        "car.html",
+        request,
+        car=c,
+        quote=quote,
+        error=error,
+        start=start,
+        end=end,
+        delivery=bool(delivery),
+        collection=bool(collection),
+        driver=driver,
+        calendar=calendar(periods),
+        weekdays=WEEKDAYS,
+        same=same,
+    )
 
 
 # ---------------------------------------------------------------- the request: lead + deal in the visitor's Bitrix24
@@ -256,9 +359,20 @@ def portal_write(s, sp, method, fields):
 
 
 @router.post("/auto/request")
-def request_car(request: Request, kind: str = Form(...), ref: str = Form(...), name: str = Form(""), phone: str = Form(""),
-                start: str = Form(""), end: str = Form(""), schedule: str = Form("6/1"), comment: str = Form(""),
-                delivery: str = Form(""), collection: str = Form(""), driver: str = Form("")):
+def request_car(
+    request: Request,
+    kind: str = Form(...),
+    ref: str = Form(...),
+    name: str = Form(""),
+    phone: str = Form(""),
+    start: str = Form(""),
+    end: str = Form(""),
+    schedule: str = Form("6/1"),
+    comment: str = Form(""),
+    delivery: str = Form(""),
+    collection: str = Form(""),
+    driver: str = Form(""),
+):
     from .api import auth, open_session
     from .crm import sync
 
@@ -274,11 +388,23 @@ def request_car(request: Request, kind: str = Form(...), ref: str = Form(...), n
             from .miniapp import rental_quote
 
             try:
-                quote = rental_quote(s, site, {"vehicle": v.id, "start": start, "end": end, "delivery": bool(delivery),
-                                               "collection": bool(collection), "additional_driver": driver[:60]})
+                quote = rental_quote(
+                    s,
+                    site,
+                    {
+                        "vehicle": v.id,
+                        "start": start,
+                        "end": end,
+                        "delivery": bool(delivery),
+                        "collection": bool(collection),
+                        "additional_driver": driver[:60],
+                    },
+                )
             except (HTTPException, ValueError):
                 return RedirectResponse(car(v, [])["url"] + "?error=dates", 303)
-            title = f"Сайт · прокат · {v.data['model']} · {quote['days']} дн. с {day(datetime.fromisoformat(start).date())}"
+            title = (
+                f"Сайт · прокат · {v.data['model']} · {quote['days']} дн. с {day(datetime.fromisoformat(start).date())}"
+            )
             amount, plate = Decimal(quote["total"]), v.data["plate"]
         elif kind == "buyout" and ref in BUYOUT:
             offer = buyout_offer(ref, schedule if schedule in SCHEDULES else "6/1")
@@ -289,14 +415,38 @@ def request_car(request: Request, kind: str = Form(...), ref: str = Form(...), n
         try:
             sp = auth(s, request)
         except HTTPException:
-            sp = open_session(s, request, response)  # the site works without the cabinet; the request opens a demo space
+            sp = open_session(
+                s, request, response
+            )  # the site works without the cabinet; the request opens a demo space
         first, _, last = name.partition(" ")
-        lead = portal_write(s, sp, "crm.lead.add", {
-            "TITLE": title, "NAME": first, "LAST_NAME": last, "SOURCE_ID": "WEB", "STATUS_ID": "NEW",
-            "PHONE": [{"VALUE": phone, "VALUE_TYPE": "MOBILE"}] if phone else [], "COMMENTS": comment[:500]})
-        deal = portal_write(s, sp, "crm.deal.add", {
-            "TITLE": title, "CATEGORY_ID": "0", "STAGE_ID": "NEW", "OPPORTUNITY": f"{amount:.2f}", "LEAD_ID": lead,
-            "SOURCE_ID": "WEB", "UF_CRM_VEHICLE": plate})
+        lead = portal_write(
+            s,
+            sp,
+            "crm.lead.add",
+            {
+                "TITLE": title,
+                "NAME": first,
+                "LAST_NAME": last,
+                "SOURCE_ID": "WEB",
+                "STATUS_ID": "NEW",
+                "PHONE": [{"VALUE": phone, "VALUE_TYPE": "MOBILE"}] if phone else [],
+                "COMMENTS": comment[:500],
+            },
+        )
+        deal = portal_write(
+            s,
+            sp,
+            "crm.deal.add",
+            {
+                "TITLE": title,
+                "CATEGORY_ID": "0",
+                "STAGE_ID": "NEW",
+                "OPPORTUNITY": f"{amount:.2f}",
+                "LEAD_ID": lead,
+                "SOURCE_ID": "WEB",
+                "UF_CRM_VEHICLE": plate,
+            },
+        )
         sync(s, sp)
         audit(s, sp, f"Заявка с сайта → лид #{lead} и сделка #{deal} в Битрикс24", None, via="site")
         response.headers["location"] = "/auto/sent?" + urlencode({"lead": lead, "deal": deal, "title": title[:120]})
@@ -325,9 +475,11 @@ def sitemap():
         cars = rental_cars(s, showcase(s))
     urls = ["/auto"] + [c["url"] for c in cars] + [f"/auto/vykup/{k}" for k in BUYOUT]
     body = "".join(f"<url><loc>{URL}{u}</loc><lastmod>{today()}</lastmod></url>" for u in urls)
-    return Response('<?xml version="1.0" encoding="UTF-8"?>'
-                    f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>',
-                    media_type="application/xml")
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>',
+        media_type="application/xml",
+    )
 
 
 @router.get("/robots.txt")

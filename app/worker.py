@@ -1,8 +1,14 @@
-import time, os, asyncio, traceback, shutil
+import asyncio
+import os
+import shutil
+import time
+import traceback
 from datetime import timedelta
-from sqlalchemy import select, delete, func, or_
-from .db import db, Job, System, Space, Booking, Item, AccessToken, FILES, now
-from .domain import cansee, bill, today, audit, update
+
+from sqlalchemy import delete, func, or_, select
+
+from .db import FILES, AccessToken, Booking, Item, Job, Space, System, db, now
+from .domain import audit, bill, cansee, today, update
 from .seed import refill_pool
 
 
@@ -16,14 +22,15 @@ def notify(job):
         if job.data.get("via") == "telegram":
             return {"telegram": "answered_in_chat"}
         if job.data.get("target"):
-            item = s.scalar(
-                select(Item).where(Item.space == sp.id, Item.id == job.data["target"])
-            )
+            item = s.scalar(select(Item).where(Item.space == sp.id, Item.id == job.data["target"]))
             if not item or not cansee(s, sp, item):
                 return {"telegram": "out_of_scope"}
         chat = sp.data["tg_chat"]
         if str(chat).startswith(("vk:", "max:")):
-            return {"channel": str(chat).split(":")[0], "telegram": "not_linked"}  # notifications go out through Telegram
+            return {
+                "channel": str(chat).split(":")[0],
+                "telegram": "not_linked",
+            }  # notifications go out through Telegram
         title = job.data["title"]
         route = "web" if sp.role in ("owner", "admin", "manager", "service", "finance", "screening") else None
         if job.data.get("target") and sp.role in ("driver", "client"):
@@ -64,26 +71,32 @@ def maintenance():
             s.add(System(key="worker", data={"heartbeat": now().isoformat()}))
         else:
             h.data = {"heartbeat": now().isoformat()}
-        s.query(Booking).filter(
-            Booking.state == "hold", Booking.expires < now()
-        ).update({"state": "expired"})
-        s.execute(
-            delete(AccessToken).where(AccessToken.created < now() - timedelta(hours=24))
-        )
+        s.query(Booking).filter(Booking.state == "hold", Booking.expires < now()).update({"state": "expired"})
+        s.execute(delete(AccessToken).where(AccessToken.created < now() - timedelta(hours=24)))
         # Provider-side rows (the YooKassa emulator, payment links, app keys, Telegram update ids) outlive the
         # demo spaces they served; a week is far longer than any retry window.
         week = (now() - timedelta(days=7)).isoformat()
         s.execute(
             delete(System).where(
-                or_(System.key.like("ykemu:%"), System.key.like("pay:%"), System.key.like("tg:%"), System.key.like("b24key:%"),
-                    System.key.like("vk:%"), System.key.like("max:%")),
-                func.coalesce(System.data["created_at"].astext, System.data["at"].astext,
-                              System.data["received"].astext, System.data["expires"].astext, "") < week,
+                or_(
+                    System.key.like("ykemu:%"),
+                    System.key.like("pay:%"),
+                    System.key.like("tg:%"),
+                    System.key.like("b24key:%"),
+                    System.key.like("vk:%"),
+                    System.key.like("max:%"),
+                ),
+                func.coalesce(
+                    System.data["created_at"].astext,
+                    System.data["at"].astext,
+                    System.data["received"].astext,
+                    System.data["expires"].astext,
+                    "",
+                )
+                < week,
             )
         )
-        expired = s.scalars(
-            select(Space).where(Space.touched < now() - timedelta(hours=24))
-        ).all()
+        expired = s.scalars(select(Space).where(Space.touched < now() - timedelta(hours=24))).all()
         for sp in expired:
             folder = (FILES / sp.id).resolve()
             if folder.parent == FILES.resolve() and folder.exists():
@@ -98,14 +111,10 @@ def maintenance():
         ).all()
     for sid in ids:
         with db() as s:
-            sp = s.scalar(
-                select(Space).where(Space.id == sid).with_for_update(skip_locked=True)
-            )
+            sp = s.scalar(select(Space).where(Space.id == sid).with_for_update(skip_locked=True))
             if not sp:
                 continue
-            if sp.data.get("last_billed") != str(today()) and str(today())[
-                :7
-            ] not in sp.data.get("closed_months", []):
+            if sp.data.get("last_billed") != str(today()) and str(today())[:7] not in sp.data.get("closed_months", []):
                 for c in s.scalars(
                     select(Item).where(
                         Item.space == sid,
@@ -125,10 +134,7 @@ def maintenance():
                 if (
                     not ticket.data.get("escalated")
                     and not ticket.data.get("answered_at")
-                    and __import__("datetime").datetime.fromisoformat(
-                        ticket.data["due"]
-                    )
-                    < now()
+                    and __import__("datetime").datetime.fromisoformat(ticket.data["due"]) < now()
                 ):
                     update(ticket, escalated=True)
                     audit(
@@ -178,9 +184,7 @@ def main():
                     # Never blindly repeat an AI request with an ambiguous billable outcome.
                     if j.state == "running" and j.kind in ("ai", "call"):
                         j.state = "failed"
-                        j.result = {
-                            "error": "Обработка прервана. Расход зарезервирован; повторите запрос вручную."
-                        }
+                        j.result = {"error": "Обработка прервана. Расход зарезервирован; повторите запрос вручную."}
                         continue
                     j.state = "running"
                     j.attempts += 1
@@ -228,12 +232,7 @@ def main():
                     folder = (FILES / sid).resolve()
                     with db() as s:
                         exists = s.get(Space, sid)
-                    if (
-                        not exists
-                        and len(sid) == 32
-                        and folder.parent == FILES.resolve()
-                        and folder.is_dir()
-                    ):
+                    if not exists and len(sid) == 32 and folder.parent == FILES.resolve() and folder.is_dir():
                         shutil.rmtree(folder)
                     result = {"cleaned": not exists}
                 else:
@@ -255,11 +254,7 @@ def main():
                                 else "Внешний сервис отклонил запрос. Проверьте соединение и лимиты."
                             )
                         }
-                        current.state = (
-                            "failed"
-                            if j.kind in ("ai", "call") or current.attempts >= 3
-                            else "pending"
-                        )
+                        current.state = "failed" if j.kind in ("ai", "call") or current.attempts >= 3 else "pending"
                         current.due = now() + timedelta(seconds=10 * current.attempts)
         except Exception as e:
             print("worker error", type(e).__name__, flush=True)

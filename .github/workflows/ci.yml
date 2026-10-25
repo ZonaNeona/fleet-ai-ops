@@ -42,7 +42,8 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: sudo apt-get install -y --no-install-recommends libpangoft2-1.0-0 fonts-dejavu-core
       - run: pip install -r requirements-dev.txt
-      - run: ruff check app scripts tests tools
+      - run: ruff check app scripts tests tools migrations
+      - run: ruff format --check app scripts tests tools migrations
       - run: mypy
       - run: psql -h 127.0.0.1 -U fleet -d fleet -c "CREATE EXTENSION IF NOT EXISTS vector"
       - run: mkdir -p "$RUNNER_TEMP/files" && echo "FILE_ROOT=$RUNNER_TEMP/files" >> "$GITHUB_ENV"
@@ -73,6 +74,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx prettier --check .
       - run: npm run build
 
   # Bitrix24 app: PHP syntax and tests without network, Vue widget type check and build.

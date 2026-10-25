@@ -64,8 +64,7 @@ export function UnderShell({
     setSection(s);
   };
   const info = SECTIONS.find((s) => s[0] === section) || SECTIONS[0];
-  const remember = (s: string) => (id: string, prompt: string) =>
-    setCtx((c) => ({ ...c, [s]: { job: id, prompt } }));
+  const remember = (s: string) => (id: string, prompt: string) => setCtx((c) => ({ ...c, [s]: { job: id, prompt } }));
   return (
     <LevelCtx.Provider value={engineer}>
       <div className="k-shell">
@@ -132,7 +131,12 @@ export function UnderShell({
             <RagView data={data} initialJob={ctx.rag?.job} initialPrompt={ctx.rag?.prompt} onStart={remember("rag")} />
           )}
           {section === "agent" && (
-            <AgentView data={data} initialJob={ctx.agent?.job} initialPrompt={ctx.agent?.prompt} onStart={remember("agent")} />
+            <AgentView
+              data={data}
+              initialJob={ctx.agent?.job}
+              initialPrompt={ctx.agent?.prompt}
+              onStart={remember("agent")}
+            />
           )}
           {section === "n8n" && <N8nView data={data} openRow={openRow} initialRun={ctx.n8n?.run} />}
           {section === "docs" && <DocsView data={data} openInbox={openInbox} />}
@@ -142,7 +146,8 @@ export function UnderShell({
           {section === "log" && <LogView data={data} go={go} />}
         </main>
         <footer className="k-foot">
-          <Credit /> · учебные данные · RAG, агент, документы и интеграции — реальные вызовы вашей сессии, сценарии бота — пошаговая схема
+          <Credit /> · учебные данные · RAG, агент, документы и интеграции — реальные вызовы вашей сессии, сценарии бота
+          — пошаговая схема
         </footer>
         <AskFab onClick={() => setAi(true)} hidden={ai} />
         {/* помощник тот же, что в продукте, но в тёмных токенах консоли */}

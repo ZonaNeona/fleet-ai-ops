@@ -1,5 +1,7 @@
-import io, html
-from .domain import serialize, calendar, get
+import html
+import io
+
+from .domain import calendar, get, serialize
 from .reports import entries, ledger_row
 
 
@@ -96,9 +98,7 @@ def render(s, sp, x, format="pdf"):
     if "status" in d:
         d["status"] = state_labels.get(d["status"], d["status"])
     facts = "".join(
-        f"<tr><td>{html.escape(labels[k])}</td><td>{html.escape(str(v))}</td></tr>"
-        for k, v in d.items()
-        if k in labels
+        f"<tr><td>{html.escape(labels[k])}</td><td>{html.escape(str(v))}</td></tr>" for k, v in d.items() if k in labels
     )
     table = ""
     if rows:
