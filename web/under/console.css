@@ -1,4 +1,4 @@
-/* ───────────── Переключатель контуров (шапка продукта и консоли) ───────────── */
+/* ───────────── Shell switch (product and console headers) ───────────── */
 .mode-switch {
   position: relative;
   display: inline-grid;
@@ -47,7 +47,7 @@
   transform: translateX(100%);
 }
 
-/* Смена контура: новый экран раскрывается кругом от переключателя */
+/* Switching shells: the new screen opens in a circle from the switch */
 :root[data-vt]::view-transition-old(root),
 :root[data-vt]::view-transition-new(root) {
   animation: none;
@@ -65,7 +65,7 @@
   }
 }
 
-/* ───────────── Консоль «Под капотом»: всегда тёмная ───────────── */
+/* ───────────── «Под капотом» console: always dark ───────────── */
 .k-shell {
   --k-bg: #06080c;
   --k-bg2: #080b10;
@@ -104,7 +104,7 @@
   font-family: var(--mono);
 }
 
-/* шапка */
+/* header */
 .k-top {
   grid-area: top;
   display: flex;
@@ -226,7 +226,7 @@
   box-shadow: 0 0 22px -6px rgba(255, 210, 63, 0.7);
 }
 
-/* рейка разделов */
+/* section rail */
 .k-rail {
   grid-area: rail;
   display: flex;
@@ -311,7 +311,7 @@
   text-overflow: ellipsis;
 }
 
-/* сцена: холст + инспектор + таймлайн */
+/* stage: canvas + inspector + timeline */
 .k-stage {
   display: grid;
   height: 100%;
@@ -438,7 +438,7 @@
   color: var(--k-text);
 }
 
-/* холст React Flow */
+/* React Flow canvas */
 .fx-canvas .react-flow {
   background: transparent;
 }
@@ -680,7 +680,7 @@
   border-color: rgba(244, 63, 94, 0.4);
 }
 
-/* командная строка */
+/* command line */
 .k-prompt {
   position: relative;
   z-index: 4;
@@ -766,7 +766,7 @@
   }
 }
 
-/* кнопки */
+/* buttons */
 .k-btn {
   display: inline-flex;
   gap: 7px;
@@ -820,7 +820,7 @@
   opacity: 0.4;
 }
 
-/* таймлайн */
+/* timeline */
 .k-timeline {
   grid-area: tl;
   display: flex;
@@ -948,7 +948,7 @@
   opacity: 0.55;
 }
 
-/* инспектор */
+/* inspector */
 .k-eyebrow {
   display: block;
   font-family: var(--mono);
@@ -1524,7 +1524,7 @@
   color: var(--k-text2);
 }
 
-/* журнал */
+/* log */
 .k-stage-log {
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "canvas ins";
@@ -1654,7 +1654,7 @@
   text-align: right;
 }
 
-/* ───────────── планшет и телефон ───────────── */
+/* ───────────── tablet and phone ───────────── */
 @media (max-width: 1180px) {
   .k-stage {
     grid-template-columns: minmax(0, 1fr) 330px;
@@ -1819,7 +1819,7 @@
   line-height: 25px;
 }
 
-/* запас снизу, чтобы плавающая кнопка AI не закрывала последние элементы */
+/* bottom room so the floating AI button does not cover the last items */
 .k-inspector {
   padding-bottom: 104px;
 }
@@ -1829,7 +1829,7 @@
   }
 }
 
-/* Документы: выбор документа над холстом, текстовый слой и проверки в инспекторе */
+/* Documents: document picker above the canvas, text layer and checks in the inspector */
 .k-prompt.k-docs-bar {
   display: flex;
   gap: 8px;
@@ -1918,7 +1918,7 @@
     grid-template-rows: auto auto;
   }
 }
-/* Эксплуатация */
+/* Operations */
 .k-ops-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -2007,7 +2007,7 @@
   color: var(--k-text3);
   font-variant-numeric: tabular-nums;
 }
-/* Робот */
+/* Robot */
 .k-robot-shot {
   border-radius: 12px;
   overflow: hidden;

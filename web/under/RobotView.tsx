@@ -25,7 +25,7 @@ const STATE: Record<string, [string, string]> = {
   loaded: ["загружено роботом", "ok"],
 };
 
-/* Playwright-робот: учебный портал штрафов → сверка с тем, что привёз n8n → загрузка нового в учёт. */
+/* Playwright robot: the training fines portal → reconcile with what n8n brought → load what is new into the ledger. */
 export function RobotView() {
   const q = useQueryClient();
   const robot = useQuery({

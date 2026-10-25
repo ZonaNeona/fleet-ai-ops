@@ -872,8 +872,8 @@ class BotSim(BaseModel):
 
 @app.post("/api/v1/bot/sim")
 def bot_sim(body: BotSim, request: Request):
-    """Веб-эмулятор бота: апдейт в формате Telegram идёт в ту же очередь и ту же логику
-    (telegram.handle), но ответ возвращается в браузер, а не в Telegram."""
+    """Web emulator of the bot: a Telegram-format update goes through the same queue and the same logic
+    (telegram.handle), but the answer comes back to the browser instead of Telegram."""
     if not (body.text or "").strip() and not body.callback:
         fail("Пустое сообщение")
     with db() as s:
@@ -927,7 +927,7 @@ def bot_sim(body: BotSim, request: Request):
 
 @app.get("/api/v1/bot/sim/{id}")
 def bot_sim_result(id: str, request: Request):
-    # без проверки роли: выбор роли в самом чате меняет роль сессии
+    # no role check: picking a role in the chat itself changes the session's role
     with db() as s:
         sp = auth(s, request)
         j = s.scalar(select(Job).where(Job.space == sp.id, Job.id == id, Job.kind == "telegram_sim"))

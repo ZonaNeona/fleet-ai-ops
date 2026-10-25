@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { CREDIT } from "./lib";
 
-/** Сквозная кнопка AI-помощника: правый нижний угол, переливающаяся рамка в духе Gemini. */
+/** The AI assistant button on every screen: bottom right, with a shimmering Gemini-style border. */
 export function AskFab({ onClick, hidden }: { onClick: () => void; hidden?: boolean }) {
   if (hidden) return null;
   return (
@@ -21,7 +21,7 @@ export function AskFab({ onClick, hidden }: { onClick: () => void; hidden?: bool
   );
 }
 
-/** Подпись: концепт и прототип, автор. */
+/** Caption: concept and prototype, author. */
 export function Credit({ className = "" }: { className?: string }) {
   return (
     <span className={"credit " + className}>

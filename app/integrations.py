@@ -243,7 +243,7 @@ async def mock(source: str, request: Request):
                 }
                 raw.append({"vehicle": item["vehicle_code"], "odometer": item["mileage"]})
             else:
-                if i not in (1, 3, 10, 25):  # 1 — машина демо-водителя: штраф виден в боте
+                if i not in (1, 3, 10, 25):  # 1 is the demo driver's car: the fine shows in the bot
                     continue
                 item = {
                     "vehicle_code": r["vehicle_code"],

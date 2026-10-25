@@ -23,8 +23,8 @@ class Answer(BaseModel):
     citations: list[int] = Field(default_factory=list)
 
 
-# Провайдеры LLM. Текст: DeepSeek напрямую, затем OpenRouter; фото документов — vision-модель OpenRouter.
-# При лимитах (429), сбоях (5xx) и таймаутах берём следующую модель цепочки.
+# LLM providers. Text: DeepSeek directly, then OpenRouter; document photos go to an OpenRouter vision model.
+# On rate limits (429), failures (5xx) and timeouts the next model of the chain is tried.
 PROVIDERS = {
     "deepseek": (
         "DEEPSEEK_BASE_URL",
@@ -70,7 +70,7 @@ def models(provider="openrouter"):
         for x in data.values():
             x["pricing"] = {"prompt": "0", "completion": "0"}
     if provider == "deepseek":
-        # DeepSeek не отдаёт тарифы в /models — для дневного бюджета берём их из окружения (USD за токен)
+        # DeepSeek does not publish prices in /models: the daily budget takes them from the environment (USD per token)
         price = {
             "prompt": os.getenv("DEEPSEEK_PRICE_PROMPT", "0.0000003"),
             "completion": os.getenv("DEEPSEEK_PRICE_COMPLETION", "0.0000006"),
@@ -81,7 +81,7 @@ def models(provider="openrouter"):
 
 
 def chain(vision=False, local=False):
-    """Упорядоченный список (провайдер, модель), доступных прямо сейчас."""
+    """Ordered (provider, model) pairs available right now."""
     if local:
         wanted = [("ollama", os.getenv("OLLAMA_VISION_MODEL" if vision else "OLLAMA_MODEL", "qwen2.5vl:3b"))]
     elif vision:
@@ -100,7 +100,7 @@ def chain(vision=False, local=False):
             if model in models(provider):
                 out.append((provider, model))
         except httpx.HTTPError:
-            continue  # провайдер недоступен — пробуем следующего
+            continue  # provider unavailable: try the next one
     return out
 
 
@@ -327,7 +327,7 @@ def run(job, model_override=None):
         options = [("openrouter" if "/" in model_override else "deepseek", model_override)]
     else:
         options = chain(vision=bool(image))
-        # модель, выбранная в настройках, идёт первой, если она есть в цепочке
+        # the model chosen in settings goes first if it is in the chain
         options.sort(key=lambda pm: pm[1] != chosen)
     if not options:
         raise RuntimeError("Нет доступной настроенной модели")

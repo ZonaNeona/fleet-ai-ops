@@ -4,7 +4,7 @@ import { Copy, KeyRound, Plug, Play } from "lucide-react";
 import { api } from "../lib";
 import { Json, Say, Section, useEngineer } from "./kit";
 
-/* MCP: тот же реестр инструментов, что у встроенного агента, — для Claude Desktop, Cursor и других клиентов. */
+/* MCP: the same tool registry as the built-in agent, for Claude Desktop, Cursor and other clients. */
 export function McpView() {
   const eng = useEngineer();
   const tools = useQuery({ queryKey: ["mcp-tools"], queryFn: () => api<any>("/mcp/tools") });

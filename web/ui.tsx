@@ -159,7 +159,7 @@ export function SearchBox({
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={"card " + className}>{children}</section>;
 }
-// Фото модели: из данных автомобиля (image/thumb), иначе — по названию модели (сессии, созданные до обновления парка)
+// Model photo: from the car's data (image/thumb), otherwise by model name (sessions created before the fleet update)
 const MODEL_PHOTO: [RegExp, string][] = [
   [/rapid/i, "skoda-rapid"],
   [/polo/i, "vw-polo"],
@@ -202,7 +202,7 @@ export function CarPhoto({
   );
 }
 
-/** Светлая/тёмная тема: data-theme на <html>, выбор помним в localStorage (если доступен). */
+/** Light/dark theme: data-theme on <html>; the choice is kept in localStorage when available. */
 export function ThemeToggle() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "light");
   const flip = () => {
@@ -214,7 +214,7 @@ export function ThemeToggle() {
     try {
       localStorage.setItem("ec-theme", next);
     } catch {
-      /* приватный режим — тема просто не запомнится */
+      /* private mode: the theme just is not remembered */
     }
     setTheme(next);
   };

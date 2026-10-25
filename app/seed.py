@@ -216,8 +216,8 @@ def create_space(s, count=160):
         "INV-02",
         {"name": "Ирина Миронова", "share": "0.50", "expense_share": "0.50"},
     )
-    # Модели — настоящие, суточные ставки — условные (учебные);
-    # «lease» — ежемесячный платёж за автомобиль (лизинг/амортизация), учебная оценка.
+    # Real car models, made-up daily rates;
+    # «lease» is the monthly payment for a car (leasing or depreciation), a rough estimate.
     models = {
         "taxi": [
             FLEET["skoda-rapid"],
@@ -231,7 +231,7 @@ def create_space(s, count=160):
             FLEET["exeed-lx"],
             FLEET["moskvich-3"],
         ],
-        # премиум в прокате — штучно, основная масса — комфорт и бизнес
+        # few premium rental cars; most are comfort and business class
         "rental": [FLEET["haval-jolion"], FLEET["geely-preface"], FLEET["hongqi-h5"]] * 7
         + [
             FLEET["mercedes-e"],
@@ -387,7 +387,7 @@ def create_space(s, count=160):
                             },
                         )
                     )
-        # Расходы по автомобилю за 90 дней: ежемесячные платежи + ТО + случайные ремонты.
+        # A car's costs over 90 days: monthly payments, scheduled service and random repairs.
         premium = car["class"] == "Премиум"
         for month in range(3):
             d = today - timedelta(days=5 + (i % 20) + 30 * month)
@@ -544,7 +544,7 @@ def create_space(s, count=160):
             "contract": None,
         },
     )
-    # Общие расходы группы помесячно: распределяются по автомобиледням в отчётах
+    # Group overheads by month: reports spread them over car-days
     months = [today.replace(day=1)]
     for _ in range(2):
         months.append((months[-1] - timedelta(days=1)).replace(day=1))
@@ -591,10 +591,10 @@ def create_space(s, count=160):
     return space
 
 
-# ───────── Пул готовых пространств ─────────
-# Посев 90 дней истории занимает ~3 с. Воркер держит пару готовых пространств,
-# и вход гостя забирает одно из них за миллисекунды. Заготовки живут в пределах
-# своих суток МСК (посев зависит от даты) и не участвуют в биллинге и эскалациях.
+# ───────── Pool of ready spaces ─────────
+# Seeding 90 days of history takes ~3 s. The worker keeps a couple of ready spaces and a visitor's login takes
+# one in milliseconds. A ready space lives within its Moscow day (the seed depends on the date) and takes no
+# part in billing or escalations.
 POOL_SIZE = 2
 
 
@@ -603,7 +603,7 @@ def pool_day():
 
 
 def claim_space(s):
-    """Готовое пространство из пула, а если пул пуст — новое."""
+    """A ready space from the pool, or a new one if the pool is empty."""
     sp = s.scalar(
         select(Space)
         .where(Space.data["pool"].astext == pool_day(), Space.data["seed_version"].astext == "taxi-3")
@@ -615,7 +615,7 @@ def claim_space(s):
         return create_space(s)
     moment = now()
     delta = moment - sp.created
-    # Время «сейчас» в посеве (SLA заявок, событие готовности) сдвигаем на момент выдачи
+    # The seed's «now» (ticket SLAs, the ready event) moves to the moment the space is handed out
     for t in s.scalars(select(Item).where(Item.space == sp.id, Item.kind == "ticket")):
         shifted = {
             k: (datetime.fromisoformat(t.data[k]) + delta).isoformat() for k in ("due", "opened") if t.data.get(k)
@@ -633,7 +633,7 @@ def claim_space(s):
 
 
 def refill_pool(s):
-    """Вызывается воркером: удаляет заготовки прошлых суток и досоздаёт одну за раз."""
+    """Called by the worker: drops ready spaces of past days and adds one at a time."""
     day = pool_day()
     for old in s.scalars(
         select(Space).where(

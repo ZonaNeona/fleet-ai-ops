@@ -106,7 +106,7 @@ def maintenance():
         ids = s.scalars(
             select(Space.id).where(
                 Space.touched >= now() - timedelta(hours=24),
-                ~Space.data.has_key("pool"),  # заготовки пула не биллингуются
+                ~Space.data.has_key("pool"),  # pool spaces are not billed
             )
         ).all()
     for sid in ids:

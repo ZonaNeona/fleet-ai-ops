@@ -17,7 +17,7 @@ const TYPE: Record<string, [string, string]> = {
   integration_trace: ["TRACE", "n8n"],
 };
 
-/** Куда вести из журнала: RAG, агент или n8n — по форме трассы. */
+/** Where a log entry leads (RAG, agent or n8n), judged by the trace's shape. */
 function target(r: any): string | null {
   if (r.type === "n8n") return "n8n";
   const steps = (r.trace || []).map((s: any) => s.step);

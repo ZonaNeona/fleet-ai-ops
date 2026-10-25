@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CornerDownLeft, LoaderCircle } from "lucide-react";
 
-/** Командная строка консоли: вопрос + подсказки. */
+/** The console's command line: a question plus suggestions. */
 export function PromptBar({
   busy,
   onRun,

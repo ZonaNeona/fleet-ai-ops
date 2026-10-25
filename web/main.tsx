@@ -38,7 +38,7 @@ import { api, Data, Row, dirs, getLabel, staffRoles, financialRoles, CREDIT } fr
 import { SearchBox, Loading, Empty, ThemeToggle } from "./ui";
 import { AskFab, Credit } from "./fab";
 import type { Action } from "./actions";
-// Стили всех разделов — в одном CSS (у лениво загружаемых модулей своих импортов CSS нет)
+// All sections' styles are in one CSS bundle (lazily loaded modules import no CSS of their own)
 import "leaflet/dist/leaflet.css";
 import "@xyflow/react/dist/style.css";
 import "./style.css";
@@ -50,10 +50,10 @@ import { appRoute } from "./tg/route";
 import { ModeSwitch, SECTIONS } from "./under/mode";
 import { SourcesWidget } from "./under/Integrations";
 
-// Тяжёлые части (графики, карта, таблицы, холсты) грузятся отдельными чанками:
-// дашборд открывается без них, остальное догружается в фоне.
+// Heavy parts (charts, map, tables, canvases) load as separate chunks:
+// the dashboard opens without them, the rest loads in the background.
 const views = () => import("./views");
-/** Ленивый именованный экспорт с сохранением типов пропсов. */
+/** A lazy named export that keeps its prop types. */
 function pick<M, K extends keyof M>(load: () => Promise<M>, key: K): M[K] {
   return lazy(() => load().then((m) => ({ default: m[key] as any }))) as unknown as M[K];
 }
@@ -105,15 +105,15 @@ const nav = [
   ["settings", "Источники и настройки", Settings],
   ["work", "Как мы работаем", Compass],
 ] as const;
-// #site — клиентский сайт таксопарка: серверные страницы /auto, не часть кабинета
+// #site is the fleet's client site: server-rendered /auto pages, not part of the cabinet
 if (location.hash === "#site") location.replace("/auto");
-// #under/<раздел> — инженерный контур «Под капотом»
+// #under/<section> is the «Под капотом» engineering console
 const underFromHash = () => {
   const m = location.hash.match(/^#under(?:\/(\w+))?/);
   if (!m) return null;
   return SECTIONS.some((s) => s[0] === m[1]) ? m[1] : "map";
 };
-// #app/<экран> — сразу нужный экран кабинета (ссылка в сообщении или резюме)
+// #app/<screen> opens that cabinet screen directly (a link in a message or a resume)
 const pageFromHash = () => {
   const m = location.hash.match(/^#app\/(\w+)/);
   return m && nav.some((n) => n[0] === m[1]) ? m[1] : null;
@@ -121,7 +121,7 @@ const pageFromHash = () => {
 function App() {
   const [globalSearch, setGlobalSearch] = useState(false);
   useEffect(() => {
-    // после первого экрана тянем чанки кабинета, затем консоли
+    // after the first screen, prefetch the cabinet's chunks, then the console's
     const a = setTimeout(prefetch, 800);
     const b = setTimeout(() => import("./under/UnderShell"), 6000);
     return () => (clearTimeout(a), clearTimeout(b));
@@ -155,7 +155,7 @@ function App() {
     return () => window.removeEventListener("hashchange", followHash);
   }, []);
   useEffect(() => {
-    // SDK Telegram читает tgWebAppData из hash при загрузке — не трогаем hash, пока он не загрузился
+    // The Telegram SDK reads tgWebAppData from the hash on load: leave the hash alone until it has loaded
     (window as any).__tg.then(() =>
       history.replaceState(
         null,
@@ -164,7 +164,7 @@ function App() {
       ),
     );
   }, [mode, section]);
-  /** Смена контура: тёмная консоль «растекается» кругом от переключателя (View Transitions). */
+  /** Switching shells: the dark console spreads in a circle from the switch (View Transitions). */
   function switchMode(next: "product" | "under", e?: { clientX: number; clientY: number }, s?: string) {
     const apply = () =>
       flushSync(() => {
@@ -680,7 +680,7 @@ function App() {
         {globalSearch && <GlobalSearch data={data} open={open} onClose={() => setGlobalSearch(false)} />}
         {ai && <AIPanel data={data} target={selected} onClose={() => setAi(false)} />}
       </Suspense>
-      {/* на странице бота сам чат — это агент, плавающая кнопка не нужна */}
+      {/* on the bot page the chat itself is the agent, so no floating button */}
       <AskFab onClick={() => setAi(true)} hidden={ai || page === "bot"} />
       {toast && (
         <div className="toast" role="status">

@@ -4,12 +4,12 @@ import { Check, Pause, Play, RotateCcw, X, AlertTriangle } from "lucide-react";
 import { api } from "../lib";
 import type { FEdge, RunState } from "./flow";
 
-/* Общие кирпичи консоли «Под капотом»: уровень объяснения, проигрыватель трасс, таймлайн, JSON. */
+/* Shared pieces of the «Под капотом» console: explanation level, trace player, timeline, JSON. */
 
 export const LevelCtx = createContext(false);
 export const useEngineer = () => useContext(LevelCtx);
 
-/** Текст в двух регистрах: «просто» и «для инженера». */
+/** Text in two registers: plain and for an engineer. */
 export function Say({ simple, eng }: { simple: ReactNode; eng: ReactNode }) {
   return <>{useEngineer() ? eng : simple}</>;
 }
@@ -21,12 +21,12 @@ export type Frame = {
   status?: "success" | "error" | "retry";
   label: string;
   ms?: number;
-  /** сколько показывать кадр, мс */
+  /** how long to show the frame, ms */
   hold?: number;
   step?: any;
 };
 
-/** Проигрыватель: по кадрам зажигает ноды, пускает частицы, ведёт камеру. */
+/** Player: lights up nodes frame by frame, sends particles, moves the camera. */
 export function useReplay(frames: Frame[], key: string, autoplay = true) {
   const [pos, setPos] = useState(frames.length);
   const [playing, setPlaying] = useState(false);
@@ -86,7 +86,7 @@ export function useReplay(frames: Frame[], key: string, autoplay = true) {
       setPos(i);
     },
     ...view,
-    /** накладывает состояние проигрывания на рёбра */
+    /** applies the playback state to the edges */
     paint: (edges: FEdge[]): FEdge[] =>
       edges.map((e) => ({
         ...e,
@@ -98,7 +98,7 @@ export function useReplay(frames: Frame[], key: string, autoplay = true) {
   };
 }
 
-/** Задание AI в очереди: запуск и опрос результата (как в боте и «Спросить AI»). */
+/** A queued AI job: start it and poll for the result (as the bot and «Спросить AI» do). */
 export function useJob(
   mode: "rag" | "agent",
   role: string,
@@ -148,7 +148,7 @@ export function useJob(
 export const ms = (v?: number) =>
   v === undefined || v === null ? "" : v >= 1000 ? (v / 1000).toFixed(1) + " с" : Math.round(v) + " мс";
 
-/** Таймлайн прогона: шаги с реальной длительностью, клик — перемотка. */
+/** Run timeline: steps with their real duration; a click seeks. */
 export function Timeline({
   frames,
   replay,
@@ -209,7 +209,7 @@ export function Timeline({
   );
 }
 
-/** JSON с подсветкой — для режима инженера. */
+/** Highlighted JSON for the engineer mode. */
 export function Json({ value, max = 4000 }: { value: any; max?: number }) {
   let text = typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
   if (text.length > max) text = text.slice(0, max) + "\n…";

@@ -527,7 +527,7 @@ def test_pool_claim_is_fresh_and_unbilled():
         s.flush()
         assert "pool" not in got.data
         assert got.created > now() - timedelta(minutes=1)
-        # SLA заявок отсчитывается от момента выдачи, а не от посева
+        # ticket SLAs count from the moment the space is handed out, not from seeding
         t = s.scalar(select(Item).where(Item.space == got.id, Item.kind == "ticket", Item.code == "SRV-201"))
         assert datetime.fromisoformat(t.data["due"]) > now() + timedelta(minutes=10)
     finally:

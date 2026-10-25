@@ -252,7 +252,7 @@ def audit(s, sp, title, target=None, **data):
         Job(
             space=sp.id,
             kind="notify",
-            # via: откуда пришла команда; действия из бота уже получили ответ в чате — дубль не шлём
+            # via: where the command came from; bot actions were already answered in the chat, so no duplicate
             data={"title": title, "target": target, "role": sp.role, "via": data.get("via")},
             result={},
         )

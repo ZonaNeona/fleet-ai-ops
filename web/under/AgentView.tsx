@@ -97,7 +97,7 @@ const TOOLS = [
   },
 ];
 
-/** Зеркало app/agent.py → tools_for(role): права проверяются на сервере, здесь — для наглядности. */
+/** Mirror of app/agent.py → tools_for(role): the server checks access; this is for display only. */
 function allowed(role: string) {
   const s = new Set(["list_vehicles", "find_contract", "search_knowledge"]);
   if (["owner", "admin", "finance", "driver", "client", "investor"].includes(role)) {

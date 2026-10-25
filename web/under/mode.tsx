@@ -13,7 +13,7 @@ import {
   ScanSearch,
 } from "lucide-react";
 
-/* Лёгкая часть контура «Под капотом»: нужна шапке продукта, поэтому не тянет за собой холсты. */
+/* The light part of the «Под капотом» console: the product header needs it, so it pulls in no canvases. */
 
 export const SECTIONS = [
   ["map", "Карта системы", "Как устроено", Network],
@@ -28,7 +28,7 @@ export const SECTIONS = [
   ["log", "Журнал", "Живая лента", TerminalSquare],
 ] as const;
 
-/** Переключатель контуров в шапке: «Продукт ⇄ Под капотом». */
+/** Shell switch in the header: «Продукт ⇄ Под капотом». */
 export function ModeSwitch({
   mode,
   onSwitch,

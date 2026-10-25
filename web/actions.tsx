@@ -354,7 +354,7 @@ export function ActionDialog({
   );
 }
 
-/** Неотрицательное число из поля формы (сервер проверяет повторно). */
+/** A non-negative number from a form field (the server checks again). */
 function amount(v: unknown, label: string) {
   const n = Number(
     String(v ?? "")

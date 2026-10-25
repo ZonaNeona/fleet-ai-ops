@@ -1,7 +1,7 @@
 @import "tailwindcss/preflight.css";
 
-/* ═══════════════════════════ Токены ═══════════════════════════ */
-/* Светлая тема — по умолчанию; тёмная — :root[data-theme="dark"] (переключатель в шапке) */
+/* ═══════════════════════════ Tokens ═══════════════════════════ */
+/* Light theme by default; dark is :root[data-theme="dark"] (switch in the header) */
 :root {
   --bg: #f4f5f7;
   --bg-2: #eceef2;
@@ -190,7 +190,7 @@ p {
   }
 }
 
-/* ═══════════════════════════ Кнопки и поля ═══════════════════════════ */
+/* ═══════════════════════════ Buttons and fields ═══════════════════════════ */
 .button {
   display: inline-flex;
   align-items: center;
@@ -449,7 +449,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 600;
 }
 
-/* ═══════════════════════════ Оболочка приложения ═══════════════════════════ */
+/* ═══════════════════════════ App shell ═══════════════════════════ */
 .fullscreen {
   display: grid;
   place-items: center;
@@ -760,7 +760,7 @@ a.demo-label:hover {
   width: 100%;
   max-width: 1480px;
   margin: 0 auto;
-  padding: 28px 28px 104px; /* снизу — место под плавающую кнопку AI */
+  padding: 28px 28px 104px; /* room for the floating AI button at the bottom */
   animation: rise 0.35s both;
 }
 .page-heading {
@@ -846,7 +846,7 @@ a.demo-label:hover {
   font-size: 12px;
 }
 
-/* ═══════════════════════════ Карточки и дашборд ═══════════════════════════ */
+/* ═══════════════════════════ Cards and dashboard ═══════════════════════════ */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1197,7 +1197,7 @@ a.demo-label:hover {
   font-size: 18px;
 }
 
-/* ═══════════════════════════ Таблицы ═══════════════════════════ */
+/* ═══════════════════════════ Tables ═══════════════════════════ */
 .table-scroll {
   overflow-x: auto;
   margin: 0 -20px;
@@ -1289,7 +1289,7 @@ tbody tr:last-child td {
   color: var(--orange);
 }
 
-/* ═══════════════════════════ Фото автомобилей ═══════════════════════════ */
+/* ═══════════════════════════ Car photos ═══════════════════════════ */
 .car-photo {
   position: relative;
   overflow: hidden;
@@ -1318,7 +1318,7 @@ tbody tr:last-child td {
   border-radius: 16px;
 }
 
-/* ═══════════════════════════ Автопарк ═══════════════════════════ */
+/* ═══════════════════════════ Fleet ═══════════════════════════ */
 .availability-bar {
   display: flex;
   align-items: center;
@@ -1443,7 +1443,7 @@ tbody tr:last-child td {
   color: var(--accent-text);
 }
 
-/* ═══════════════════════════ Сервис: канбан ═══════════════════════════ */
+/* ═══════════════════════════ Service: kanban ═══════════════════════════ */
 .kanban {
   display: grid;
   grid-auto-flow: column;
@@ -1529,7 +1529,7 @@ tbody tr:last-child td {
   font-size: 12.5px;
 }
 
-/* ═══════════════════════════ Финансы, аналитика, настройки ═══════════════════════════ */
+/* ═══════════════════════════ Finance, analytics, settings ═══════════════════════════ */
 .import-box {
   display: flex;
   flex-direction: column;
@@ -1669,7 +1669,7 @@ tbody tr:last-child td {
   gap: 10px;
 }
 
-/* ═══════════════════════════ Кабинет водителя / клиента ═══════════════════════════ */
+/* ═══════════════════════════ Driver / client cabinet ═══════════════════════════ */
 .mobile-home-grid {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -1755,7 +1755,7 @@ tbody tr:last-child td {
   font-size: 12.5px;
 }
 
-/* ═══════════════════════════ Карточка объекта (drawer) ═══════════════════════════ */
+/* ═══════════════════════════ Object card (drawer) ═══════════════════════════ */
 .drawer-overlay,
 .overlay {
   position: fixed;
@@ -1960,7 +1960,7 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
-/* ═══════════════════════════ Диалоги и формы ═══════════════════════════ */
+/* ═══════════════════════════ Dialogs and forms ═══════════════════════════ */
 .dialog {
   position: fixed;
   left: 50%;
@@ -2058,7 +2058,7 @@ tbody tr:last-child td {
   margin-bottom: 3px;
 }
 
-/* ═══════════════════════════ AI-помощник ═══════════════════════════ */
+/* ═══════════════════════════ AI assistant ═══════════════════════════ */
 .ai-modes {
   display: flex;
   gap: 6px;
@@ -2138,7 +2138,7 @@ tbody tr:last-child td {
   font-size: 11.5px;
 }
 
-/* ═══════════════════════════ Состояния и уведомления ═══════════════════════════ */
+/* ═══════════════════════════ States and notifications ═══════════════════════════ */
 .empty {
   display: flex;
   flex-direction: column;
@@ -2225,7 +2225,7 @@ tbody tr:last-child td {
   display: none;
 }
 
-/* ═══════════════════════════ Адаптив ═══════════════════════════ */
+/* ═══════════════════════════ Responsive ═══════════════════════════ */
 @media (max-width: 1180px) {
   .hero {
     grid-template-columns: 1fr;
@@ -2389,7 +2389,7 @@ tbody tr:last-child td {
   align-items: center;
   gap: 6px;
 }
-/* панель — flex-колонка с прокруткой: блоки не должны сжиматься по высоте */
+/* the panel is a scrolling flex column: blocks must not shrink in height */
 .drawer > *,
 .ai-drawer > * {
   flex-shrink: 0;
@@ -2398,7 +2398,7 @@ tbody tr:last-child td {
   grid-column: 1 / -1;
 }
 
-/* ═══════════════════════════ Графики и карта — цвета из темы ═══════════════════════════ */
+/* ═══════════════════════════ Charts and map: colours from the theme ═══════════════════════════ */
 .recharts-cartesian-grid line {
   stroke: var(--chart-grid);
 }
@@ -2437,7 +2437,7 @@ tbody tr:last-child td {
   stroke-width: 2;
 }
 
-/* ═══════════════════════════ Переключатель темы ═══════════════════════════ */
+/* ═══════════════════════════ Theme switch ═══════════════════════════ */
 .theme-toggle {
   display: inline-grid;
   place-items: center;
@@ -2453,7 +2453,7 @@ tbody tr:last-child td {
   border-color: rgba(var(--tint), 0.25);
 }
 
-/* ═══════════════════════════ Ответ AI ═══════════════════════════ */
+/* ═══════════════════════════ AI answer ═══════════════════════════ */
 .ai-answer {
   display: flex;
   flex-direction: column;
@@ -2521,7 +2521,7 @@ tbody tr:last-child td {
   color: var(--accent-text);
   font-weight: 600;
 }
-/* график выручки заполняет карточку по высоте (карточка тянется по соседней колонке) */
+/* the revenue chart fills the card's height (the card stretches to the neighbouring column) */
 .revenue-chart {
   display: flex;
   flex-direction: column;
@@ -2562,7 +2562,7 @@ tbody tr:last-child td {
   }
 }
 
-/* ═══════════════════════════ Карта площадок (Leaflet) ═══════════════════════════ */
+/* ═══════════════════════════ Sites map (Leaflet) ═══════════════════════════ */
 .branch-leaflet {
   height: 230px;
   margin-bottom: 10px;
@@ -2606,11 +2606,11 @@ tbody tr:last-child td {
 .leaflet-tooltip-top::before {
   border-top-color: var(--surface);
 }
-/* тёмная тема: стандартные тайлы OSM затемняем, маркеры не трогаем */
+/* dark theme: darken the standard OSM tiles, leave the markers alone */
 :root[data-theme="dark"] .branch-leaflet .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.6);
 }
-/* карточки, идущие друг за другом прямо в контенте страницы, — с отступом */
+/* cards that follow each other directly in the page content get a gap */
 .main main > .card,
 .main main > .notice,
 .main main > .methodology,
@@ -2618,7 +2618,7 @@ tbody tr:last-child td {
 .main main > .integration-grid {
   margin-bottom: 14px;
 }
-/* коллаж фото в «Автопарк сегодня»: строки не растягиваются под картинки */
+/* photo collage in «Автопарк сегодня»: rows do not stretch to the images */
 .focus-photos {
   grid-template-rows: repeat(2, minmax(0, 1fr));
   flex: none;
@@ -2654,7 +2654,7 @@ tbody tr:last-child td {
   font-size: 12px;
 }
 
-/* ───────── Сквозная кнопка AI (правый нижний угол) — переливы в духе Gemini ───────── */
+/* ───────── AI button on every screen (bottom right), Gemini-style shimmer ───────── */
 @property --fab-a {
   syntax: "<angle>";
   initial-value: 0deg;
@@ -2735,7 +2735,7 @@ tbody tr:last-child td {
 .ask-fab-icon svg {
   animation: fab-twinkle 2.8s ease-in-out infinite;
 }
-/* блик, пробегающий по иконке */
+/* a glint running across the icon */
 .ask-fab-icon i {
   position: absolute;
   inset: 0;
@@ -2814,7 +2814,7 @@ tbody tr:last-child td {
     transform: translateY(24px) scale(0.6);
   }
 }
-/* тост поднимаем над кнопкой */
+/* lift the toast above the button */
 .toast {
   bottom: 96px;
 }
@@ -2850,7 +2850,7 @@ tbody tr:last-child td {
   }
 }
 
-/* подпись «концепт и прототип · автор» */
+/* the «concept and prototype · author» caption */
 .credit {
   color: var(--text-3);
 }
@@ -2875,7 +2875,7 @@ tbody tr:last-child td {
   color: #ffd23f;
 }
 
-/* Предупреждение в шторке помощника: guardrails в демо не подключены */
+/* Notice in the assistant drawer: guardrails are not enabled in the demo */
 .ai-guard {
   border: 1px solid color-mix(in srgb, var(--orange, #f59e0b) 35%, transparent);
   background: color-mix(in srgb, var(--orange, #f59e0b) 8%, transparent);
@@ -2936,7 +2936,7 @@ tbody tr:last-child td {
   font-weight: 600;
 }
 
-/* Radix-модалка ставит body{pointer-events:none}: кнопка AI должна оставаться кликабельной поверх шторки */
+/* A Radix modal sets body{pointer-events:none}: the AI button must stay clickable above the drawer */
 .ask-fab {
   pointer-events: auto;
 }

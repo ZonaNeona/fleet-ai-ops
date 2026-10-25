@@ -1,11 +1,11 @@
 import { build } from "esbuild";
 import { mkdir, cp, readFile, rm, writeFile } from "node:fs/promises";
 
-await rm("dist", { recursive: true, force: true }); // без хвостов прошлых сборок
+await rm("dist", { recursive: true, force: true }); // no leftovers from earlier builds
 await mkdir("dist/assets", { recursive: true });
 await cp("public", "dist", { recursive: true });
 
-// Сценарий показа (docs/DEMO.md) и авторство фото (public/cars/credits.json) — статические страницы
+// The demo guide (docs/DEMO.md) and photo credits (public/cars/credits.json) are static pages
 const esc = (t) => String(t).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const inline = (t) =>
   esc(t)
@@ -79,7 +79,7 @@ const result = await build({
   outdir: "dist/assets",
   entryNames: "app-[hash]",
   chunkNames: "chunk-[hash]",
-  splitting: true, // кабинет, графики, карта и консоль — отдельные чанки, лендинг их не ждёт
+  splitting: true, // cabinet, charts, map and console are separate chunks; the first screen does not wait for them
   format: "esm",
   platform: "browser",
   target: "es2022",
@@ -101,7 +101,7 @@ await writeFile(
   template.replace("/web/main.tsx", "/" + js[0].replace("dist/", "")).replace(
     "</head>",
     `<link rel="stylesheet" href="/${js[1].cssBundle.replace("dist/", "")}">` +
-      // общие чанки точки входа — сразу, параллельно с ней
+      // the entry's shared chunks load right away, in parallel with it
       js[1].imports
         .filter((i) => i.kind === "import-statement")
         .map((i) => `<link rel="modulepreload" href="/${i.path.replace("dist/", "")}">`)

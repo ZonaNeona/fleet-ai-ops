@@ -17,7 +17,7 @@ type Signals = { summary: { rule: string; label: string; count: number }[]; rows
 // Where a signal without a ledger object leads: the screen that owns it.
 const PAGE: Record<string, string> = { "hiring-stuck": "crm", "crm-paid-gap": "crm", "call-low": "calls" };
 
-/* «Сделать сейчас»: правила над учётом, сервисом, Битрикс24 и звонками — без модели; сигнал исчезает, когда причина устранена. */
+/* «Сделать сейчас»: rules over the ledger, service, Bitrix24 and calls, no model; a signal goes away once its cause is fixed. */
 export function SignalsWidget({
   data,
   open,

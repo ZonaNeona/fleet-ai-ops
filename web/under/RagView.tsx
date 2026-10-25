@@ -69,7 +69,7 @@ const EDGES: FEdge[] = [
   { id: "llm-citations", from: "llm", to: "citations" },
   { id: "citations-answer", from: "citations", to: "answer" },
 ];
-/** Ветка guard — только когда она реально сработала, иначе пунктир режет схему */
+/** The guard branch only when it actually fired; otherwise its dashed line clutters the diagram */
 const GUARD_EDGE: FEdge = {
   id: "rrf-answer",
   from: "rrf",
@@ -170,7 +170,7 @@ export function RagView({
     if (id === "citations") return (s.output?.citations || []).length + " ссылк. верны";
     return ms(s.ms);
   };
-  // пока задание в очереди — «живой» конвейер до вектора
+  // while the job is queued, animate the pipeline up to the vector step
   const waiting = job.busy;
   const nodes: FNode[] = NODES.map((n) => {
     let state: RunState | undefined = r ? replay.states[n.id] : undefined;

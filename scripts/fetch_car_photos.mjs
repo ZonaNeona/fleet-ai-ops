@@ -1,6 +1,6 @@
-// Фото моделей автопарка с Wikimedia Commons (свободные лицензии) + файл авторства.
-// node scripts/fetch_car_photos.mjs            — кандидаты в public/cars/_candidates (по 4 на модель)
-// node scripts/fetch_car_photos.mjs pick       — забрать выбранные (scripts/car_photos.json) в public/cars/
+// Fleet model photos from Wikimedia Commons (free licences) plus a credits file.
+// node scripts/fetch_car_photos.mjs            — candidates into public/cars/_candidates (4 per model)
+// node scripts/fetch_car_photos.mjs pick       — copy the chosen ones (scripts/car_photos.json) to public/cars/
 import fs from "node:fs";
 import path from "node:path";
 
@@ -26,7 +26,7 @@ const MODELS = {
   "sollers-argo": "Sollers Argo",
   "lada-largus": "Lada Largus",
   "gazelle-next": "GAZelle Next",
-  // повторный поиск: у первых запросов не нашлось подходящих ракурсов/поколений
+  // second search: the first queries found no suitable angle or generation
   "kia-rio-b": "Kia Rio 2020 sedan Russia",
   "kia-rio-c": "Kia Rio IV sedan",
   "geely-emgrand-b": "Geely Emgrand 2024 front",
@@ -104,7 +104,7 @@ if (process.argv[2] === "pick") {
   const cf = path.join(dir, "candidates.json");
   const all = fs.existsSync(cf) ? JSON.parse(fs.readFileSync(cf, "utf8")) : {};
   for (const [slug, q] of Object.entries(MODELS)) {
-    if (all[slug]?.length) continue; // уже есть — продолжаем с места остановки
+    if (all[slug]?.length) continue; // already there: resume where it stopped
     const list = await candidates(q);
     all[slug] = list;
     for (const [i, c] of list.entries())

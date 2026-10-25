@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { api } from "../lib";
 
-/** Черновик действия агента: заявка создаётся только после явного подтверждения человеком. */
+/** A draft of an agent action: the request is created only after a person explicitly confirms it. */
 export function Drafts({ drafts, onConfirmed }: { drafts: any[]; onConfirmed?: () => void }) {
   const [status, setStatus] = useState<Record<string, string>>({});
   const q = useQueryClient();

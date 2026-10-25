@@ -1,4 +1,4 @@
-// Скриншоты контура «Под капотом»: node scripts/under_shots.mjs [baseURL] [outDir] [шаги через запятую]
+// Screenshots of the «Под капотом» console: node scripts/under_shots.mjs [baseURL] [outDir] [comma-separated steps]
 import { chromium } from "@playwright/test";
 const base = process.argv[2] || "http://localhost:5174";
 const out = process.argv[3] || "reports";

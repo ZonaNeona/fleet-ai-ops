@@ -1,4 +1,4 @@
-/* CRM · Битрикс24 */
+/* CRM · Bitrix24 */
 .cr {
   display: grid;
   gap: 14px;
@@ -256,7 +256,7 @@
   }
 }
 
-/* Приложение Битрикс24 в карточке сделки */
+/* Bitrix24 app inside the deal card */
 .ba {
   display: grid;
   gap: 12px;

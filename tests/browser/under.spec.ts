@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Контур «Под капотом» — отдельная оболочка, включается переключателем в шапке и по #under/<раздел>.
+// The «Под капотом» console is a separate shell: the header switch or #under/<section> opens it.
 test("under hood: header switch and anchors swap the whole shell", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Открыть как собственник", exact: true }).click();
@@ -29,12 +29,12 @@ test("under hood: real RAG, role-bound agent, n8n replay and mobile", async ({ p
   await expect(page.getByRole("heading", { name: "Обзор бизнеса." })).toBeVisible({ timeout: 30000 });
   await page.locator(".topbar").getByRole("button", { name: "Под капотом" }).click();
 
-  // карта: сценарий проигрывается по шагам
+  // map: the scenario plays step by step
   await page.getByRole("button", { name: "Водитель спрашивает долг в боте" }).first().click();
   await expect(page.locator(".k-caption")).toBeVisible();
   await page.screenshot({ path: "reports/under-map.png" });
 
-  // RAG: реальная трасса, ответ со ссылками
+  // RAG: a real trace, an answer with sources
   await page.locator(".k-rail button", { hasText: "RAG" }).click();
   await page.getByRole("button", { name: "Какие документы нужны водителю?", exact: true }).click();
   await expect(page.locator(".k-tl-step").first()).toBeVisible({ timeout: 90000 });
@@ -45,7 +45,7 @@ test("under hood: real RAG, role-bound agent, n8n replay and mobile", async ({ p
   await page.locator(".react-flow__node", { hasText: "Слияние" }).click();
   await expect(page.locator(".k-inspector")).toContainText("Reciprocal Rank Fusion");
 
-  // агент: роль водителя видит get_balance, у менеджера он под замком
+  // agent: the driver role sees get_balance, for the manager it is locked
   await page.locator(".k-rail button", { hasText: "Агент" }).click();
   await page.getByRole("button", { name: "Сколько я должен?", exact: true }).click();
   await expect(page.locator(".k-tl-step", { hasText: "get_balance" })).toBeVisible({ timeout: 90000 });
@@ -54,21 +54,21 @@ test("under hood: real RAG, role-bound agent, n8n replay and mobile", async ({ p
   await expect(page.locator(".react-flow__node", { hasText: "get_balance" })).toContainText("нет доступа у роли");
   await page.locator(".k-role").selectOption("owner");
 
-  // интеграции: настоящий запуск n8n и сверка
+  // integrations: a real n8n run and reconciliation
   await page.locator(".k-rail button", { hasText: "Интеграции" }).click();
   await page.getByRole("button", { name: "Запустить workflow" }).click();
   await expect(page.locator(".k-tl-step", { hasText: "Нормализовать данные" })).toBeVisible({ timeout: 60000 });
   await expect(page.locator(".k-inspector")).toContainText("расхождений", { timeout: 20000 });
   await page.screenshot({ path: "reports/under-n8n.png" });
 
-  // журнал и переход «проиграть на холсте»
+  // log and the «replay on canvas» link
   await page.locator(".k-rail button", { hasText: "Журнал" }).click();
   await page.locator(".k-log-row", { hasText: "Сколько я должен?" }).first().click();
   await page.getByRole("button", { name: "Проиграть на холсте" }).click();
   await expect(page.locator(".k-rail button.active")).toContainText("Агент");
   await page.screenshot({ path: "reports/under-log-replay.png" });
 
-  // телефон: без горизонтальной прокрутки, рейка внизу
+  // phone: no horizontal scroll, the rail at the bottom
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".k-rail button", { hasText: "Карта" }).click();
   await page.screenshot({ path: "reports/under-mobile-map.png" });

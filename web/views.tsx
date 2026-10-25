@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { api, Data, Row, dirs, statuses, kinds, rub, num, dt, getLabel, availableActions, financialRoles } from "./lib";
 import { Badge, Table, Card, CarPhoto, Empty, Loading } from "./ui";
-// Leaflet (~45 КБ gzip) нужен только карте площадок — грузим его отдельно
+// Leaflet (~45 KB gzip) is needed only by the sites map, so it loads separately
 const BranchMap = lazy(() => import("./branchmap").then((m) => ({ default: m.BranchMap })));
 type Props = {
   data: Data;
@@ -1509,7 +1509,7 @@ export function DetailPanel(p: Props & { row: Row; onClose: () => void }) {
         <Dialog.Overlay className="drawer-overlay" />
         <Dialog.Content
           className="drawer"
-          // клик по плавающей кнопке AI не закрывает карточку: помощник открывается поверх с её контекстом
+          // a click on the floating AI button keeps the card open: the assistant opens above it with its context
           onPointerDownOutside={(e) => {
             if ((e.target as HTMLElement)?.closest?.(".ask-fab")) e.preventDefault();
           }}
@@ -1787,7 +1787,7 @@ const FIELD_LABELS: Record<string, string> = {
   amount: "Сумма",
   issuer: "Кем выдан",
 };
-/** Ответ модели: абзацы и маркированные строки, ссылки «(ист. N)» — компактными метками. */
+/** A model answer: paragraphs and bullet lines, «(ист. N)» references as compact tags. */
 export function AnswerText({ text }: { text: string }) {
   const blocks = String(text || "")
     .split(/\n{2,}/)
@@ -1829,7 +1829,7 @@ export function AIPanel({
   data: Data;
   target: Row | null;
   onClose: () => void;
-  /** куда монтировать панель: в консоли «Под капотом» — в тёмный контейнер */
+  /** where to mount the panel: in the «Под капотом» console, a dark container */
   container?: HTMLElement | null;
 }) {
   const [prompt, setPrompt] = useState("");

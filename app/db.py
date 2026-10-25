@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TSTZRANGE, ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 load_dotenv(os.getenv("FLEET_ENV", "/etc/fleet.env"))
-# Общий ключ LLM для демо-сервисов (доступ по ACL); если файла нет или он недоступен — работает OpenRouter
+# Shared LLM key for the demo services (ACL-protected file); without it the stand uses OpenRouter
 try:
     load_dotenv(os.getenv("AI_ENV", "/etc/demo-ai/deepseek.env"))
 except OSError:

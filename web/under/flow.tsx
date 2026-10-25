@@ -20,8 +20,8 @@ import {
 } from "@xyflow/react";
 import { Check, Lock, RotateCw, X, type LucideIcon } from "lucide-react";
 
-/* Холст «Под капотом» — по мотивам холста n8n: свои ноды, частицы по связям,
-   камера следует за активной нодой во время проигрывания трассы. */
+/* The «Под капотом» canvas, after the n8n canvas: custom nodes, particles along edges,
+   and a camera that follows the active node while a trace replays. */
 
 export type RunState = "idle" | "wait" | "running" | "success" | "error" | "retry" | "locked";
 export type Side = "l" | "r" | "t" | "b";
@@ -46,16 +46,16 @@ export type FEdge = {
   to: string;
   out?: Side;
   in?: Side;
-  /** номер импульса: смена значения запускает новую частицу */
+  /** pulse number: a new value starts a new particle */
   pulse?: number;
   reverse?: boolean;
   error?: boolean;
-  /** связь уже пройдена в текущем прогоне */
+  /** the edge was already passed in the current run */
   lit?: boolean;
   dashed?: boolean;
-  /** бегущий пунктир — «идёт работа» */
+  /** running dashes: work in progress */
   flow?: boolean;
-  /** ветка ошибки */
+  /** error branch */
   danger?: boolean;
   label?: string;
 };
@@ -75,7 +75,7 @@ const FlowNode = memo(function FlowNode({ data }: NodeProps<Node<ND>>) {
       style={{ ["--c" as any]: data.color, width: Math.max(px + 60, 128) }}
     >
       <div className="fx-tile" style={{ width: px, height: px }}>
-        {/* хэндлы позиционируются абсолютно — без обёрток, иначе обёртки становятся ячейками сетки и сдвигают иконку */}
+        {/* handles are absolutely positioned without wrappers, otherwise wrappers become grid cells and shift the icon */}
         {(["l", "r", "t", "b"] as Side[]).map((s) => (
           <Fragment key={s}>
             <Handle id={"t" + s} type="target" position={pos[s]} />
@@ -142,7 +142,7 @@ function FlowEdge({
       {!!data?.pulse && (
         <g key={data.pulse}>
           <circle r={0} className={`fx-particle ${err ? "err" : ""}`}>
-            {/* r=0 до старта — иначе точка мелькает в начале координат */}
+            {/* r=0 before the start, otherwise the dot flashes at the origin */}
             <set attributeName="r" to="4.5" begin="0s" fill="freeze" />
             <animateMotion
               dur="0.75s"
@@ -185,11 +185,11 @@ const edgeTypes = { fx: FlowEdge };
 export type CanvasProps = {
   nodes: FNode[];
   edges: FEdge[];
-  /** нода, за которой следует камера; null — вся схема */
+  /** the node the camera follows; null means the whole diagram */
   focus?: string | null;
   selected?: string | null;
   onSelect?: (id: string | null) => void;
-  /** ключ сцены: при смене — камера заново вписывает схему */
+  /** scene key: when it changes, the camera fits the diagram again */
   scene?: string;
   zoom?: number;
 };
@@ -200,7 +200,7 @@ function Canvas(p: CanvasProps) {
   const height = useStore((s) => s.height);
   const first = useRef(true);
   const mobile = width > 0 && width < 640;
-  // На телефоне схема поворачивается сверху вниз: так она крупнее на узком экране
+  // On a phone the diagram turns top-to-bottom: it is larger on a narrow screen that way
   const vertical = mobile;
   const at = (n: FNode) => (vertical ? { x: n.y * 0.85, y: n.x * 0.62 } : { x: n.x, y: n.y });
   const side = (s: Side): Side => (vertical ? ({ l: "t", r: "b", t: "l", b: "r" } as const)[s] : s);
@@ -237,7 +237,7 @@ function Canvas(p: CanvasProps) {
     const ys = pts.map((n) => n.y);
     const bounds = {
       x: Math.min(...xs) - 30,
-      y: Math.min(...ys) - 70, // сверху — запас под панель сценариев
+      y: Math.min(...ys) - 70, // room at the top for the scenario panel
       width: Math.max(...xs) - Math.min(...xs) + 190,
       height: Math.max(...ys) - Math.min(...ys) + 200,
     };

@@ -177,7 +177,7 @@ export function availableActions(x: Row, role: string): { id: string; label: str
   return a;
 }
 
-/** Авторство прототипа — показывается в кабинете и консоли «Под капотом». */
+/** Prototype authorship, shown in the cabinet and the «Под капотом» console. */
 export const CREDIT = {
   author: "Игорь Шварёв",
   role: "AI-разработчик (Telegram-боты, LLM)",

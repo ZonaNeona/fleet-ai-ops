@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 
-// Площадки учебного таксопарка — условные точки в районах Москвы
+// The demo fleet's sites: approximate points in Moscow districts
 const COORDS: Record<string, [number, number]> = {
   vernadskogo: [55.6765, 37.5051],
   mitino: [55.8456, 37.3612],
   kuntsevo: [55.7309, 37.4462],
 };
-// Подложка OpenStreetMap (без API-ключа, с указанием авторства); в тёмной теме затемняется CSS-фильтром
+// OpenStreetMap tiles (no API key, with attribution); a CSS filter darkens them in the dark theme
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">участники OpenStreetMap</a>';
 
@@ -39,7 +39,7 @@ export function BranchMap({ branches, counts }: { branches: Branch[]; counts: Re
         .addTo(map);
     }
     if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [36, 36] });
-    // карточка могла поменять размер после первой отрисовки
+    // the card may have resized after the first paint
     const resize = new ResizeObserver(() => map.invalidateSize());
     resize.observe(box.current);
     return () => {

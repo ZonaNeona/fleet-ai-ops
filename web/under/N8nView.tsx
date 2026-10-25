@@ -35,7 +35,7 @@ export const SOURCES: Record<string, { title: string; what: string }> = {
 };
 const STAFF = ["owner", "admin", "finance", "manager"];
 
-/** Иконка/цвет по типу ноды n8n; HTTP-ноды различаем по роли в процессе. */
+/** Icon and colour by n8n node type; HTTP nodes are told apart by their role in the workflow. */
 function meta(n: Wf["nodes"][number]) {
   const url = String(n.parameters?.url || "");
   if (n.type.endsWith(".webhook")) return { icon: Webhook, color: "#a78bfa", tech: "Webhook" };

@@ -1,8 +1,8 @@
-"""Telegram-бот таксопарка: три типа пользователей (водитель, клиент, сотрудник отдела) в одном боте.
+"""The fleet's Telegram bot: three kinds of users (driver, client, office staff) in one bot.
 
-Вебхук (api.py) только проверяет secret_token, отсекает повторы по update_id и ставит задание в очередь;
-здесь воркер разбирает апдейт, выполняет действие через те же бизнес-команды, что и веб-кабинет
-(domain.command — роли, статусы, ключ идемпотентности), и отправляет ответ.
+The webhook (api.py) only checks secret_token, drops repeats by update_id and queues a job; here the worker
+parses the update, runs the action through the same business commands as the web cabinet (domain.command:
+roles, statuses, idempotency key) and sends the answer.
 """
 
 import asyncio
@@ -52,7 +52,7 @@ DISCLAIMER = "Концепт и прототип · данные учебные,
 
 
 def validate(raw):
-    """Проверка подписи initData Telegram Mini App."""
+    """Verifies the signature of Telegram Mini App initData."""
     pairs = dict(parse_qsl(raw, keep_blank_values=True))
     received = pairs.pop("hash", "")
     token = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -78,7 +78,7 @@ def validate(raw):
     return user
 
 
-# ───────────────────────── отправка ─────────────────────────
+# ───────────────────────── sending ─────────────────────────
 
 
 def rub(v) -> str:
@@ -90,7 +90,7 @@ def esc(v) -> str:
 
 
 def kb(*rows):
-    """Строки кнопок: ("Текст", "callback") | ("Текст", "url:https://…") | ("Текст", "app")."""
+    """Button rows: ("Text", "callback") | ("Text", "url:https://…") | ("Text", "app")."""
     out = []
     for row in rows:
         buttons = []
@@ -116,7 +116,7 @@ def kb(*rows):
 
 @lru_cache(maxsize=32)
 def car_jpeg(image_path: str) -> bytes | None:
-    """Фото модели из статики фронтенда → JPEG (sendPhoto надёжно принимает JPEG/PNG)."""
+    """A model photo from the frontend static files → JPEG (sendPhoto reliably accepts JPEG/PNG)."""
     from PIL import Image
 
     for base in (ROOT / "dist", ROOT / "public"):
@@ -191,7 +191,7 @@ async def _deliver(chat, messages, callback_id=None):
 
 
 async def send(chat, text, route=None):
-    """Уведомление из воркера (события пространства)."""
+    """A notification from the worker (space events)."""
     action = "web" if route == "web" else "app:" + route if route else "app"
     await _deliver(chat, [{"text": esc(text), "kb": kb([("Открыть кабинет", action)])}])
 
@@ -209,7 +209,7 @@ async def photo_bytes(file_id):
         await bot.session.close()
 
 
-# ───────────────────────── меню по ролям ─────────────────────────
+# ───────────────────────── menus by role ─────────────────────────
 
 
 def role_picker(prefix=""):
@@ -303,7 +303,7 @@ def active_contract(s, sp):
 
 
 def run(s, sp, action, payload, key):
-    """Бизнес-команда в точке сохранения: при ошибке откат только её изменений, ответ — текстом."""
+    """A business command inside a savepoint: on error only its changes roll back and the answer is text."""
     try:
         with s.begin_nested():
             return command(s, sp, action, payload, key), None
@@ -311,7 +311,7 @@ def run(s, sp, action, payload, key):
         return None, str(e.detail)
 
 
-# ───────────────────────── действия ─────────────────────────
+# ───────────────────────── actions ─────────────────────────
 
 
 def driver_action(s, sp, act, uid_key):
@@ -328,7 +328,7 @@ def driver_action(s, sp, act, uid_key):
             }
         ]
     if act == "fines":
-        # Данные приходят тем же конвейером n8n (источник «Штрафы ГИБДД»), что и в кабинете
+        # The data comes through the same n8n pipeline (source «Штрафы ГИБДД») as in the cabinet
         from .integrations import enqueue
 
         if not c:
@@ -501,7 +501,7 @@ def client_action(s, sp, act, arg, uid_key):
             if v.data["direction"] == "rental" and v.data["status"] == "ready" and v.id not in busy
         ]
         seen, picks = set(), []
-        for v in cars:  # по одной машине каждой модели
+        for v in cars:  # one car of each model
             if v.data["model"] not in seen:
                 seen.add(v.data["model"])
                 picks.append(v)
@@ -740,7 +740,7 @@ def finance_action(s, sp, act, arg, uid_key):
     return [menu(sp)]
 
 
-# ───────────────────────── входная точка воркера ─────────────────────────
+# ───────────────────────── worker entry point ─────────────────────────
 
 
 def _space(s, telegram_id, chat_id):
@@ -976,10 +976,10 @@ def thaw_reply(messages):
 
 
 def handle(data, space_id=None):
-    """Логика бота без транспорта → (chat_id, сообщения, callback_id).
+    """Bot logic without transport → (chat_id, messages, callback_id).
 
-    space_id задан — апдейт пришёл из веб-эмулятора: отвечаем от имени текущей
-    демосессии, ничего не отправляя в Telegram."""
+    With space_id the update came from the web emulator: answer within that demo session and send nothing
+    to Telegram."""
     cb = data.get("callback_query")
     m = data.get("message") or (cb or {}).get("message") or {}
     user = (cb or m).get("from", {})
@@ -1009,8 +1009,8 @@ def handle(data, space_id=None):
     ctx = None
     text_in = (m.get("text") or "").strip() if not cb else ""
     if text_in and not text_in.startswith("/") and not HELP.search(text_in) and not raw:
-        # LLM вызываем до основной транзакции: она держит блокировку пространства,
-        # а учёт расхода AI пишется отдельным соединением
+        # The LLM is called before the main transaction: that one holds the space lock,
+        # and AI spending is recorded over a separate connection
         with db() as s:
             sp0 = (
                 s.get(Space, space_id)
@@ -1182,7 +1182,7 @@ def handle(data, space_id=None):
 
 
 def process(data):
-    """Апдейт из настоящего Telegram: логика + доставка через Bot API."""
+    """An update from real Telegram: the logic plus delivery through the Bot API."""
     from .payments import telegram_update
 
     paid = telegram_update(data)
@@ -1197,7 +1197,7 @@ def process(data):
 
 
 def _as_json(m):
-    """Сообщение бота → JSON для веб-эмулятора (тот же текст и те же кнопки)."""
+    """A bot message → JSON for the web emulator (the same text and buttons)."""
     rows = []
     markup = m.get("kb")
     for row in markup.inline_keyboard if markup else []:
@@ -1214,7 +1214,7 @@ def _as_json(m):
             ]
         )
     out = {"text": m.get("text", ""), "kb": rows, "id": m.get("id"), "edit_target": m.get("edit_target")}
-    # фото — только если файл реально есть в статике (в старых пространствах путь мог устареть)
+    # a photo only if the file really is in the static files (older spaces may keep a stale path)
     if m.get("photo") and any((base / m["photo"].lstrip("/")).is_file() for base in (ROOT / "dist", ROOT / "public")):
         out["photo"] = m["photo"]
     if m.get("document"):
@@ -1226,7 +1226,7 @@ def _as_json(m):
 
 
 def simulate(data):
-    """Апдейт из веб-эмулятора: та же логика, ответ возвращается JSON-ом."""
+    """An update from the web emulator: the same logic, the answer comes back as JSON."""
     r = handle(data["update"], space_id=data["space"])
     if not r:
         return {"messages": []}

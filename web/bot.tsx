@@ -40,7 +40,7 @@ type Msg = {
   at: number;
 };
 
-/* Разрешаем только разметку, которую формирует сам бот (parse_mode=HTML Telegram). */
+/* Only the markup the bot itself produces is allowed (Telegram parse_mode=HTML). */
 function safeHtml(text: string) {
   return text.replace(/<(?!\/?(b|i|u|s|code|a)(\s+href="https?:[^"<>]*")?\s*>)[^>]*>/g, "");
 }

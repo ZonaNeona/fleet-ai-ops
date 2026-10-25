@@ -25,7 +25,7 @@ last_kb: list[list[str]] = []
 
 async def fake_deliver(chat, messages, callback_id=None):
     global last_kb
-    last_kb = []  # кнопки всех сообщений одного ответа
+    last_kb = []  # buttons of all messages of one answer
     for m in messages:
         text = re.sub(r"<[^>]+>", "", m.get("text", ""))
         tag = "📷 " if m.get("photo") else "📄 " if m.get("document") else ""
@@ -162,7 +162,7 @@ try:
     if hday:
         tap(hday)
     tap("f:economy")
-    # штрафы ГИБДД водителя приходят через n8n-конвейер
+    # the driver's traffic fines come through the n8n pipeline
     tap("role:driver")
     tap("d:fines")
     for _ in range(20):

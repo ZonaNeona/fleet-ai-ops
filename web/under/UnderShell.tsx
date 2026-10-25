@@ -150,7 +150,7 @@ export function UnderShell({
           — пошаговая схема
         </footer>
         <AskFab onClick={() => setAi(true)} hidden={ai} />
-        {/* помощник тот же, что в продукте, но в тёмных токенах консоли */}
+        {/* the same assistant as in the product, in the console's dark tokens */}
         <div ref={setHost} data-theme="dark" className="k-ai-host" />
         {ai && host && <AIPanel data={data} target={null} onClose={() => setAi(false)} container={host} />}
       </div>

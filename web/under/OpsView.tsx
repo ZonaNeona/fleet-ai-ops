@@ -44,7 +44,7 @@ const STATUS: Record<string, string> = {
   canceled: "отменён",
 };
 
-/* Эксплуатация: метрики, очередь, Redis, лимиты и платежи — те же цифры, что /api/metrics отдаёт Prometheus. */
+/* Operations: metrics, queue, Redis, limits and payments: the same numbers /api/metrics gives Prometheus. */
 export function OpsView() {
   const eng = useEngineer();
   const q = useQueryClient();
