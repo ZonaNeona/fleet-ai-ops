@@ -19,6 +19,10 @@ cp -an dist/assets/. "$task_stage/dist/assets/" 2>/dev/null || true
 task_deps=same
 cmp -s requirements.txt "$task_stage/requirements.txt" || task_deps=changed
 rsync -a "$task_stage"/ /var/www/fleet/
+# Files removed from the repository leave the host too (code directories only; data lives outside them).
+for d in app scripts tests tools migrations docs; do
+  rsync -a --delete --exclude __pycache__ "$task_stage/$d/" "/var/www/fleet/$d/"
+done
 chown fleet:fleet /var/www/fleet && chmod 755 /var/www/fleet
 chown -R fleet:fleet app web dist public docs tests migrations scripts n8n infra b24app tools
 if [ "$task_deps" = changed ]; then .venv/bin/pip install -q -r requirements.txt; fi
